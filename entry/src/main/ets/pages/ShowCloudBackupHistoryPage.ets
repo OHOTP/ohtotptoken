@@ -9,6 +9,7 @@ import { CommonConstants } from '../utils/CommonConstants';
 import { DeviceInfoHelper } from '../utils/DeviceInfoHelper';
 import { SyncTimeHelper } from '../utils/SyncTimeHelper';
 import { common } from '@kit.AbilityKit';
+import { cloudSync } from '@kit.CoreFileKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { taskpool } from '@kit.ArkTS';
@@ -30,11 +31,39 @@ export struct ShowCloudBackupHistoryPage {
   @Local appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
   private backupManager: CloudBackupManager = CloudBackupManager.getInstance();
   private scroller: Scroller = new Scroller();
+  private fileSync: cloudSync.FileSync = new cloudSync.FileSync();
+  private lastSyncTime: number = 0;
+  private readonly SYNC_INTERVAL_MS: number = 120000;
 
-  /** 页面生命周期：获取本设备 ID，加载备份历史列表 */
+  /** 页面生命周期：获取本设备 ID，先从云端同步文件再加载备份历史列表 */
   aboutToAppear(): void {
     this.currentDeviceId = DeviceInfoHelper.getInstance().getDeviceId();
-    this.loadBackupHistory();
+    this.syncAndLoadHistory();
+  }
+
+  /**
+   * 先触发 FileSync 从云端下载文件（确保仅云端文件变为可读），
+   * 再通过 TaskPool 后台线程加载备份历史记录。
+   * 2 分钟内跳过重复同步以避免频繁触发。
+   */
+  private syncAndLoadHistory(): void {
+    this.isLoading = true;
+    const now = Date.now();
+    if (this.lastSyncTime > 0 && (now - this.lastSyncTime) < this.SYNC_INTERVAL_MS) {
+      hilog.info(DOMAIN, TAG, 'syncAndLoadHistory: within cooldown, skipping sync');
+      this.loadBackupHistory();
+      return;
+    }
+    this.lastSyncTime = now;
+    this.fileSync.start()
+      .then(() => {
+        hilog.info(DOMAIN, TAG, 'syncAndLoadHistory: sync completed');
+        this.loadBackupHistory();
+      })
+      .catch((err: BusinessError) => {
+        hilog.warn(DOMAIN, TAG, `syncAndLoadHistory: sync failed, loading anyway: ${err.code} ${err.message}`);
+        this.loadBackupHistory();
+      });
   }
 
   /**

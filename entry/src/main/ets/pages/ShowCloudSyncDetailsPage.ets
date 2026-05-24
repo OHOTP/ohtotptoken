@@ -280,8 +280,7 @@ export struct ShowCloudSyncDetailsPage {
                           if (!this.cloudSyncEnabled) {
                             return;
                           }
-                          this.loadingText = $r('app.string.cloud_sync_backing_up');
-                          this.Is_loaded = true;
+                          showSnackBar($r('app.string.cloud_sync_backing_up'), SnackBarNotifyType.INFO);
                           this.triggerCloudSync();
                         })
 
@@ -446,7 +445,7 @@ export struct ShowCloudSyncDetailsPage {
     return $r('app.string.cloud_sync_error_no_error');
   }
 
-  /** 手动触发从云端恢复：启动 FileSync，含60秒冷却防抖 */
+  /** 手动触发从云端恢复：启动 FileSync 从云端下载备份文件，下载完成后自动恢复令牌 */
   private triggerFileSync(): void {
     if (!this.isHuaweiLoggedIn || !this.cloudSyncEnabled) {
       return;
@@ -457,21 +456,31 @@ export struct ShowCloudSyncDetailsPage {
       return;
     }
     this.lastSyncTriggerTime = now;
-    this.loadingText = $r('app.string.cloud_sync_syncing');
-    this.Is_loaded = true;
+    showSnackBar($r('app.string.cloud_sync_syncing'), SnackBarNotifyType.INFO);
     try {
-      this.fileSync.start().then(() => {
-        this.Is_loaded = false;
-        showSnackBar($r('app.string.cloud_sync_started'), SnackBarNotifyType.SUCCESS);
-      }).catch((err: BusinessError) => {
-        this.Is_loaded = false;
-        hilog.error(DOMAIN, TAG, `FileSync start failed: ${err.code} ${err.message}`);
-        showSnackBar($r('app.string.cloud_sync_start_failed'), SnackBarNotifyType.WARNING);
-      });
+      this.fileSync.start()
+        .then(() => {
+          hilog.info(DOMAIN, TAG, 'triggerFileSync: sync completed, restoring from cloud');
+          return CloudBackupManager.getInstance().restoreFromCloud();
+        })
+        .then((restored: boolean) => {
+          this.syncState = 4;
+          this.syncError = 0;
+          const rawTime = AppPreference.getPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME) as string;
+          this.lastSyncTime = SyncTimeHelper.formatTimestamp(SyncTimeHelper.parseStoredTimestamp(rawTime));
+          if (restored) {
+            showSnackBar($r('app.string.cloud_backup_restore_success'), SnackBarNotifyType.SUCCESS);
+          } else {
+            showSnackBar($r('app.string.cloud_backup_restore_failed'), SnackBarNotifyType.WARNING);
+          }
+        })
+        .catch((err: BusinessError) => {
+          hilog.error(DOMAIN, TAG, `triggerFileSync failed: ${err.code} ${err.message}`);
+          showSnackBar($r('app.string.cloud_sync_start_failed'), SnackBarNotifyType.WARNING);
+        });
     } catch (err) {
-      this.Is_loaded = false;
       let e = err as BusinessError;
-      hilog.error(DOMAIN, TAG,`FileSync start exception: ${e.code} ${e.message}`);
+      hilog.error(DOMAIN, TAG, `triggerFileSync exception: ${e.code} ${e.message}`);
       showSnackBar($r('app.string.cloud_sync_start_failed'), SnackBarNotifyType.WARNING);
     }
   }
@@ -547,17 +556,26 @@ export struct ShowCloudSyncDetailsPage {
     });
   }
 
-  /** 手动触发立即备份：调用 CloudBackupManager.backupToCloud 上传令牌到云端 */
+  /** 手动触发立即备份：调用 CloudBackupManager.backupToCloud 上传令牌到云端，含用户反馈 */
   private triggerCloudSync(): void {
     if (!this.isHuaweiLoggedIn || !this.cloudSyncEnabled) {
-      this.Is_loaded = false;
       return;
     }
-    CloudBackupManager.getInstance().backupToCloud().then(success => {
-      this.Is_loaded = false;
+    const now = Date.now();
+    if (now - this.lastSyncTriggerTime < this.SYNC_COOLDOWN_MS) {
+      showSnackBar($r('app.string.cloud_sync_cooldown'), SnackBarNotifyType.WARNING);
+      return;
+    }
+    this.lastSyncTriggerTime = now;
+    CloudBackupManager.getInstance().backupToCloud(this.fileSync).then(success => {
       if (success) {
         const rawTime = AppPreference.getPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME) as string;
         this.lastSyncTime = SyncTimeHelper.formatTimestamp(SyncTimeHelper.parseStoredTimestamp(rawTime));
+        this.syncState = 4;
+        this.syncError = 0;
+        showSnackBar($r('app.string.toast_backup_success'), SnackBarNotifyType.SUCCESS);
+      } else {
+        showSnackBar($r('app.string.cloud_sync_start_failed'), SnackBarNotifyType.WARNING);
       }
     });
   }

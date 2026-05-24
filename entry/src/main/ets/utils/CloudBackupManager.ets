@@ -20,10 +20,11 @@ import { TokenStore } from './TokenStore';
 import { TokenConfig } from './TokenConfig';
 import { fileIo as fs, cloudSync, fileUri } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
-import { buffer } from '@kit.ArkTS';
+import { buffer, taskpool } from '@kit.ArkTS';
 import { DeviceInfoHelper } from './DeviceInfoHelper';
 import { HuaweiAccountManager } from './HuaweiAccountManager';
 import { SyncTimeHelper } from './SyncTimeHelper';
+import { loadBackupHistoryRecords } from './CloudSyncTask';
 
 const TAG = 'CloudBackupManager';
 const DOMAIN = 0xFF00;
@@ -117,7 +118,7 @@ export class CloudBackupManager {
    * 流程：初始化 → 加密 → 写文件 → 清理超限旧备份 → 触发 FileSync 同步 → 记录时间戳
    * @returns 是否成功
    */
-  async backupToCloud(): Promise<boolean> {
+  async backupToCloud(externalSync?: cloudSync.FileSync): Promise<boolean> {
     await this.init();
     if (!this.context || !this.cloudDir) {
       hilog.error(DOMAIN, TAG, 'backupToCloud: not initialized');
@@ -172,7 +173,7 @@ export class CloudBackupManager {
       await this.deleteBackupFile(oldestRecord.id);
     }
 
-    await this.syncToCloud();
+    await this.syncToCloud(externalSync);
 
     AppPreference.setPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME, `${now}`);
 
@@ -431,68 +432,20 @@ export class CloudBackupManager {
     }
   }
 
-  /** 扫描云端目录，解析备份文件头部元信息，返回按时间戳降序排列的记录列表 */
+  /**
+   * 扫描云端目录，解析备份文件头部元信息，返回按时间戳降序排列的记录列表。
+   * 委托到 TaskPool 后台线程执行 I/O 密集型操作，避免阻塞主线程。
+   */
   private async listBackupRecords(): Promise<CloudBackupRecord[]> {
-    const records: CloudBackupRecord[] = [];
     try {
-      const files = fs.listFileSync(this.cloudDir);
-
-      for (const fileName of files) {
-        if (!fileName.startsWith(BACKUP_FILE_PREFIX) || !fileName.endsWith(BACKUP_FILE_EXT)) {
-          continue;
-        }
-
-        const filePath = `${this.cloudDir}/${fileName}`;
-        try {
-          const stat = await fs.stat(filePath);
-          const timestampStr = fileName.replace(BACKUP_FILE_PREFIX, '').replace(BACKUP_FILE_EXT, '');
-          const timestamp = parseInt(timestampStr);
-
-          if (isNaN(timestamp)) {
-            continue;
-          }
-
-          let tokenCount = 0;
-          let fileSize = stat.size;
-          let deviceId = '';
-          let deviceName = '';
-          try {
-            const tokenContent = await this.readFileContent(filePath);
-            const header = this.crypto.parseTokenHeader(tokenContent);
-            tokenCount = header.tokenCount;
-            fileSize = header.size;
-            deviceId = header.deviceId;
-            deviceName = header.deviceName;
-          } catch (e) {
-            hilog.warn(DOMAIN, TAG, `listBackupRecords: parse header failed for ${fileName}, using file stat`);
-          }
-
-          const d = new Date(timestamp);
-          const dateStr = `${d.getFullYear()}-${this.padZero(d.getMonth() + 1)}-${this.padZero(d.getDate())} ${this.padZero(d.getHours())}:${this.padZero(d.getMinutes())}`;
-
-          records.push({
-            id: fileName,
-            date: dateStr,
-            timestamp: timestamp,
-            tokenCount: tokenCount,
-            size: fileSize,
-            encrypted: true,
-            deviceId: deviceId,
-            deviceName: deviceName,
-            location: stat.location,
-          });
-        } catch (e) {
-          hilog.error(DOMAIN, TAG, `listBackupRecords: stat error for ${fileName}=${JSON.stringify(e)}`);
-        }
-      }
-
-      records.sort((a, b) => b.timestamp - a.timestamp);
+      const result = await taskpool.execute(loadBackupHistoryRecords, this.cloudDir);
+      const records = result as CloudBackupRecord[];
+      hilog.info(DOMAIN, TAG, `listBackupRecords: returning ${records.length} records`);
+      return records;
     } catch (e) {
       hilog.error(DOMAIN, TAG, `listBackupRecords: error=${JSON.stringify(e)}`);
+      return [];
     }
-
-    hilog.info(DOMAIN, TAG, `listBackupRecords: returning ${records.length} records`);
-    return records;
   }
 
   /** 读取文件全部内容为 UTF-8 字符串 */
@@ -506,14 +459,12 @@ export class CloudBackupManager {
     return buffer.from(uint8Array).toString('utf-8');
   }
 
-  /** 触发 FileSync 将本地变更同步到云端 */
-  private async syncToCloud(): Promise<void> {
-    if (!this.fileSync) {
-      this.fileSync = new cloudSync.FileSync();
-    }
+  /** 触发 FileSync 将本地变更同步到云端。接受可选的外部 FileSync 实例用于进度回调 */
+  private async syncToCloud(externalSync?: cloudSync.FileSync): Promise<void> {
+    const sync = externalSync || (this.fileSync || (this.fileSync = new cloudSync.FileSync()));
 
     try {
-      await this.fileSync.start();
+      await sync.start();
       hilog.info(DOMAIN, TAG, 'syncToCloud: started');
     } catch (e) {
       hilog.error(DOMAIN, TAG, `syncToCloud: error=${JSON.stringify(e)}`);
