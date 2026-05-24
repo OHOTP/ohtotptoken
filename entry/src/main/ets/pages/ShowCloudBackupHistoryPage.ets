@@ -56,13 +56,14 @@ export struct ShowCloudBackupHistoryPage {
     }
     this.lastSyncTime = now;
     const progressCallback = (pg: cloudSync.SyncProgress) => {
-      if (pg.state === 4) {
+      const state = pg.state as number;
+      if (state === 1 || state === 3 || state === 4 || state === 5) {
         try {
           this.fileSync.off('progress', progressCallback);
         } catch (e) {
           // ignore
         }
-        hilog.info(DOMAIN, TAG, 'syncAndLoadHistory: sync actually completed');
+        hilog.info(DOMAIN, TAG, `syncAndLoadHistory: terminal state=${state}`);
         this.loadBackupHistory();
       }
     };

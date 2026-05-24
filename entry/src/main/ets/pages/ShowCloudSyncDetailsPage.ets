@@ -66,10 +66,16 @@ export struct ShowCloudSyncDetailsPage {
   private syncProgressCallback = (pg: cloudSync.SyncProgress) => {
     this.syncState = pg.state as number;
     this.syncError = pg.error as number;
-    if (pg.state === 4 && this.syncCompleteCallback) {
+    if (!this.syncCompleteCallback) {
+      return;
+    }
+    if (pg.state === 4) {
       const cb = this.syncCompleteCallback;
       this.syncCompleteCallback = null;
       cb();
+    } else if (pg.state === 1 || pg.state === 3 || pg.state === 5) {
+      this.syncCompleteCallback = null;
+      showSnackBar($r('app.string.cloud_sync_start_failed'), SnackBarNotifyType.WARNING);
     }
   }
 
@@ -99,8 +105,9 @@ export struct ShowCloudSyncDetailsPage {
 
   }
 
-  /** 页面生命周期：注销 FileSync 进度回调 */
+  /** 页面生命周期：注销 FileSync 进度回调，清理待执行的回调避免离开页面后误触发 */
   aboutToDisappear(): void {
+    this.syncCompleteCallback = null;
     try {
       this.fileSync.off('progress', this.syncProgressCallback);
     } catch (err) {
