@@ -43,7 +43,7 @@ export struct ShowCloudBackupHistoryPage {
 
   /**
    * 先触发 FileSync 从云端下载文件（确保仅云端文件变为可读），
-   * 再通过 TaskPool 后台线程加载备份历史记录。
+   * 通过进度回调等待实际下载完成后，再通过 TaskPool 后台线程加载备份历史记录。
    * 2 分钟内跳过重复同步以避免频繁触发。
    */
   private syncAndLoadHistory(): void {
@@ -55,15 +55,33 @@ export struct ShowCloudBackupHistoryPage {
       return;
     }
     this.lastSyncTime = now;
-    this.fileSync.start()
-      .then(() => {
-        hilog.info(DOMAIN, TAG, 'syncAndLoadHistory: sync completed');
+    const progressCallback = (pg: cloudSync.SyncProgress) => {
+      if (pg.state === 4) {
+        try {
+          this.fileSync.off('progress', progressCallback);
+        } catch (e) {
+          // ignore
+        }
+        hilog.info(DOMAIN, TAG, 'syncAndLoadHistory: sync actually completed');
         this.loadBackupHistory();
-      })
-      .catch((err: BusinessError) => {
-        hilog.warn(DOMAIN, TAG, `syncAndLoadHistory: sync failed, loading anyway: ${err.code} ${err.message}`);
-        this.loadBackupHistory();
-      });
+      }
+    };
+    try {
+      this.fileSync.on('progress', progressCallback);
+    } catch (err) {
+      hilog.warn(DOMAIN, TAG, 'syncAndLoadHistory: on progress failed, loading anyway');
+      this.loadBackupHistory();
+      return;
+    }
+    this.fileSync.start().catch((err: BusinessError) => {
+      try {
+        this.fileSync.off('progress', progressCallback);
+      } catch (e) {
+        // ignore
+      }
+      hilog.warn(DOMAIN, TAG, `syncAndLoadHistory: start failed, loading anyway: ${err.code} ${err.message}`);
+      this.loadBackupHistory();
+    });
   }
 
   /**

@@ -60,11 +60,17 @@ export struct ShowCloudSyncDetailsPage {
   private lastSyncTriggerTime: number = 0;
   private isInitialSyncRunning: boolean = false;
   private lastInitialSyncTime: number = 0;
+  private syncCompleteCallback: (() => void) | null = null;
   private readonly SYNC_COOLDOWN_MS: number = 60000;
   private readonly INITIAL_SYNC_COOLDOWN_MS: number = 600000;
   private syncProgressCallback = (pg: cloudSync.SyncProgress) => {
     this.syncState = pg.state as number;
     this.syncError = pg.error as number;
+    if (pg.state === 4 && this.syncCompleteCallback) {
+      const cb = this.syncCompleteCallback;
+      this.syncCompleteCallback = null;
+      cb();
+    }
   }
 
   /** 页面生命周期：加载偏好设置、注册 FileSync 进度回调、按需触发初始同步 */
@@ -445,7 +451,7 @@ export struct ShowCloudSyncDetailsPage {
     return $r('app.string.cloud_sync_error_no_error');
   }
 
-  /** 手动触发从云端恢复：启动 FileSync 从云端下载备份文件，下载完成后自动恢复令牌 */
+  /** 手动触发从云端恢复：通过进度回调等待 FileSync 实际下载完成后再自动恢复令牌 */
   private triggerFileSync(): void {
     if (!this.isHuaweiLoggedIn || !this.cloudSyncEnabled) {
       return;
@@ -457,28 +463,27 @@ export struct ShowCloudSyncDetailsPage {
     }
     this.lastSyncTriggerTime = now;
     showSnackBar($r('app.string.cloud_sync_syncing'), SnackBarNotifyType.INFO);
-    try {
-      this.fileSync.start()
-        .then(() => {
-          hilog.info(DOMAIN, TAG, 'triggerFileSync: sync completed, restoring from cloud');
-          return CloudBackupManager.getInstance().restoreFromCloud();
-        })
-        .then((restored: boolean) => {
-          this.syncState = 4;
-          this.syncError = 0;
+    this.syncCompleteCallback = () => {
+      hilog.info(DOMAIN, TAG, 'triggerFileSync: sync actually completed, restoring from cloud');
+      CloudBackupManager.getInstance().restoreFromCloud().then((restored: boolean) => {
+        if (restored) {
+          AppPreference.setPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME, `${Date.now()}`);
           const rawTime = AppPreference.getPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME) as string;
           this.lastSyncTime = SyncTimeHelper.formatTimestamp(SyncTimeHelper.parseStoredTimestamp(rawTime));
-          if (restored) {
-            showSnackBar($r('app.string.cloud_backup_restore_success'), SnackBarNotifyType.SUCCESS);
-          } else {
-            showSnackBar($r('app.string.cloud_backup_restore_failed'), SnackBarNotifyType.WARNING);
-          }
-        })
-        .catch((err: BusinessError) => {
-          hilog.error(DOMAIN, TAG, `triggerFileSync failed: ${err.code} ${err.message}`);
-          showSnackBar($r('app.string.cloud_sync_start_failed'), SnackBarNotifyType.WARNING);
-        });
+          showSnackBar($r('app.string.cloud_backup_restore_success'), SnackBarNotifyType.SUCCESS);
+        } else {
+          showSnackBar($r('app.string.cloud_backup_restore_failed'), SnackBarNotifyType.WARNING);
+        }
+      });
+    };
+    try {
+      this.fileSync.start().catch((err: BusinessError) => {
+        this.syncCompleteCallback = null;
+        hilog.error(DOMAIN, TAG, `triggerFileSync start failed: ${err.code} ${err.message}`);
+        showSnackBar($r('app.string.cloud_sync_start_failed'), SnackBarNotifyType.WARNING);
+      });
     } catch (err) {
+      this.syncCompleteCallback = null;
       let e = err as BusinessError;
       hilog.error(DOMAIN, TAG, `triggerFileSync exception: ${e.code} ${e.message}`);
       showSnackBar($r('app.string.cloud_sync_start_failed'), SnackBarNotifyType.WARNING);
@@ -571,8 +576,6 @@ export struct ShowCloudSyncDetailsPage {
       if (success) {
         const rawTime = AppPreference.getPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME) as string;
         this.lastSyncTime = SyncTimeHelper.formatTimestamp(SyncTimeHelper.parseStoredTimestamp(rawTime));
-        this.syncState = 4;
-        this.syncError = 0;
         showSnackBar($r('app.string.toast_backup_success'), SnackBarNotifyType.SUCCESS);
       } else {
         showSnackBar($r('app.string.cloud_sync_start_failed'), SnackBarNotifyType.WARNING);
