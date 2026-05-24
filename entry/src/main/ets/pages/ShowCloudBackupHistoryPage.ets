@@ -33,12 +33,25 @@ export struct ShowCloudBackupHistoryPage {
   private scroller: Scroller = new Scroller();
   private fileSync: cloudSync.FileSync = new cloudSync.FileSync();
   private lastSyncTime: number = 0;
+  private historyProgressCallback: ((pg: cloudSync.SyncProgress) => void) | null = null;
   private readonly SYNC_INTERVAL_MS: number = 120000;
 
   /** 页面生命周期：获取本设备 ID，先从云端同步文件再加载备份历史列表 */
   aboutToAppear(): void {
     this.currentDeviceId = DeviceInfoHelper.getInstance().getDeviceId();
     this.syncAndLoadHistory();
+  }
+
+  /** 页面生命周期：清理 SyncProgress 监听器，避免离开页面后回调在已销毁组件上执行 */
+  aboutToDisappear(): void {
+    if (this.historyProgressCallback) {
+      try {
+        this.fileSync.off('progress', this.historyProgressCallback);
+      } catch (e) {
+        // ignore
+      }
+      this.historyProgressCallback = null;
+    }
   }
 
   /**
@@ -58,31 +71,37 @@ export struct ShowCloudBackupHistoryPage {
     const progressCallback = (pg: cloudSync.SyncProgress) => {
       const state = pg.state as number;
       if (state === 1 || state === 3 || state === 4 || state === 5) {
-        try {
-          this.fileSync.off('progress', progressCallback);
-        } catch (e) {
-          // ignore
-        }
+        this.unregisterHistoryCallback();
         hilog.info(DOMAIN, TAG, `syncAndLoadHistory: terminal state=${state}`);
         this.loadBackupHistory();
       }
     };
+    this.historyProgressCallback = progressCallback;
     try {
       this.fileSync.on('progress', progressCallback);
     } catch (err) {
+      this.historyProgressCallback = null;
       hilog.warn(DOMAIN, TAG, 'syncAndLoadHistory: on progress failed, loading anyway');
       this.loadBackupHistory();
       return;
     }
     this.fileSync.start().catch((err: BusinessError) => {
-      try {
-        this.fileSync.off('progress', progressCallback);
-      } catch (e) {
-        // ignore
-      }
+      this.unregisterHistoryCallback();
       hilog.warn(DOMAIN, TAG, `syncAndLoadHistory: start failed, loading anyway: ${err.code} ${err.message}`);
       this.loadBackupHistory();
     });
+  }
+
+  /** 清理 syncAndLoadHistory 注册的 progress 回调，防内存泄漏 */
+  private unregisterHistoryCallback(): void {
+    if (this.historyProgressCallback) {
+      try {
+        this.fileSync.off('progress', this.historyProgressCallback!);
+      } catch (e) {
+        // ignore
+      }
+      this.historyProgressCallback = null;
+    }
   }
 
   /**
