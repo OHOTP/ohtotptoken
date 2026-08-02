@@ -4,7 +4,7 @@ import { MaterialPolicy } from '../../utils/MaterialPolicy';
 import { showSnackBar, SnackBarNotifyType } from 'common';
 import { SubItemToggle } from '../../components/SubItemToggle'
 import { AppStorageV2, curves } from '@kit.ArkUI';
-import { AppPreference, SettingColorMode, SettingTopEffectType, SettingBottomTabsType, TokenPreference, AVAILABLE_TOP_EFFECT_TYPES, AVAILABLE_BOTTOM_TABS_TYPES, AVAILABLE_MATERIAL_MODES, AVAILABLE_IMMERSIVE_STYLES, SettingMaterialMode, SettingImmersiveStyle, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES } from 'common';
+import { AppPreference, SettingColorMode, SettingTopEffectType, SettingBottomTabsType, TokenPreference, MaterialPreference, AVAILABLE_TOP_EFFECT_TYPES, AVAILABLE_BOTTOM_TABS_TYPES, AVAILABLE_MATERIAL_MODES, AVAILABLE_IMMERSIVE_STYLES, SettingMaterialMode, SettingImmersiveStyle, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES } from 'common';
 import { SubItemButton } from '../../components/SubItemButton';
 import { SettingItem } from '../../components/SettingItem';
 import { SubItemDivider } from '../../components/SubItemDivider';
@@ -26,6 +26,7 @@ export struct AppearanceSheet {
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Local debug_mode_is_on: boolean = AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON) as boolean;
   @Local token_preference: TokenPreference = AppStorageV2.connect(TokenPreference) as TokenPreference;
+  @Local material_preference: MaterialPreference = AppStorageV2.connect(MaterialPreference) as MaterialPreference;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   private sheetScroller: Scroller = new Scroller();
   private appCtx = AppStorage.get<common.UIAbilityContext>('appContext') as common.UIAbilityContext;
@@ -121,9 +122,7 @@ export struct AppearanceSheet {
                     SettingMaterialMode.AUTO,
                   onChange: (value: number) => {
                     AppPreference.setPreference(PREF_KEYS.APPEARANCE_MATERIAL_MODE, value);
-                    if (this.appCtx.eventHub != undefined) {
-                      this.appCtx.eventHub.emit(EVENT_NAMES.MATERIAL_MODE_CHANGED);
-                    }
+                    this.material_preference.app_appearance_material_mode = value;
                   }
                 })
 
@@ -138,9 +137,7 @@ export struct AppearanceSheet {
                     SettingImmersiveStyle.REGULAR,
                   onChange: (value: number) => {
                     AppPreference.setPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE, value);
-                    if (this.appCtx.eventHub != undefined) {
-                      this.appCtx.eventHub.emit(EVENT_NAMES.MATERIAL_MODE_CHANGED);
-                    }
+                    this.material_preference.app_appearance_immersive_style = value;
                   }
                 })
 

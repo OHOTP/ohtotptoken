@@ -1,5 +1,5 @@
-import { AppPreference, PREF_KEYS, SettingImmersiveStyle, SettingMaterialMode } from 'common';
-import { uiMaterial } from '@kit.ArkUI';
+import { MaterialPreference, SettingImmersiveStyle, SettingMaterialMode } from 'common';
+import { AppStorageV2, uiMaterial } from '@kit.ArkUI';
 import { MaterialPolicy, MaterialTier } from '../utils/MaterialPolicy';
 import { SETTING_GROUP_RADIUS } from './SettingStyle';
 
@@ -36,8 +36,9 @@ export enum MaterialThickness {
  *   反色）。已逐文件 grep colorMode 确认：现有引用均为外观自定义的深浅色
  *   token 颜色（TokenItem/SnackBar/ThemeColorMode），与材质无关，无需删除
  *
- * 注意：读取偏好的方法在运行期调用，组件应在 build 中调用以便
- * EVENT_NAMES.MATERIAL_MODE_CHANGED 广播后重建时取到新值。
+ * 注意：读取偏好的方法在运行期调用，组件应在 build 中调用。
+ * 偏好读取自 MaterialPreference 的 @Trace 字段（AppStorageV2 全局共享），
+ * build 中读取即建立依赖，设置项变更后消费组件自动重建取到新值。
  */
 export class MaterialTheme {
   /** 材质模式下表面背景色：透明（透出 ImmersiveMaterial 材质层） */
@@ -47,13 +48,21 @@ export class MaterialTheme {
   static readonly RADIUS_GROUP: number = SETTING_GROUP_RADIUS;
 
   /**
+   * 获取全局共享的材质偏好实例（AppStorageV2 单例）。
+   * 在组件 build 中经此方法读取 @Trace 字段即建立依赖，
+   * 偏好变更后该组件自动重建。
+   */
+  private static materialPref(): MaterialPreference {
+    return AppStorageV2.connect(MaterialPreference, () => new MaterialPreference())!;
+  }
+
+  /**
    * 解析用户材质模式偏好后的有效材质档位
    *
    * @returns SOLID 偏好强制 'solid'；AUTO/IMMERSIVE 返回 MaterialPolicy 设备能力档位
    */
   static effectiveTier(): MaterialTier {
-    const mode = AppPreference.getPreference(PREF_KEYS.APPEARANCE_MATERIAL_MODE) as number;
-    if (mode === SettingMaterialMode.SOLID) {
+    if (MaterialTheme.materialPref().app_appearance_material_mode === SettingMaterialMode.SOLID) {
       return 'solid';
     }
     // AUTO 与 IMMERSIVE 均为尽力而为：设备支持什么用什么
@@ -74,8 +83,7 @@ export class MaterialTheme {
    * @returns MaterialThickness 档位
    */
   static preferredThickness(): MaterialThickness {
-    const style = AppPreference.getPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE) as number;
-    switch (style) {
+    switch (MaterialTheme.materialPref().app_appearance_immersive_style) {
       case SettingImmersiveStyle.ULTRA_THIN:
         return MaterialThickness.ULTRA_THIN;
       case SettingImmersiveStyle.THIN:

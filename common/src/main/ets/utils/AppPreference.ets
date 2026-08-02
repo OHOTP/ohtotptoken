@@ -37,8 +37,6 @@ export enum EVENT_NAMES {
   START_TOKEN_SORT = 'onStartTokenSort',
   /** 华为账号状态变更事件（登录/登出/初始化完成后由 Index 广播,SheetCoordinator 监听同步） */
   HUAWEI_ACCOUNT_STATE_CHANGED = 'onHuaweiAccountStateChanged',
-  /** 材质模式/厚度偏好变更事件（Phase 4.1,材质消费组件监听后重建材质表面） */
-  MATERIAL_MODE_CHANGED = 'onMaterialModeChanged',
 }
 
 /**
@@ -350,6 +348,21 @@ export class TokenPreference {
 }
 
 /**
+ * 材质偏好配置类
+ * 存储材质模式与沉浸材质厚度偏好，@Trace 字段供 UI 建立依赖：
+ * MaterialTheme 静态方法在组件 build 中读取本类字段时，依赖被收集，
+ * 偏好变更后所有材质消费组件（MaterialSurface/MaterialSheetStyle 等）自动重建。
+ * 写入遵循项目既有双写模式：先 AppPreference.setPreference 持久化，再赋值 @Trace 字段。
+ */
+@ObservedV2
+export class MaterialPreference {
+  /** 材质模式（SettingMaterialMode：AUTO/IMMERSIVE/SOLID） */
+  @Trace app_appearance_material_mode: number = SettingMaterialMode.AUTO;
+  /** 沉浸材质厚度偏好（SettingImmersiveStyle 五档） */
+  @Trace app_appearance_immersive_style: number = SettingImmersiveStyle.REGULAR;
+}
+
+/**
  * 路由名称常量
  * 统一管理所有pushPathByName使用的路由名称
  */
@@ -527,6 +540,7 @@ export class AppPreference {
       }
     }
     AppPreference.loadTokenAppearance();
+    AppPreference.loadMaterialAppearance();
   }
 
   /**
@@ -611,6 +625,19 @@ export class AppPreference {
       AppPreference.getPreference(PREF_KEYS.APPEARANCE_CHAIN_ANIMATION_ENABLE) as boolean;
     token_appearance.app_appearance_long_press_duration =
       Math.max(200, Math.min(1000, AppPreference.getPreference(PREF_KEYS.APPEARANCE_LONG_PRESS_DURATION) as number));
+  }
+
+  /**
+   * 加载材质偏好到AppStorageV2
+   * 从偏好设置中读取材质模式与沉浸材质厚度并更新到MaterialPreference对象
+   */
+  private static loadMaterialAppearance(): void {
+    let material_preference: MaterialPreference =
+      AppStorageV2.connect(MaterialPreference, () => new MaterialPreference())!;
+    material_preference.app_appearance_material_mode =
+      AppPreference.getPreference(PREF_KEYS.APPEARANCE_MATERIAL_MODE) as number;
+    material_preference.app_appearance_immersive_style =
+      AppPreference.getPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE) as number;
   }
 
   /**
