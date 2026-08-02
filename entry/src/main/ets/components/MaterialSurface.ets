@@ -66,6 +66,10 @@ export struct MaterialSurface {
           this.content();
         }
       }
+        // 表面默认填满父级可用宽度（卡片语义），高度由内容决定；
+        // 注意：尾随闭包语法后不能再链式调用系统属性（编译期解析为新语句），
+        // 调用方需要的宽度由本组件内部保证
+        .width('100%')
         .borderRadius(this.radius)
         .backgroundColor(MaterialTheme.MATERIAL_SURFACE_BG)
         .systemMaterial(this.createImmersiveMaterial())
@@ -75,6 +79,7 @@ export struct MaterialSurface {
           this.content();
         }
       }
+        .width('100%')
         .borderRadius(this.radius)
         .backgroundColor(this.solidColor)
     }

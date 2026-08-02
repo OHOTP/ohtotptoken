@@ -1,5 +1,5 @@
-
-import { SETTING_GROUP_RADIUS, SETTING_TITLE_INSET_LEFT, SETTING_TITLE_INSET_VERTICAL } from './SettingStyle';
+import { SETTING_TITLE_INSET_LEFT, SETTING_TITLE_INSET_VERTICAL } from './SettingStyle';
+import { MaterialSurface } from './MaterialSurface';
 
 @Builder
 function DefaultBuilder() {
@@ -26,17 +26,19 @@ export struct SettingItem {
           .width('100%')
           .textAlign(TextAlign.Start)
       }
-      Column() {
-        if (this.subItemBuilder) {
-          this.subItemBuilder();
+      // 分组背景是分组列表唯一的背景层（Phase 5.3 起由 MaterialSurface 接管：
+      // 沉浸档渲染 ImmersiveMaterial，其余档位回落 item_bg 实体色；
+      // 圆角/实体色均取 MaterialSurface 默认值），子项背景须保持透明，
+      // 不使用阴影（与材质表面冲突）
+      MaterialSurface() {
+        Column() {
+          if (this.subItemBuilder) {
+            this.subItemBuilder();
+          }
         }
+        .alignItems(HorizontalAlign.Start)
+        .width('100%')
       }
-      .alignItems(HorizontalAlign.Start)
-      .width('100%')
-      // 分组背景是分组列表唯一的不透明层，Phase 3 由 MaterialSurface 接管；
-      // 子项背景须保持透明，不使用阴影（与材质表面冲突）
-      .backgroundColor($r('app.color.item_bg'))
-      .borderRadius(SETTING_GROUP_RADIUS)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)

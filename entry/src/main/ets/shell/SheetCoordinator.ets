@@ -15,6 +15,8 @@ import { HdsListItemCard, PrefixIcon, IconSize, SuffixArrow, ScrollEffectType } 
 import { CommonConstants } from 'common';
 import lazy { HuaweiAccountManager, HuaweiUserInfo, HuaweiAccountLoginError } from 'common';
 import { MaterialSheetStyle } from '../components/MaterialSheetStyle';
+import { MaterialSurface } from '../components/MaterialSurface';
+import { MaterialTheme } from '../components/MaterialTheme';
 
 /**
  * Sheet 协调器(Task 3.1)
@@ -266,7 +268,8 @@ export struct SheetCoordinator {
     List({ space: 10, scroller: this.scroller }) {
       // 华为账号登录卡片
       ListItem() {
-        Row({ space: 16 }) {
+        MaterialSurface({ radius: $r('sys.float.ohos_id_menu_outer_border_radius') }) {
+          Row({ space: 16 }) {
           if (this.isHuaweiLoggedIn && this.huaweiUser && this.huaweiUser.avatarUri !== '') {
             Image(this.huaweiUser.avatarUri)
               .draggable(false)
@@ -315,20 +318,19 @@ export struct SheetCoordinator {
           .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
         }
-        .width('100%')
-        .padding({ left: 20, right: 20, top: 16, bottom: 16 })
-        .alignItems(VerticalAlign.Center)
-        .borderRadius($r('sys.float.ohos_id_menu_outer_border_radius'))
-        .backgroundColor($r('app.color.item_bg'))
-        .onClick(() => {
-          if (!this.isHuaweiLoggedIn) {
-            this.triggerHuaweiLogin();
-          } else {
-            this.isAccountSheetVisible = true;
-          }
-        })
-        .bindSheet($$this.isAccountSheetVisible, this.AccountSheetBuilder(),
-          MaterialSheetStyle.options(SheetSize.MEDIUM))
+          .width('100%')
+          .padding({ left: 20, right: 20, top: 16, bottom: 16 })
+          .alignItems(VerticalAlign.Center)
+          .onClick(() => {
+            if (!this.isHuaweiLoggedIn) {
+              this.triggerHuaweiLogin();
+            } else {
+              this.isAccountSheetVisible = true;
+            }
+          })
+          .bindSheet($$this.isAccountSheetVisible, this.AccountSheetBuilder(),
+            MaterialSheetStyle.options(SheetSize.MEDIUM))
+        }
       }
       .padding({
         left: $r('sys.float.padding_level8'),
@@ -337,11 +339,13 @@ export struct SheetCoordinator {
 
       // 备份与迁移入口
       ListItem() {
-        Column() {
+        MaterialSurface({ radius: $r('sys.float.ohos_id_menu_outer_border_radius') }) {
+          Column() {
           HdsListItemCard({
             cardPrefixMargin: $r('sys.float.padding_level2'),
             cardSuffixMargin: $r('sys.float.padding_level2'),
-            cardBackgroundColor: $r('app.color.item_bg'),
+            // 沉浸档透明透出 MaterialSurface 材质层，其余档位保持 item_bg
+            cardBackgroundColor: MaterialTheme.surfaceBackground($r('app.color.item_bg')),
             cardHeight: CommonConstants.SETTING_OPTION_CARD_HEIGHT,
             prefixItem: new PrefixIcon({
               iconSize: IconSize.SYSTEM_ICON,
@@ -361,13 +365,12 @@ export struct SheetCoordinator {
           })
             .bindSheet($$this.isBackupSheetVisible, this.BackupAndMigrationSheetBuilder(),
               MaterialSheetStyle.options())
+          }
+          .padding({
+            top: $r('sys.float.padding_level2'),
+            bottom: $r('sys.float.padding_level2'),
+          })
         }
-        .padding({
-          top: $r('sys.float.padding_level2'),
-          bottom: $r('sys.float.padding_level2'),
-        })
-        .borderRadius($r('sys.float.ohos_id_menu_outer_border_radius'))
-        .backgroundColor($r('app.color.item_bg'))
       }
       .padding({
         left: $r('sys.float.padding_level8'),
@@ -376,11 +379,13 @@ export struct SheetCoordinator {
 
       // 安全性入口
       ListItem() {
-        Column() {
+        MaterialSurface({ radius: $r('sys.float.ohos_id_menu_outer_border_radius') }) {
+          Column() {
           HdsListItemCard({
             cardPrefixMargin: $r('sys.float.padding_level2'),
             cardSuffixMargin: $r('sys.float.padding_level2'),
-            cardBackgroundColor: $r('app.color.item_bg'),
+            // 沉浸档透明透出 MaterialSurface 材质层，其余档位保持 item_bg
+            cardBackgroundColor: MaterialTheme.surfaceBackground($r('app.color.item_bg')),
             cardHeight: CommonConstants.SETTING_OPTION_CARD_HEIGHT,
             prefixItem: new PrefixIcon({
               iconSize: IconSize.SYSTEM_ICON,
@@ -400,13 +405,12 @@ export struct SheetCoordinator {
           })
             .bindSheet($$this.isSafetySheetVisible, this.SecuritySheetBuilder(),
               MaterialSheetStyle.options())
+          }
+          .padding({
+            top: $r('sys.float.padding_level2'),
+            bottom: $r('sys.float.padding_level2'),
+          })
         }
-        .padding({
-          top: $r('sys.float.padding_level2'),
-          bottom: $r('sys.float.padding_level2'),
-        })
-        .borderRadius($r('sys.float.ohos_id_menu_outer_border_radius'))
-        .backgroundColor($r('app.color.item_bg'))
       }
       .padding({
         left: $r('sys.float.padding_level8'),
@@ -415,11 +419,13 @@ export struct SheetCoordinator {
 
       // 外观与功能入口
       ListItem() {
-        Column() {
+        MaterialSurface({ radius: $r('sys.float.ohos_id_menu_outer_border_radius') }) {
+          Column() {
           HdsListItemCard({
             cardPrefixMargin: $r('sys.float.padding_level2'),
             cardSuffixMargin: $r('sys.float.padding_level2'),
-            cardBackgroundColor: $r('app.color.item_bg'),
+            // 沉浸档透明透出 MaterialSurface 材质层，其余档位保持 item_bg
+            cardBackgroundColor: MaterialTheme.surfaceBackground($r('app.color.item_bg')),
             cardHeight: CommonConstants.SETTING_OPTION_CARD_HEIGHT,
             prefixItem: new PrefixIcon({
               iconSize: IconSize.SYSTEM_ICON,
@@ -439,13 +445,12 @@ export struct SheetCoordinator {
           })
             .bindSheet($$this.isAppearanceSheetVisible, this.AppearanceSheetBuilder(),
               MaterialSheetStyle.options())
+          }
+          .padding({
+            top: $r('sys.float.padding_level2'),
+            bottom: $r('sys.float.padding_level2'),
+          })
         }
-        .padding({
-          top: $r('sys.float.padding_level2'),
-          bottom: $r('sys.float.padding_level2'),
-        })
-        .borderRadius($r('sys.float.ohos_id_menu_outer_border_radius'))
-        .backgroundColor($r('app.color.item_bg'))
       }
       .padding({
         left: $r('sys.float.padding_level8'),
@@ -454,11 +459,13 @@ export struct SheetCoordinator {
 
       // 数据同步入口
       ListItem() {
-        Column() {
+        MaterialSurface({ radius: $r('sys.float.ohos_id_menu_outer_border_radius') }) {
+          Column() {
           HdsListItemCard({
             cardPrefixMargin: $r('sys.float.padding_level2'),
             cardSuffixMargin: $r('sys.float.padding_level2'),
-            cardBackgroundColor: $r('app.color.item_bg'),
+            // 沉浸档透明透出 MaterialSurface 材质层，其余档位保持 item_bg
+            cardBackgroundColor: MaterialTheme.surfaceBackground($r('app.color.item_bg')),
             cardHeight: CommonConstants.SETTING_OPTION_CARD_HEIGHT,
             prefixItem: new PrefixIcon({
               iconSize: IconSize.SYSTEM_ICON,
@@ -478,13 +485,12 @@ export struct SheetCoordinator {
           })
             .bindSheet($$this.isDataSyncSheetVisible, this.DataSyncSheetBuilder(),
               MaterialSheetStyle.options())
+          }
+          .padding({
+            top: $r('sys.float.padding_level2'),
+            bottom: $r('sys.float.padding_level2'),
+          })
         }
-        .padding({
-          top: $r('sys.float.padding_level2'),
-          bottom: $r('sys.float.padding_level2'),
-        })
-        .borderRadius($r('sys.float.ohos_id_menu_outer_border_radius'))
-        .backgroundColor($r('app.color.item_bg'))
       }
       .padding({
         left: $r('sys.float.padding_level8'),
@@ -493,11 +499,13 @@ export struct SheetCoordinator {
 
       // 协议与声明入口
       ListItem() {
-        Column() {
+        MaterialSurface({ radius: $r('sys.float.ohos_id_menu_outer_border_radius') }) {
+          Column() {
           HdsListItemCard({
             cardPrefixMargin: $r('sys.float.padding_level2'),
             cardSuffixMargin: $r('sys.float.padding_level2'),
-            cardBackgroundColor: $r('app.color.item_bg'),
+            // 沉浸档透明透出 MaterialSurface 材质层，其余档位保持 item_bg
+            cardBackgroundColor: MaterialTheme.surfaceBackground($r('app.color.item_bg')),
             cardHeight: CommonConstants.SETTING_OPTION_CARD_HEIGHT,
             prefixItem: new PrefixIcon({
               iconSize: IconSize.SYSTEM_ICON,
@@ -517,13 +525,12 @@ export struct SheetCoordinator {
           })
             .bindSheet($$this.isAgreementSheetVisible, this.AgreementSheetBuilder(),
               MaterialSheetStyle.options())
+          }
+          .padding({
+            top: $r('sys.float.padding_level2'),
+            bottom: $r('sys.float.padding_level2'),
+          })
         }
-        .padding({
-          top: $r('sys.float.padding_level2'),
-          bottom: $r('sys.float.padding_level2'),
-        })
-        .borderRadius($r('sys.float.ohos_id_menu_outer_border_radius'))
-        .backgroundColor($r('app.color.item_bg'))
       }
       .padding({
         left: $r('sys.float.padding_level8'),
@@ -532,11 +539,13 @@ export struct SheetCoordinator {
 
       // 建议与反馈入口
       ListItem() {
-        Column() {
+        MaterialSurface({ radius: $r('sys.float.ohos_id_menu_outer_border_radius') }) {
+          Column() {
           HdsListItemCard({
             cardPrefixMargin: $r('sys.float.padding_level2'),
             cardSuffixMargin: $r('sys.float.padding_level2'),
-            cardBackgroundColor: $r('app.color.item_bg'),
+            // 沉浸档透明透出 MaterialSurface 材质层，其余档位保持 item_bg
+            cardBackgroundColor: MaterialTheme.surfaceBackground($r('app.color.item_bg')),
             cardHeight: CommonConstants.SETTING_OPTION_CARD_HEIGHT,
             prefixItem: new PrefixIcon({
               iconSize: IconSize.SYSTEM_ICON,
@@ -556,13 +565,12 @@ export struct SheetCoordinator {
           })
             .bindSheet($$this.isFeedbackSheetVisible, this.FeedbackSheetBuilder(),
               MaterialSheetStyle.options())
+          }
+          .padding({
+            top: $r('sys.float.padding_level2'),
+            bottom: $r('sys.float.padding_level2'),
+          })
         }
-        .padding({
-          top: $r('sys.float.padding_level2'),
-          bottom: $r('sys.float.padding_level2'),
-        })
-        .borderRadius($r('sys.float.ohos_id_menu_outer_border_radius'))
-        .backgroundColor($r('app.color.item_bg'))
       }
       .padding({
         left: $r('sys.float.padding_level8'),
@@ -571,11 +579,13 @@ export struct SheetCoordinator {
 
       // 关于入口
       ListItem() {
-        Column() {
+        MaterialSurface({ radius: $r('sys.float.ohos_id_menu_outer_border_radius') }) {
+          Column() {
           HdsListItemCard({
             cardPrefixMargin: $r('sys.float.padding_level2'),
             cardSuffixMargin: $r('sys.float.padding_level2'),
-            cardBackgroundColor: $r('app.color.item_bg'),
+            // 沉浸档透明透出 MaterialSurface 材质层，其余档位保持 item_bg
+            cardBackgroundColor: MaterialTheme.surfaceBackground($r('app.color.item_bg')),
             cardHeight: CommonConstants.SETTING_OPTION_CARD_HEIGHT,
             prefixItem: new PrefixIcon({
               iconSize: IconSize.SYSTEM_ICON,
@@ -595,13 +605,12 @@ export struct SheetCoordinator {
           })
             .bindSheet($$this.isAboutSheetVisible, this.AboutSheetBuilder(),
               MaterialSheetStyle.options())
+          }
+          .padding({
+            top: $r('sys.float.padding_level2'),
+            bottom: $r('sys.float.padding_level2'),
+          })
         }
-        .padding({
-          top: $r('sys.float.padding_level2'),
-          bottom: $r('sys.float.padding_level2'),
-        })
-        .borderRadius($r('sys.float.ohos_id_menu_outer_border_radius'))
-        .backgroundColor($r('app.color.item_bg'))
       }
       .padding({
         left: $r('sys.float.padding_level8'),
