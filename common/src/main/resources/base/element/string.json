@@ -1337,6 +1337,38 @@
       "value": "Your device does not support anti-peep protection"
     },
     {
+      "name": "menu_add_nfc_read",
+      "value": "Read NFC"
+    },
+    {
+      "name": "nfc_read_prompt_default",
+      "value": "Place the NFC device near the reading area"
+    },
+    {
+      "name": "nfc_read_prompt_password",
+      "value": "Enter the password, then place the NFC device near the reading area again"
+    },
+    {
+      "name": "nfc_read_password_placeholder",
+      "value": "NFC device password"
+    },
+    {
+      "name": "nfc_read_success",
+      "value": "Read %d tokens"
+    },
+    {
+      "name": "nfc_read_failed",
+      "value": "Read failed. Please try again"
+    },
+    {
+      "name": "nfc_read_no_tokens",
+      "value": "No available tokens found"
+    },
+    {
+      "name": "nfc_unsupported",
+      "value": "NFC is not supported on this device"
+    },
+    {
       "name": "dialog_icon_search_placeholder",
       "value": "Search icons..."
     },

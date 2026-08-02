@@ -43,6 +43,10 @@ import { AppShell } from '../shell/AppShell';
 import { HomeTabs } from '../shell/HomeTabs';
 // [冷启动优化] SheetCoordinator("我的"页签 + 8 个 Sheet)仅在用户切换到"我的"Tab 时触发模块评估
 import lazy { SheetCoordinator } from '../shell/SheetCoordinator';
+import { NFCReadDialog } from '../dialogs/NFCReadDialog';
+import { NfcSessionTokens } from '../oath/NfcSessionTokens';
+import { NfcOathReader } from '../oath/NfcOathReader';
+import { OathReadResult } from '../oath/OathApplet';
 
 const TAG = 'PrivacySubscribe';
 
@@ -81,6 +85,11 @@ function TokenAddMenuBuilder(host: Index) {
         host.openSteamAddDialog();
       })
       .accessibilityText($r('app.string.tab_token_add_stream_key'))
+    MenuItem({ content: $r('app.string.menu_add_nfc_read') })
+      .onClick(() => {
+        host.openNfcReadDialog();
+      })
+      .accessibilityText($r('app.string.menu_add_nfc_read'))
   }
 }
 
@@ -167,6 +176,7 @@ struct Index {
   private dialog_totp_config?: CustomDialogController;
   private dialog_forti_config?: CustomDialogController;
   private dialog_steam_config?: CustomDialogController;
+  private dialog_nfc_read?: CustomDialogController;
 
   // [性能打点] hiTraceMeter 用于 DevEco Profiler 冷启动分析，搜索 "H:" 前缀查看各阶段耗时
   aboutToAppear(): void {
@@ -195,6 +205,8 @@ struct Index {
       this.appCtx.eventHub.on(EVENT_NAMES.START_TOKEN_SORT, () => {
         this.pageInfos.pushPathByName(ROUTE_NAMES.TokenSortPage, null);
       });
+      // NFC 外部令牌变更事件：合并刷新（本地令牌 + 会话级 NFC 令牌）
+      this.appCtx.eventHub.on(EVENT_NAMES.NFC_EXTERNAL_TOKENS_CHANGED, () => this.refreshDisplayTokens());
       this.appCtx.eventHub.on(EVENT_NAMES.FILE_DROP, (uri: string) => {
         this.backup_select_uri = uri;
         if (this.backup_select_uri.endsWith('.bak')) {
@@ -234,7 +246,7 @@ struct Index {
       stepReached = 2;
       hiTraceMeter.finishTrace('H:aboutToAppear.getTokens', 1);
 
-      this.CurrentTokens = tokens;
+      this.CurrentTokens = [...tokens, ...NfcSessionTokens.getInstance().getTokens()];
       this.CurrentTokensCount = tokens.length;
       this.token_loading = false;
       this.appIsInit = true;
@@ -475,9 +487,8 @@ struct Index {
     if (this.appCtx.eventHub!= undefined) this.appCtx.eventHub.emit(EVENT_NAMES.TIMESTAMP_CHANGED, timestamp, true);
     //页面打开的时候刷新token
     tkStore.LoadTokenByDataBase().then(() => {
-      // 接收同步完成后刷新数据
-      tkStore.getTokens().then((tokens) => {
-        this.CurrentTokens = tokens;
+      // 接收同步完成后刷新数据（合并 NFC 外部令牌，保证外部令牌不丢失）
+      this.refreshDisplayTokens().then(() => {
         this.token_loading = false;
       });
     });
@@ -508,8 +519,17 @@ struct Index {
     }
   }
 
+  /**
+   * 合并刷新：本地令牌 + 会话级 NFC 外部令牌。
+   * 外部令牌不持久化，所有刷新路径（TOKEN_CHANGED / NFC_EXTERNAL_TOKENS_CHANGED /
+   * onPageShow / 删除）统一经此方法，保证外部令牌在本地令牌增删后不丢失、不重复。
+   */
+  async refreshDisplayTokens(): Promise<void> {
+    this.CurrentTokens = [...await tkStore.getTokens(), ...NfcSessionTokens.getInstance().getTokens()];
+  }
+
   async onTokenChanged(): Promise<void> {
-    this.CurrentTokens = await tkStore.getTokens();
+    await this.refreshDisplayTokens();
   }
 
   async updateTokenConfig(conf: TokenConfig, toast: boolean = true): Promise<boolean> {
@@ -523,7 +543,7 @@ struct Index {
       const isNew = !this.CurrentTokens.some(t => t.TokenUUID === conf.TokenUUID);
       await tkStore.updateToken(conf);
       if (isNew) {
-        this.CurrentTokens = [...(await tkStore.getTokens())];
+        await this.refreshDisplayTokens();
       }
       if (toast) {
         showSnackBar($r('app.string.toast_token_update', conf.TokenIssuer, conf.TokenName), SnackBarNotifyType.SUCCESS);
@@ -554,7 +574,7 @@ struct Index {
       }
     }
     if (hasNew) {
-      this.CurrentTokens = [...(await tkStore.getTokens())];
+      await this.refreshDisplayTokens();
     }
     if (failCount === 0) {
       showSnackBar($r('app.string.toast_multi_token_update', tokens.length), SnackBarNotifyType.SUCCESS);
@@ -663,6 +683,34 @@ struct Index {
       })
     })
     this.dialog_steam_config.open()
+  }
+
+  openNfcReadDialog(): void {
+    // NFC 能力检查不通过：SnackBar 提示并返回，不打开弹窗
+    if (!NfcOathReader.getInstance().isNfcSupported()) {
+      showSnackBar($r('app.string.nfc_unsupported'), SnackBarNotifyType.WARNING);
+      return;
+    }
+    this.dialog_nfc_read = new CustomDialogController({
+      builder: NFCReadDialog({
+        onSuccess: (result: OathReadResult) => {
+          const count = NfcSessionTokens.getInstance().applyResult(result);
+          showSnackBar($r('app.string.nfc_read_success', count), SnackBarNotifyType.SUCCESS);
+          this.dialog_nfc_read?.close();
+        },
+        onClose: () => {
+          this.dialog_nfc_read?.close();
+        }
+      }),
+      cancel: () => {},
+      autoCancel: true,
+      alignment: DialogAlignment.Bottom,
+      offset: { dx: 0, dy: -20 },
+      gridCount: 4,
+      customStyle: false,
+      cornerRadius: 10,
+    });
+    this.dialog_nfc_read.open();
   }
 
   // 准备接入标准化隐私托管

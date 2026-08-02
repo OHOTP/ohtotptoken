@@ -14,6 +14,7 @@ import { AppWindowInfo } from 'common';
 import { GenericDataSource } from 'common';
 import { showSnackBar, SnackBarNotifyType } from 'common';
 import { common } from "@kit.AbilityKit";
+import { NfcSessionTokens } from "../oath/NfcSessionTokens";
 import { hilog } from "@kit.PerformanceAnalysisKit";
 import { HdsListItem } from '@kit.UIDesignKit';
 
@@ -201,31 +202,34 @@ export struct TokenListPage {
     Row({ space: 10 }) {
       // 侧滑操作按钮(Phase 5.7): MaterialSurface 承载语义色材质 + 光感反馈
       // + 按压形变; 按钮背景按档位映射(沉浸档透明透出材质, 其余档语义色)
-      MaterialSurface({
-        thickness: MaterialThickness.THIN,
-        lightEffect: true,
-        interactive: true,
-        materialColor: Color.Orange,
-        radius: '50%',
-        solidColor: Color.Transparent,
-        fillWidth: false
-      }) {
-        Button({ type: ButtonType.Circle }) {
-          Text() {
-            SymbolSpan($r('sys.symbol.qrcode'))
-              .fontSize(30)
-              .fontWeight(FontWeight.Medium)
-              .fontColor([Color.White])
+      // NFC 外部令牌无持久化 URI，不提供二维码入口
+      if (vm.config.TokenType !== otpType.NFC_external) {
+        MaterialSurface({
+          thickness: MaterialThickness.THIN,
+          lightEffect: true,
+          interactive: true,
+          materialColor: Color.Orange,
+          radius: '50%',
+          solidColor: Color.Transparent,
+          fillWidth: false
+        }) {
+          Button({ type: ButtonType.Circle }) {
+            Text() {
+              SymbolSpan($r('sys.symbol.qrcode'))
+                .fontSize(30)
+                .fontWeight(FontWeight.Medium)
+                .fontColor([Color.White])
+            }
           }
+          .backgroundColor(MaterialTheme.surfaceBackground(Color.Orange))
+          .padding(10)
+          .onClick(() => {
+            this.showQRCodeDialog(vm.config);
+          })
         }
-        .backgroundColor(MaterialTheme.surfaceBackground(Color.Orange))
-        .padding(10)
-        .onClick(() => {
-          this.showQRCodeDialog(vm.config);
-        })
       }
 
-      if (this.TabBarVisible) {
+      if (this.TabBarVisible && vm.config.TokenType !== otpType.NFC_external) {
         MaterialSurface({
           thickness: MaterialThickness.THIN,
           lightEffect: true,
@@ -325,7 +329,12 @@ export struct TokenListPage {
               value: $r('app.string.dialog_btn_delete'),
               fontColor: Color.Red,
               action: async () => {
-                tkStore.deleteToken(vm.config.TokenUUID);
+                if (vm.config.TokenType === otpType.NFC_external) {
+                  // 外部令牌仅存于会话存储，从会话中移除
+                  NfcSessionTokens.getInstance().remove(vm.config.TokenUUID);
+                } else {
+                  tkStore.deleteToken(vm.config.TokenUUID);
+                }
               }
             }
           })

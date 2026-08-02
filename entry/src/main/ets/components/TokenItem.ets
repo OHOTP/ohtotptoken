@@ -1,4 +1,5 @@
 import { systemDateTime } from '@kit.BasicServicesKit';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { otpType, TokenConfig, dialogSystemMaterial } from 'common';
 import { convertToken2URI, copyText, generateOTP } from 'common';
 import { TokenIcon } from 'uikit';
@@ -16,6 +17,7 @@ import { CommonConstants } from 'common';
 import { AppFonts } from 'common';
 import { MaterialSurface } from './MaterialSurface';
 import { MaterialTheme } from './MaterialTheme';
+import { NfcSessionTokens } from '../oath/NfcSessionTokens';
 
 let current_token_hide_map: Map<string, boolean> = new Map();
 let tkStore = TokenStore.getInstance();
@@ -140,19 +142,52 @@ export struct TokenItem {
     .alignItems(HorizontalAlign.Start)
   }
 
+  /**
+   * Config 引用变化时重新计算令牌内容（@Monitor 为 V2 监听器，仅在值变化后触发）。
+   * 注意：LazyForEach 复用组件场景下 @Param 不会重新赋值，@Monitor 可能不触发，
+   * 因此还依赖 NFC_EXTERNAL_TOKENS_CHANGED 事件驱动刷新（见 onNfcExternalTokensChanged）。
+   */
+  @Monitor("Config")
+  onConfigChanged(monitor: IMonitor): void {
+    hilog.info(0xFF00, 'TokenItem', `onConfigChanged triggered uuid=${this.Config.TokenUUID} code=${this.Config.TokenExternalCode}`);
+    this.updateToken();
+  }
+
+  /**
+   * 事件驱动刷新：外部令牌会话存储变更时，直接按 TokenUUID 查找最新令牌并刷新验证码。
+   * 不依赖 @Param 重新赋值（LazyForEach 复用组件时不更新 @Param）。
+   */
+  private onNfcExternalTokensChangedHandler: () => void = () => {};
+  onNfcExternalTokensChanged(): void {
+    if (this.Config.TokenType !== otpType.NFC_external) {
+      return;
+    }
+    const latest = NfcSessionTokens.getInstance().getTokens().find((t) => t.TokenUUID === this.Config.TokenUUID);
+    if (latest !== undefined) {
+      const newCode = latest.TokenExternalCode ?? '';
+      if (newCode !== this.TokenNumber) {
+        this.TokenNumber = newCode;
+        hilog.info(0xFF00, 'TokenItem', `event refresh uuid=${this.Config.TokenUUID} code=${newCode}`);
+      }
+    }
+  }
+
   aboutToAppear(): void {
     this.onTimestampChangedHandler = (timestamp: number, force: boolean): void => this.onTimestampChanged(timestamp, force);
     // 使用 AppStorage 获取的 context 注册事件，避免 aboutToAppear 阶段调用 getUIContext()
     this.appCtx.eventHub?.on(EVENT_NAMES.TIMESTAMP_CHANGED, this.onTimestampChangedHandler);
+    this.onNfcExternalTokensChangedHandler = (): void => this.onNfcExternalTokensChanged();
+    this.appCtx.eventHub?.on(EVENT_NAMES.NFC_EXTERNAL_TOKENS_CHANGED, this.onNfcExternalTokensChangedHandler);
     this.updateToken();
   }
 
   aboutToDisappear(): void {
     this.appCtx.eventHub?.off(EVENT_NAMES.TIMESTAMP_CHANGED, this.onTimestampChangedHandler);
+    this.appCtx.eventHub?.off(EVENT_NAMES.NFC_EXTERNAL_TOKENS_CHANGED, this.onNfcExternalTokensChangedHandler);
   }
 
   onTimestampChanged(timestamp: number, force: boolean): void {
-    if (this.Config.TokenType !== otpType.HOTP) {
+    if (this.Config.TokenType !== otpType.HOTP && this.Config.TokenType !== otpType.NFC_external) {
       this.token_steps = Math.floor(timestamp / this.Config.TokenPeriod);
       this.TokenLeftPeriod = this.Config.TokenPeriod - timestamp % this.Config.TokenPeriod;
       if (this.TokenLeftPeriod == this.Config.TokenPeriod || force) {
@@ -163,6 +198,12 @@ export struct TokenItem {
 
   updateToken() {
     if (this.Config === undefined) {
+      return;
+    }
+    if (this.Config.TokenType == otpType.NFC_external) {
+      // 外部令牌静态展示：直接显示卡片读取的验证码，不参与计时计算
+      this.TokenNumber = this.Config.TokenExternalCode ?? '';
+      hilog.info(0xFF00, 'TokenItem', `updateToken external uuid=${this.Config.TokenUUID} code=${this.Config.TokenExternalCode} display=${this.TokenNumber}`);
       return;
     }
     if (this.Config.TokenType == otpType.HOTP) {
@@ -221,7 +262,8 @@ export struct TokenItem {
               .textAlign(TextAlign.End)
               .textOverflow({ overflow: TextOverflow.MARQUEE })
               .maxLines(1)
-              .fontColor(this.TokenLeftPeriod <= this.token_color_change_threshold && this.Config.TokenType !== otpType.HOTP ?
+              .fontColor(this.TokenLeftPeriod <= this.token_color_change_threshold && this.Config.TokenType !== otpType.HOTP &&
+                this.Config.TokenType !== otpType.NFC_external ?
                 this.token_color_expiring : this.token_color_normal)
               .fontSize(this.token_preference.app_appearance_token_font_size)
               .fontWeight(this.token_preference.app_appearance_token_font_weight)
@@ -239,7 +281,8 @@ export struct TokenItem {
                 .maxLines(1)
                 .fontColor($r('app.color.str_gray'))
                 .fontSize(10)
-            } else if (this.token_preference.app_appearance_show_next_token_enable) {
+            } else if (this.Config.TokenType !== otpType.NFC_external &&
+              this.token_preference.app_appearance_show_next_token_enable) {
               Text(this.TokenNumberNext)
                 .textAlign(TextAlign.End)
                 .textOverflow({ overflow: TextOverflow.MARQUEE })
@@ -263,6 +306,8 @@ export struct TokenItem {
                 this.Update(this.Config)
                 this.updateHOTPToken();
               })
+          } else if (this.Config.TokenType == otpType.NFC_external) {
+            // 外部令牌静态展示：不显示倒计时环
           } else {
             Stack() {
               Text(this.TokenLeftPeriod.toString())
@@ -420,69 +465,74 @@ export struct TokenItem {
   @Builder
   TokenRightCtxMenu() {
     Menu() {
-      MenuItem({ symbolStartIcon: this.menu_icon_sort, content: $r('app.string.token_right_menu_sort') })
-        .onClick(() => {
-          if (this.appCtx.eventHub != undefined) {
-            this.appCtx.eventHub.emit(EVENT_NAMES.START_TOKEN_SORT);
-          }
-        })
-        .accessibilityText($r('app.string.token_right_menu_sort'))
+      // NFC 外部令牌为会话级、不持久化，排序（RankScore 持久化）对其无意义，故不提供排序入口
+      if (this.Config.TokenType !== otpType.NFC_external) {
+        MenuItem({ symbolStartIcon: this.menu_icon_sort, content: $r('app.string.token_right_menu_sort') })
+          .onClick(() => {
+            if (this.appCtx.eventHub != undefined) {
+              this.appCtx.eventHub.emit(EVENT_NAMES.START_TOKEN_SORT);
+            }
+          })
+          .accessibilityText($r('app.string.token_right_menu_sort'))
+      }
       MenuItem({ symbolStartIcon: this.menu_icon_copy, content: $r('app.string.token_right_menu_copy') })
         .onClick(() => {
           copyText(this.TokenNumber, `${this.TokenNumber} copied`);
         })
         .accessibilityText($r('app.string.token_right_menu_copy'))
-      MenuItem({ symbolStartIcon: this.menu_icon_qrcode, content: $r('app.string.token_right_menu_show_qrcode') })
-        .onClick(() => {
-          this.dialog_qrcode = new CustomDialogController({
-            systemMaterial: dialogSystemMaterial(),
-            builder: QRCodeDialog({
-              content: convertToken2URI(this.Config),
-              winSize: this.window.Size
-            })
-          });
-          this.dialog_qrcode.open();
-        })
-        .accessibilityText($r('app.string.token_right_menu_show_qrcode'))
-      MenuItem({ symbolStartIcon: this.menu_icon_edit, content: $r('app.string.token_right_menu_edit') })
-        .onClick(() => {
-          if (this.Config.TokenType === otpType.TOTP || this.Config.TokenType === otpType.HOTP ||
-            this.Config.TokenType === undefined) { // default
-            this.dialog_totp_config = new CustomDialogController({
+      if (this.Config.TokenType !== otpType.NFC_external) {
+        MenuItem({ symbolStartIcon: this.menu_icon_qrcode, content: $r('app.string.token_right_menu_show_qrcode') })
+          .onClick(() => {
+            this.dialog_qrcode = new CustomDialogController({
               systemMaterial: dialogSystemMaterial(),
-              builder: TOTPConfigDialog({
-                conf_json: JSON.stringify(this.Config),
-                confirm: async (new_conf): Promise<boolean> => {
-                  return await this.Update(JSON.parse(new_conf))
-                }
+              builder: QRCodeDialog({
+                content: convertToken2URI(this.Config),
+                winSize: this.window.Size
               })
-            })
-            this.dialog_totp_config.open()
-          } else if (this.Config.TokenType === otpType.Forti) { // forti
-            this.dialog_forti_config = new CustomDialogController({
-              systemMaterial: dialogSystemMaterial(),
-              builder: FortiConfigDialog({
-                conf_json: JSON.stringify(this.Config),
-                confirm: async (new_conf): Promise<boolean> => {
-                  return await this.Update(JSON.parse(new_conf))
-                }
+            });
+            this.dialog_qrcode.open();
+          })
+          .accessibilityText($r('app.string.token_right_menu_show_qrcode'))
+        MenuItem({ symbolStartIcon: this.menu_icon_edit, content: $r('app.string.token_right_menu_edit') })
+          .onClick(() => {
+            if (this.Config.TokenType === otpType.TOTP || this.Config.TokenType === otpType.HOTP ||
+              this.Config.TokenType === undefined) { // default
+              this.dialog_totp_config = new CustomDialogController({
+                systemMaterial: dialogSystemMaterial(),
+                builder: TOTPConfigDialog({
+                  conf_json: JSON.stringify(this.Config),
+                  confirm: async (new_conf): Promise<boolean> => {
+                    return await this.Update(JSON.parse(new_conf))
+                  }
+                })
               })
-            })
-            this.dialog_forti_config.open()
-          } else if (this.Config.TokenType === otpType.Steam) { // steam
-            this.dialog_steam_config = new CustomDialogController({
-              systemMaterial: dialogSystemMaterial(),
-              builder: SteamConfigDialog({
-                conf_json: JSON.stringify(this.Config),
-                confirm: async (new_conf): Promise<boolean> => {
-                  return await this.Update(JSON.parse(new_conf))
-                }
+              this.dialog_totp_config.open()
+            } else if (this.Config.TokenType === otpType.Forti) { // forti
+              this.dialog_forti_config = new CustomDialogController({
+                systemMaterial: dialogSystemMaterial(),
+                builder: FortiConfigDialog({
+                  conf_json: JSON.stringify(this.Config),
+                  confirm: async (new_conf): Promise<boolean> => {
+                    return await this.Update(JSON.parse(new_conf))
+                  }
+                })
               })
-            })
-            this.dialog_steam_config.open()
-          }
-        })
-        .accessibilityText($r('app.string.token_right_menu_edit'))
+              this.dialog_forti_config.open()
+            } else if (this.Config.TokenType === otpType.Steam) { // steam
+              this.dialog_steam_config = new CustomDialogController({
+                systemMaterial: dialogSystemMaterial(),
+                builder: SteamConfigDialog({
+                  conf_json: JSON.stringify(this.Config),
+                  confirm: async (new_conf): Promise<boolean> => {
+                    return await this.Update(JSON.parse(new_conf))
+                  }
+                })
+              })
+              this.dialog_steam_config.open()
+            }
+          })
+          .accessibilityText($r('app.string.token_right_menu_edit'))
+      }
       MenuItem({ symbolStartIcon: this.menu_icon_trash, content: $r('app.string.token_right_menu_delete') })
         .onClick(() => {
           this.getUIContext().showAlertDialog({
@@ -502,7 +552,12 @@ export struct TokenItem {
               value: $r('app.string.dialog_btn_delete'),
               fontColor: Color.Red,
               action: async () => {
-                tkStore.deleteToken(this.Config.TokenUUID);
+                if (this.Config.TokenType === otpType.NFC_external) {
+                  // 外部令牌仅存于会话存储，从会话中移除
+                  NfcSessionTokens.getInstance().remove(this.Config.TokenUUID);
+                } else {
+                  tkStore.deleteToken(this.Config.TokenUUID);
+                }
               }
             }
           })
