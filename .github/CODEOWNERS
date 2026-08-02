@@ -1,0 +1,8 @@
+# CODEOWNERS — 代码所有权规则
+# 详见 https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# 当 PR 修改下列路径时，GitHub 会自动请求对应 owner 进行 review。
+# owner 为 GitHub 用户名（带 @ 前缀）。
+
+# 默认规则：所有代码改动请求核心维护者 review
+*  @AheadAlot @SolidFaker @eveloki

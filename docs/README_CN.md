@@ -48,3 +48,9 @@
 - [andOTP/andOTP](https://github.com/andOTP/andOTP): 图标包
 - [iamhyc/Aigis](https://github.com/iamhyc/Aigis)
 - [nanopb/nanopb](https://github.com/nanopb/nanopb): 用于 Google 身份验证器迁移的`protobuf`库
+
+## 贡献
+
+欢迎参与本项目！提交 Pull Request 前，请先阅读[贡献指南](../CONTRIBUTING.md)。
+
+> ⚠️ **Pull Request 请提交到 [`dev`](https://github.com/OHOTP/ohtotptoken/tree/dev) 分支**，`main` 仅用于发布，且与自动发布 CI 绑定。
