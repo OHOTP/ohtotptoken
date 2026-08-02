@@ -11,6 +11,7 @@ import { throttle } from 'common';
 import { ShowDataSyncDetailsPage } from '../ShowDataSyncDetailsPage';
 import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import { SETTING_PAGE_INSET } from '../../components/SettingStyle';
+import { MaterialTheme } from '../../components/MaterialTheme';
 
 @Preview
 @ComponentV2
@@ -84,16 +85,19 @@ export struct DataSyncSheet {
           .height('100%')
           .scrollBar(BarState.Off)
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-          .backgroundColor($r('app.color.window_background'))
+          // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
+          .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
           .layoutWeight(1)
         }
         .width('100%')
         .height('100%')
-        .backgroundColor($r('app.color.window_background'))
+        // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
+        .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
       }
       .width('100%')
       .height('100%')
-      .backgroundColor($r('app.color.window_background'))
+      // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
+      .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
       .mode(NavigationMode.Stack)
       .navDestination(this.navDestinationBuilder)
       .bindToScrollable([this.sheetScroller])
