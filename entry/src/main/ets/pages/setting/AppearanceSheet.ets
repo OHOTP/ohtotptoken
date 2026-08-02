@@ -2,7 +2,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { showSnackBar, SnackBarNotifyType } from 'common';
 import { SubItemToggle } from '../../components/SubItemToggle'
 import { AppStorageV2, curves } from '@kit.ArkUI';
-import { AppPreference, SettingColorMode, SettingTopEffectType, SettingBottomTabsType, TokenPreference, AVAILABLE_TOP_EFFECT_TYPES, AVAILABLE_BOTTOM_TABS_TYPES, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES } from 'common';
+import { AppPreference, SettingColorMode, SettingTopEffectType, SettingBottomTabsType, TokenPreference, AVAILABLE_TOP_EFFECT_TYPES, AVAILABLE_BOTTOM_TABS_TYPES, AVAILABLE_MATERIAL_MODES, AVAILABLE_IMMERSIVE_STYLES, SettingMaterialMode, SettingImmersiveStyle, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES } from 'common';
 import { SubItemButton } from '../../components/SubItemButton';
 import { SettingItem } from '../../components/SettingItem';
 import { SubItemDivider } from '../../components/SubItemDivider';
@@ -103,6 +103,40 @@ export struct AppearanceSheet {
                     AppPreference.setPreference(PREF_KEYS.APPEARANCE_TOP_EFFECT_TYPE, value);
                     if (this.appCtx.eventHub != undefined) {
                       this.appCtx.eventHub.emit(EVENT_NAMES.TOP_EFFECT_TYPE_CHANGED);
+                    }
+                  }
+                })
+
+                SubItemDivider()
+
+                SubItemEnumSelect({
+                  icon: $r('sys.symbol.rectangle_stack'),
+                  title: $r('app.string.setting_material_mode'),
+                  options: AVAILABLE_MATERIAL_MODES,
+                  description: $r('app.string.setting_material_mode_desc'),
+                  selected: AppPreference.getPreference(PREF_KEYS.APPEARANCE_MATERIAL_MODE) as number ??
+                    SettingMaterialMode.AUTO,
+                  onChange: (value: number) => {
+                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_MATERIAL_MODE, value);
+                    if (this.appCtx.eventHub != undefined) {
+                      this.appCtx.eventHub.emit(EVENT_NAMES.MATERIAL_MODE_CHANGED);
+                    }
+                  }
+                })
+
+                SubItemDivider()
+
+                SubItemEnumSelect({
+                  icon: $r('sys.symbol.rectangle_split_3x1'),
+                  title: $r('app.string.setting_immersive_style'),
+                  options: AVAILABLE_IMMERSIVE_STYLES,
+                  description: $r('app.string.setting_immersive_style_desc'),
+                  selected: AppPreference.getPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE) as number ??
+                    SettingImmersiveStyle.REGULAR,
+                  onChange: (value: number) => {
+                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE, value);
+                    if (this.appCtx.eventHub != undefined) {
+                      this.appCtx.eventHub.emit(EVENT_NAMES.MATERIAL_MODE_CHANGED);
                     }
                   }
                 })

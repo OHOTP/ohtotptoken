@@ -957,6 +957,54 @@
       "value": "Immersive Gradient Blur"
     },
     {
+      "name": "setting_material_mode",
+      "value": "Material Mode"
+    },
+    {
+      "name": "setting_material_mode_desc",
+      "value": "Immersive light-sense material for cards and surfaces (requires device support)"
+    },
+    {
+      "name": "setting_material_mode_auto",
+      "value": "Auto"
+    },
+    {
+      "name": "setting_material_mode_immersive",
+      "value": "Immersive"
+    },
+    {
+      "name": "setting_material_mode_solid",
+      "value": "Solid"
+    },
+    {
+      "name": "setting_immersive_style",
+      "value": "Material Thickness"
+    },
+    {
+      "name": "setting_immersive_style_desc",
+      "value": "Thickness of the immersive material"
+    },
+    {
+      "name": "setting_immersive_style_ultra_thin",
+      "value": "Ultra Thin"
+    },
+    {
+      "name": "setting_immersive_style_thin",
+      "value": "Thin"
+    },
+    {
+      "name": "setting_immersive_style_regular",
+      "value": "Regular"
+    },
+    {
+      "name": "setting_immersive_style_thick",
+      "value": "Thick"
+    },
+    {
+      "name": "setting_immersive_style_ultra_thick",
+      "value": "Ultra Thick"
+    },
+    {
       "name": "setting_bottom_tabs_type",
       "value": "Bottom Tabs Type"
     },

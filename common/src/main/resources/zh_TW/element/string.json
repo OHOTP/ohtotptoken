@@ -945,6 +945,54 @@
       "value": "沉浸式漸變模糊"
     },
     {
+      "name": "setting_material_mode",
+      "value": "材質模式"
+    },
+    {
+      "name": "setting_material_mode_desc",
+      "value": "為卡片與表面啟用沉浸光感材質（需要裝置支援）"
+    },
+    {
+      "name": "setting_material_mode_auto",
+      "value": "自動"
+    },
+    {
+      "name": "setting_material_mode_immersive",
+      "value": "沉浸光感"
+    },
+    {
+      "name": "setting_material_mode_solid",
+      "value": "實體背景"
+    },
+    {
+      "name": "setting_immersive_style",
+      "value": "材質厚度"
+    },
+    {
+      "name": "setting_immersive_style_desc",
+      "value": "沉浸材質的厚度檔位"
+    },
+    {
+      "name": "setting_immersive_style_ultra_thin",
+      "value": "超薄"
+    },
+    {
+      "name": "setting_immersive_style_thin",
+      "value": "薄"
+    },
+    {
+      "name": "setting_immersive_style_regular",
+      "value": "常規"
+    },
+    {
+      "name": "setting_immersive_style_thick",
+      "value": "厚"
+    },
+    {
+      "name": "setting_immersive_style_ultra_thick",
+      "value": "超厚"
+    },
+    {
       "name": "setting_bottom_tabs_type",
       "value": "底部Tabs類型"
     },

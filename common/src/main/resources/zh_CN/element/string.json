@@ -945,6 +945,54 @@
       "value": "沉浸式渐变模糊"
     },
     {
+      "name": "setting_material_mode",
+      "value": "材质模式"
+    },
+    {
+      "name": "setting_material_mode_desc",
+      "value": "为卡片与表面启用沉浸光感材质（需要设备支持）"
+    },
+    {
+      "name": "setting_material_mode_auto",
+      "value": "自动"
+    },
+    {
+      "name": "setting_material_mode_immersive",
+      "value": "沉浸光感"
+    },
+    {
+      "name": "setting_material_mode_solid",
+      "value": "实体背景"
+    },
+    {
+      "name": "setting_immersive_style",
+      "value": "材质厚度"
+    },
+    {
+      "name": "setting_immersive_style_desc",
+      "value": "沉浸材质的厚度档位"
+    },
+    {
+      "name": "setting_immersive_style_ultra_thin",
+      "value": "超薄"
+    },
+    {
+      "name": "setting_immersive_style_thin",
+      "value": "薄"
+    },
+    {
+      "name": "setting_immersive_style_regular",
+      "value": "常规"
+    },
+    {
+      "name": "setting_immersive_style_thick",
+      "value": "厚"
+    },
+    {
+      "name": "setting_immersive_style_ultra_thick",
+      "value": "超厚"
+    },
+    {
       "name": "setting_bottom_tabs_type",
       "value": "底部Tabs类型"
     },

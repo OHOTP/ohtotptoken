@@ -1,30 +1,18 @@
 import { uiMaterial } from '@kit.ArkUI';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
-import { SETTING_GROUP_RADIUS } from './SettingStyle';
+import { MaterialTheme, MaterialThickness } from './MaterialTheme';
 
 @Builder
 function EmptyBuilder() {
 }
 
-/**
- * 材质厚度档位
- *
- * 与 uiMaterial.ImmersiveStyle 五档一一映射。自定义枚举而非直接暴露
- * uiMaterial.ImmersiveStyle，避免 API 23~25 设备在组件默认值求值时
- * 引用 uiMaterial 符号（低 API 设备上该符号不存在）。
- */
-export enum MaterialThickness {
-  ULTRA_THIN,
-  THIN,
-  REGULAR,
-  THICK,
-  ULTRA_THICK
-}
+// MaterialThickness 已移至 MaterialTheme.ets（Phase 4.2），此处转出口保持既有导入路径兼容
+export { MaterialThickness } from './MaterialTheme';
 
 /**
  * MaterialSurface — 通用沉浸材质表面容器（Phase 3.1）
  *
- * 按 MaterialPolicy.tier 三态渲染，业务布局与材质策略解耦：
+ * 按 MaterialTheme.effectiveTier()（MaterialPolicy 设备能力 × 用户材质模式
+ * 偏好，Phase 4.2 接入）三态渲染，业务布局与材质策略解耦：
  * - immersive：.systemMaterial(new uiMaterial.ImmersiveMaterial({...}))，
  *   背景强制透明（不透明背景会盖住材质层，官方 FAQ 明确）
  * - hds：通用容器没有可直接设置的 HDS 材质属性（systemMaterialEffect 仅
@@ -47,8 +35,11 @@ export enum MaterialThickness {
 @Preview
 @ComponentV2
 export struct MaterialSurface {
-  /** 材质厚度，默认 REGULAR */
-  @Param thickness: MaterialThickness = MaterialThickness.REGULAR;
+  /**
+   * 材质厚度；不传（undefined）时跟随用户的材质厚度偏好
+   * （MaterialTheme.preferredThickness()，默认 REGULAR）
+   */
+  @Param thickness: MaterialThickness | undefined = undefined;
   /** 按压弹性形变（官方 interactive，默认 false） */
   @Param interactive: boolean = false;
   /**
@@ -62,21 +53,21 @@ export struct MaterialSurface {
   @Param colorInvert: boolean = false;
   /** 材质自带阴影，默认 true；需自定义 shadow 时置 false */
   @Param applyShadow: boolean = true;
-  /** 圆角，默认与设置分组卡片一致（SettingStyle 12）；命名避开基类 borderRadius 属性方法 */
-  @Param radius: Length = SETTING_GROUP_RADIUS;
+  /** 圆角，默认与设置分组卡片一致（MaterialTheme.RADIUS_GROUP）；命名避开基类 borderRadius 属性方法 */
+  @Param radius: Length = MaterialTheme.RADIUS_GROUP;
   /** solid / hds 档位的实体背景色 */
   @Param solidColor: ResourceColor = $r('app.color.item_bg');
   @BuilderParam content?: CustomBuilder = EmptyBuilder;
 
   build() {
-    if (MaterialPolicy.getInstance().isImmersive()) {
+    if (MaterialTheme.isImmersiveEffective()) {
       Column() {
         if (this.content) {
           this.content();
         }
       }
         .borderRadius(this.radius)
-        .backgroundColor(Color.Transparent)
+        .backgroundColor(MaterialTheme.MATERIAL_SURFACE_BG)
         .systemMaterial(this.createImmersiveMaterial())
     } else {
       Column() {
@@ -95,7 +86,7 @@ export struct MaterialSurface {
    */
   private createImmersiveMaterial(): uiMaterial.Material {
     return new uiMaterial.ImmersiveMaterial({
-      style: this.mapThickness(this.thickness),
+      style: this.mapThickness(this.thickness ?? MaterialTheme.preferredThickness()),
       interactive: this.interactive,
       lightEffect: this.lightEffect ? { color: this.lightEffectColor } : undefined,
       colorInvert: this.colorInvert,

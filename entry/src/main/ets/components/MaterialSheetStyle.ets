@@ -1,6 +1,5 @@
 import { uiMaterial } from '@kit.ArkUI';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
-import { MaterialThickness } from './MaterialSurface';
+import { MaterialTheme, MaterialThickness } from './MaterialTheme';
 
 /**
  * MaterialSheetStyle — MaterialAware 半模态配置工厂（Phase 3.2）
@@ -8,7 +7,7 @@ import { MaterialThickness } from './MaterialSurface';
  * 统一 8 个 bindSheet 的 SheetOptions（高度档位 / preferType / dragBar /
  * 背景与材质），消除 SheetCoordinator 中重复散落的 options 字面量。
  *
- * 按 MaterialPolicy.tier 分档：
+ * 按 MaterialTheme.effectiveTier()（设备能力 × 用户材质模式偏好）分档：
  * - immersive：SheetOptions.systemMaterial（API 26 新增）设 ImmersiveMaterial，
  *   背板 backgroundColor 必须透明 —— 不透明背板会盖住材质层
  *   （官方半模态示例10：systemMaterial + backgroundColor: Color.Transparent）
@@ -34,7 +33,7 @@ export class MaterialSheetStyle {
    */
   static options(detent: SheetSize = SheetSize.LARGE,
     thickness: MaterialThickness = MaterialThickness.ULTRA_THICK): SheetOptions {
-    if (MaterialPolicy.getInstance().isImmersive()) {
+    if (MaterialTheme.isImmersiveEffective()) {
       return {
         detents: [detent],
         preferType: SheetType.BOTTOM,

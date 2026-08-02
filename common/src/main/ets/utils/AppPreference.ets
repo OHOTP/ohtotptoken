@@ -37,6 +37,8 @@ export enum EVENT_NAMES {
   START_TOKEN_SORT = 'onStartTokenSort',
   /** 华为账号状态变更事件（登录/登出/初始化完成后由 Index 广播,SheetCoordinator 监听同步） */
   HUAWEI_ACCOUNT_STATE_CHANGED = 'onHuaweiAccountStateChanged',
+  /** 材质模式/厚度偏好变更事件（Phase 4.1,材质消费组件监听后重建材质表面） */
+  MATERIAL_MODE_CHANGED = 'onMaterialModeChanged',
 }
 
 /**
@@ -163,6 +165,10 @@ export enum PREF_KEYS {
   ASSET_MIGRATION_DONE = 'app_asset_migration_done',
   /** 图标包云备份最后同步时间 */
   ICON_PACK_CLOUD_SYNC_TIME = 'app_icon_pack_cloud_sync_time',
+  /** 材质模式（自动/沉浸光感/实体背景） */
+  APPEARANCE_MATERIAL_MODE = 'app_appearance_material_mode',
+  /** 沉浸材质厚度偏好 */
+  APPEARANCE_IMMERSIVE_STYLE = 'app_appearance_immersive_style',
 }
 
 /** 主密码旧偏好键名（已废弃，仅用于兼容性检测与清理） */
@@ -245,6 +251,54 @@ export enum SettingBottomTabsType {
 export const AVAILABLE_BOTTOM_TABS_TYPES: EnumSelectOption[] = [
   { label: $r('app.string.setting_bottom_tabs_type_flatten'), value: SettingBottomTabsType.FLATTEN },
   { label: $r('app.string.setting_bottom_tabs_type_suspension'), value: SettingBottomTabsType.SUSPENSION },
+];
+
+/**
+ * 材质模式枚举（Phase 4.1）
+ * AUTO：跟随设备能力（MaterialPolicy 三级回退判定）
+ * IMMERSIVE：尽量使用沉浸光感材质（设备不支持时按能力回退，与 AUTO 等价）
+ * SOLID：强制实体背景，关闭材质
+ */
+export enum SettingMaterialMode {
+  /** 自动（跟随设备能力） */
+  AUTO,
+  /** 沉浸光感（尽量使用材质） */
+  IMMERSIVE,
+  /** 实体背景（关闭材质） */
+  SOLID,
+}
+
+/**
+ * 当前支持的材质模式选项数组
+ */
+export const AVAILABLE_MATERIAL_MODES: EnumSelectOption[] = [
+  { label: $r('app.string.setting_material_mode_auto'), value: SettingMaterialMode.AUTO },
+  { label: $r('app.string.setting_material_mode_immersive'), value: SettingMaterialMode.IMMERSIVE },
+  { label: $r('app.string.setting_material_mode_solid'), value: SettingMaterialMode.SOLID },
+];
+
+/**
+ * 沉浸材质厚度偏好枚举（Phase 4.1）
+ * 与 uiMaterial.ImmersiveStyle 五档一一对应；common HAR 不能引用
+ * uiMaterial（entry 侧 API 26 符号），故用独立枚举承载偏好值
+ */
+export enum SettingImmersiveStyle {
+  ULTRA_THIN,
+  THIN,
+  REGULAR,
+  THICK,
+  ULTRA_THICK,
+}
+
+/**
+ * 当前支持的材质厚度选项数组
+ */
+export const AVAILABLE_IMMERSIVE_STYLES: EnumSelectOption[] = [
+  { label: $r('app.string.setting_immersive_style_ultra_thin'), value: SettingImmersiveStyle.ULTRA_THIN },
+  { label: $r('app.string.setting_immersive_style_thin'), value: SettingImmersiveStyle.THIN },
+  { label: $r('app.string.setting_immersive_style_regular'), value: SettingImmersiveStyle.REGULAR },
+  { label: $r('app.string.setting_immersive_style_thick'), value: SettingImmersiveStyle.THICK },
+  { label: $r('app.string.setting_immersive_style_ultra_thick'), value: SettingImmersiveStyle.ULTRA_THICK },
 ];
 
 
@@ -376,6 +430,10 @@ export class AppPreference {
     [PREF_KEYS.DEBUG_MODE_ON, false],
     // 快速扫描URI
     [PREF_KEYS.WANT_URI, ''],
+    // 材质模式（默认自动，跟随设备能力）
+    [PREF_KEYS.APPEARANCE_MATERIAL_MODE, SettingMaterialMode.AUTO],
+    // 沉浸材质厚度偏好（默认常规）
+    [PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE, SettingImmersiveStyle.REGULAR],
   ]);
   private static appearance_default: Map<string, SettingValue> = new Map<string, SettingValue>([
     // 外观-自定义
