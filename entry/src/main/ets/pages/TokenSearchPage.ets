@@ -6,7 +6,7 @@ import { FortiConfigDialog } from 'uikit';
 import { TOTPConfigDialog } from 'uikit';
 import { QRCodeDialog } from 'uikit';
 import { SteamConfigDialog } from 'uikit';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, dialogSystemMaterial } from 'common';
 import { otpType, TokenConfig, TokenConfigVM } from 'common';
 import { TokenStore } from 'common';
 import { convertToken2URI } from 'common';
@@ -266,6 +266,7 @@ export struct TokenSearchPage {
 
   showQRCodeDialog(conf: TokenConfig): void {
     this.dialog_qrcode = new CustomDialogController({
+      systemMaterial: dialogSystemMaterial(),
       builder: QRCodeDialog({
         content: convertToken2URI(conf),
         winSize: this.window.Size
@@ -305,6 +306,7 @@ export struct TokenSearchPage {
         if (vm.config.TokenType === otpType.TOTP || vm.config.TokenType === otpType.HOTP ||
           vm.config.TokenType === undefined) {
           this.dialog_totp_config = new CustomDialogController({
+            systemMaterial: dialogSystemMaterial(),
             builder: TOTPConfigDialog({
               conf_json: JSON.stringify(vm.config),
               confirm: async (new_conf): Promise<boolean> => {
@@ -316,6 +318,7 @@ export struct TokenSearchPage {
           this.dialog_totp_config.open()
         } else if (vm.config.TokenType === otpType.Forti) {
           this.dialog_forti_config = new CustomDialogController({
+            systemMaterial: dialogSystemMaterial(),
             builder: FortiConfigDialog({
               conf_json: JSON.stringify(vm.config),
               confirm: async (new_conf): Promise<boolean> => {
@@ -327,6 +330,7 @@ export struct TokenSearchPage {
           this.dialog_forti_config.open()
         } else if (vm.config.TokenType === otpType.Steam) {
           this.dialog_steam_config = new CustomDialogController({
+            systemMaterial: dialogSystemMaterial(),
             builder: SteamConfigDialog({
               conf_json: JSON.stringify(vm.config),
               confirm: async (new_conf): Promise<boolean> => {

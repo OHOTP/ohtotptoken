@@ -1,4 +1,4 @@
-import { otpType, TokenConfig } from 'common';
+import { otpType, TokenConfig, dialogSystemMaterial } from 'common';
 import { base32Decode, base32Encode, stringToIntArray, ScanBarCode } from 'common'
 import { http } from '@kit.NetworkKit';
 import { BusinessError } from '@kit.BasicServicesKit';
@@ -40,6 +40,7 @@ export struct FortiConfigDialog {
   confirm: (new_conf: string) => Promise<boolean> = async () => false;
 
   dialog_icon_config = new CustomDialogController({
+    systemMaterial: dialogSystemMaterial(),
     builder: SelectIconDialog({
       issuer: this.conf.TokenIssuer,
       currentIconPath: this.conf.TokenIconPath,

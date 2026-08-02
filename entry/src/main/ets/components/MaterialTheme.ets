@@ -1,4 +1,5 @@
 import { AppPreference, PREF_KEYS, SettingImmersiveStyle, SettingMaterialMode } from 'common';
+import { uiMaterial } from '@kit.ArkUI';
 import { MaterialPolicy, MaterialTier } from '../utils/MaterialPolicy';
 import { SETTING_GROUP_RADIUS } from './SettingStyle';
 
@@ -117,5 +118,30 @@ export class MaterialTheme {
    */
   static materialApplyShadow(): boolean {
     return true;
+  }
+
+  /**
+   * 自定义弹窗背板材质实参（Phase 5.5，经 common MaterialStyleBridge 注入，
+   * 供 CustomDialogControllerOptions.systemMaterial 使用）
+   *
+   * API 26 上自定义弹窗背板默认即为 ULTRA_THICK ImmersiveMaterial
+   * （CustomDialogControllerOptions.systemMaterial 默认值，undefined 与默认一致），
+   * 因此仅"用户 SOLID 偏好"这一种情况需要显式干预：
+   * - 设备无原生材质能力（tier 非 immersive，含 API 23~25）：返回 undefined，
+   *   不求值 uiMaterial 符号
+   * - 有效档位为 immersive：返回 undefined，保持弹窗默认材质
+   * - 用户 SOLID 偏好且设备支持原生材质：返回 uiMaterial.Material.empty，
+   *   单独关闭该弹窗的材质（官方 Material.empty 用法）
+   *
+   * @returns systemMaterial 实参；undefined 表示不传该字段
+   */
+  static dialogSystemMaterial(): SystemUiMaterial | undefined {
+    if (MaterialPolicy.getInstance().getTier() !== 'immersive') {
+      return undefined;
+    }
+    if (MaterialTheme.isImmersiveEffective()) {
+      return undefined;
+    }
+    return uiMaterial.Material.empty;
   }
 }

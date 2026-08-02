@@ -1,4 +1,4 @@
-import { TokenConfig } from 'common';
+import { TokenConfig, dialogSystemMaterial } from 'common';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { bundleManager,common } from '@kit.AbilityKit';
 import { convertToken2URI, generateFileNameWithDate } from 'common'
@@ -57,6 +57,7 @@ export struct BackupAndMigrationSheet {
 
   //region 加密导入导出
   private password_input_dialog: CustomDialogController | null = new CustomDialogController({
+    systemMaterial: dialogSystemMaterial(),
     builder: EncryptionPassWordDialog({
       cancel: () => {},
       confirm: (password: string) => {
@@ -294,6 +295,7 @@ export struct BackupAndMigrationSheet {
                           // URI 导入需要组件上下文，在此创建 CustomDialogController
                           if (!this.uriDialogController) {
                             this.uriDialogController = new CustomDialogController({
+                              systemMaterial: dialogSystemMaterial(),
                               builder: URIConfigDialog({
                                 confirm: async (tokens: Array<TokenConfig>): Promise<boolean> => {
                                   this.backupReload(tokens);

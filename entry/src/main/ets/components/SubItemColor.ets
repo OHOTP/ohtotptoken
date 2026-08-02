@@ -1,5 +1,5 @@
 import { ColorSelectDialog } from "../dialogs/ColorSelectDialog";
-import { AppWindowInfo } from 'common';
+import { AppWindowInfo, dialogSystemMaterial } from 'common';
 import { colorHex } from 'common';
 import { AppStorageV2 } from "@kit.ArkUI";
 import { SETTING_ROW_MIN_HEIGHT, SETTING_ROW_PADDING } from './SettingStyle';
@@ -98,6 +98,7 @@ export struct SubItemColor {
                 .layoutWeight(1)
                 .onClick(() => {
                   this.dialog_color_picker = new CustomDialogController({
+                    systemMaterial: dialogSystemMaterial(),
                     builder: ColorSelectDialog({
                       old_color: color.color,
                       confirm: (new_color) => {

@@ -18,6 +18,7 @@ export * from './src/main/ets/utils/HuaweiAccountManager';
 export * from './src/main/ets/utils/IconPackCloudBackup';
 export * from './src/main/ets/utils/KvManager';
 export * from './src/main/ets/utils/Logger';
+export * from './src/main/ets/utils/MaterialStyleBridge';
 export * from './src/main/ets/utils/PermissionManager';
 export * from './src/main/ets/utils/PhotoPickerUtils';
 export * from './src/main/ets/utils/PreferenceManager';

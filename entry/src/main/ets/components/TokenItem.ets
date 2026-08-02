@@ -1,5 +1,5 @@
 import { systemDateTime } from '@kit.BasicServicesKit';
-import { otpType, TokenConfig } from 'common';
+import { otpType, TokenConfig, dialogSystemMaterial } from 'common';
 import { convertToken2URI, copyText, generateOTP } from 'common';
 import { TokenIcon } from 'uikit';
 import { SteamUtils } from 'common';
@@ -366,6 +366,7 @@ export struct TokenItem {
       MenuItem({ symbolStartIcon: this.menu_icon_qrcode, content: $r('app.string.token_right_menu_show_qrcode') })
         .onClick(() => {
           this.dialog_qrcode = new CustomDialogController({
+            systemMaterial: dialogSystemMaterial(),
             builder: QRCodeDialog({
               content: convertToken2URI(this.Config),
               winSize: this.window.Size
@@ -379,6 +380,7 @@ export struct TokenItem {
           if (this.Config.TokenType === otpType.TOTP || this.Config.TokenType === otpType.HOTP ||
             this.Config.TokenType === undefined) { // default
             this.dialog_totp_config = new CustomDialogController({
+              systemMaterial: dialogSystemMaterial(),
               builder: TOTPConfigDialog({
                 conf_json: JSON.stringify(this.Config),
                 confirm: async (new_conf): Promise<boolean> => {
@@ -389,6 +391,7 @@ export struct TokenItem {
             this.dialog_totp_config.open()
           } else if (this.Config.TokenType === otpType.Forti) { // forti
             this.dialog_forti_config = new CustomDialogController({
+              systemMaterial: dialogSystemMaterial(),
               builder: FortiConfigDialog({
                 conf_json: JSON.stringify(this.Config),
                 confirm: async (new_conf): Promise<boolean> => {
@@ -399,6 +402,7 @@ export struct TokenItem {
             this.dialog_forti_config.open()
           } else if (this.Config.TokenType === otpType.Steam) { // steam
             this.dialog_steam_config = new CustomDialogController({
+              systemMaterial: dialogSystemMaterial(),
               builder: SteamConfigDialog({
                 conf_json: JSON.stringify(this.Config),
                 confirm: async (new_conf): Promise<boolean> => {
