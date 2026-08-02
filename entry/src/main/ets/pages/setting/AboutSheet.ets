@@ -1,4 +1,6 @@
 import { SettingItem } from '../../components/SettingItem';
+import { MaterialPolicy } from '../../utils/MaterialPolicy';
+
 import { AppWindowInfo } from 'common';
 import { bundleManager } from '@kit.AbilityKit';
 import { AppStorageV2, curves } from '@kit.ArkUI';
@@ -121,7 +123,7 @@ export struct AboutSheet {
           },
           systemMaterialEffect: {
             materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+            materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
           }
         },
         content: {

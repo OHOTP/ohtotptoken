@@ -1,4 +1,6 @@
 import { TokenConfig, dialogSystemMaterial } from 'common';
+import { MaterialPolicy } from '../../utils/MaterialPolicy';
+
 import { BusinessError } from '@kit.BasicServicesKit';
 import { bundleManager,common } from '@kit.AbilityKit';
 import { convertToken2URI, generateFileNameWithDate } from 'common'
@@ -406,7 +408,7 @@ export struct BackupAndMigrationSheet {
           },
           systemMaterialEffect: {
             materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+            materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
           }
         },
         content: {

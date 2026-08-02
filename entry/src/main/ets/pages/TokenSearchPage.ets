@@ -1,4 +1,6 @@
 import { TokenItem } from "../components/TokenItem";
+import { MaterialPolicy } from '../utils/MaterialPolicy';
+
 import { PageScaffold } from "../components/PageScaffold";
 import { MaterialSurface } from "../components/MaterialSurface";
 import { MaterialTheme, MaterialThickness } from "../components/MaterialTheme";
@@ -247,7 +249,7 @@ export struct TokenSearchPage {
         },
         systemMaterialEffect: {
           materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
         }
       },
       content: {

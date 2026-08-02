@@ -1,4 +1,6 @@
 import { SubItemButton } from '../../components/SubItemButton';
+import { MaterialPolicy } from '../../utils/MaterialPolicy';
+
 import { SettingItem } from '../../components/SettingItem';
 import { common } from '@kit.AbilityKit';
 import { throttle, startBrowsableAbility } from 'common';
@@ -102,7 +104,7 @@ export struct FeedbackSheet {
           },
           systemMaterialEffect: {
             materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+            materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
           }
         },
         content: {

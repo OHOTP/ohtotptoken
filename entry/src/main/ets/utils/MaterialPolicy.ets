@@ -178,6 +178,24 @@ export class MaterialPolicy {
   }
 
   /**
+   * HDS 组件 systemMaterialEffect 的自适应材质等级（Phase 5.8）
+   *
+   * 保留现有 ADAPTIVE 自适应行为，仅在设备不支持 HDS IMMERSIVE 类型时
+   * 回退 SMOOTH（官方建议，降低卡顿发热风险）：
+   * - tier 为 immersive（API 26 原生材质设备）：ADAPTIVE
+   * - tier 为 hds 且设备支持 IMMERSIVE 类型：ADAPTIVE
+   * - 其余（hds 不支持 IMMERSIVE 类型 / solid / 未初始化）：SMOOTH
+   *
+   * @returns hdsMaterial.MaterialLevel
+   */
+  getHdsAdaptiveMaterialLevel(): hdsMaterial.MaterialLevel {
+    if (this.tier === 'immersive' || this.hdsImmersiveSupported) {
+      return hdsMaterial.MaterialLevel.ADAPTIVE;
+    }
+    return hdsMaterial.MaterialLevel.SMOOTH;
+  }
+
+  /**
    * 检查是否已初始化
    * @returns 是否已初始化
    */

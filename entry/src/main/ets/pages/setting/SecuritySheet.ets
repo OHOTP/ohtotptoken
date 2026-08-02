@@ -1,4 +1,6 @@
 import { BusinessError } from '@kit.BasicServicesKit';
+import { MaterialPolicy } from '../../utils/MaterialPolicy';
+
 import { showSnackBar, SnackBarNotifyType } from 'common';
 import { SubItemToggle } from '../../components/SubItemToggle'
 import { AppStorageV2, curves } from '@kit.ArkUI';
@@ -180,7 +182,7 @@ export struct SecuritySheet {
           },
           systemMaterialEffect: {
             materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+            materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
           }
         },
         content: {

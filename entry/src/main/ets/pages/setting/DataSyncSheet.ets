@@ -1,4 +1,6 @@
 import { SubItemToggle } from '../../components/SubItemToggle'
+import { MaterialPolicy } from '../../utils/MaterialPolicy';
+
 import { AppStorageV2 } from '@kit.ArkUI';
 import { AppPreference, SettingValue, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES } from 'common';
 import { SubItemButton } from '../../components/SubItemButton';
@@ -122,7 +124,7 @@ export struct DataSyncSheet {
           },
           systemMaterialEffect: {
             materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+            materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
           }
         },
         content: {

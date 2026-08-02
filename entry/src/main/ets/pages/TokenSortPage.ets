@@ -1,4 +1,6 @@
 import { TokenItem } from "../components/TokenItem";
+import { MaterialPolicy } from '../utils/MaterialPolicy';
+
 import { AppPreference, TokenPreference, EVENT_NAMES } from 'common';
 import { TokenConfig } from 'common';
 import { TokenStore } from 'common';
@@ -108,7 +110,7 @@ export struct TokenSortPage {
         },
         systemMaterialEffect: {
           materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
         }
       },
       content: {

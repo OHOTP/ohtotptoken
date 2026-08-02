@@ -1,4 +1,6 @@
 import { AppStorageV2 } from '@kit.ArkUI';
+import { MaterialPolicy } from '../utils/MaterialPolicy';
+
 import { SettingItem } from '../components/SettingItem';
 import { SubItemDivider } from '../components/SubItemDivider';
 import { SubItemToggle } from '../components/SubItemToggle';
@@ -599,7 +601,7 @@ export struct AppearancePage {
         },
         systemMaterialEffect: {
           materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
         }
       },
       content: {

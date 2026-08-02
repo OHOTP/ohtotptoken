@@ -1,4 +1,6 @@
 import { AppStorageV2, LengthMetrics } from '@kit.ArkUI';
+import { MaterialPolicy } from '../utils/MaterialPolicy';
+
 import { CloudBackupManager } from 'common';
 import { CloudBackupRecord } from 'common';
 import { AppPreference, PREF_KEYS } from 'common';
@@ -194,7 +196,7 @@ export struct ShowCloudBackupHistoryPage {
         },
         systemMaterialEffect: {
           materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
         }
       },
       content: {

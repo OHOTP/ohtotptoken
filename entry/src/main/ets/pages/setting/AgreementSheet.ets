@@ -1,4 +1,6 @@
 import { SubItemButton } from '../../components/SubItemButton';
+import { MaterialPolicy } from '../../utils/MaterialPolicy';
+
 import { SettingItem } from '../../components/SettingItem';
 import { SubItemDivider } from '../../components/SubItemDivider';
 import { throttle } from 'common';
@@ -95,7 +97,7 @@ export struct AgreementSheet {
           },
           systemMaterialEffect: {
             materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+            materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
           }
         },
         content: {
