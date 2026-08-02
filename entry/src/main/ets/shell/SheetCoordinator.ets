@@ -14,6 +14,7 @@ import { AppStorageV2 } from '@kit.ArkUI';
 import { HdsListItemCard, PrefixIcon, IconSize, SuffixArrow, ScrollEffectType } from '@kit.UIDesignKit';
 import { CommonConstants } from 'common';
 import lazy { HuaweiAccountManager, HuaweiUserInfo, HuaweiAccountLoginError } from 'common';
+import { MaterialSheetStyle } from '../components/MaterialSheetStyle';
 
 /**
  * Sheet 协调器(Task 3.1)
@@ -326,11 +327,8 @@ export struct SheetCoordinator {
             this.isAccountSheetVisible = true;
           }
         })
-        .bindSheet($$this.isAccountSheetVisible, this.AccountSheetBuilder(), {
-          detents: [SheetSize.MEDIUM],
-          preferType: SheetType.BOTTOM,
-          dragBar: true,
-        })
+        .bindSheet($$this.isAccountSheetVisible, this.AccountSheetBuilder(),
+          MaterialSheetStyle.options(SheetSize.MEDIUM))
       }
       .padding({
         left: $r('sys.float.padding_level8'),
@@ -361,11 +359,8 @@ export struct SheetCoordinator {
               this.isBackupSheetVisible = true;
             }
           })
-            .bindSheet($$this.isBackupSheetVisible, this.BackupAndMigrationSheetBuilder(), {
-              detents: [SheetSize.LARGE],
-              preferType: SheetType.BOTTOM,
-              dragBar: true,
-            })
+            .bindSheet($$this.isBackupSheetVisible, this.BackupAndMigrationSheetBuilder(),
+              MaterialSheetStyle.options())
         }
         .padding({
           top: $r('sys.float.padding_level2'),
@@ -403,11 +398,8 @@ export struct SheetCoordinator {
               this.isSafetySheetVisible = true;
             }
           })
-            .bindSheet($$this.isSafetySheetVisible, this.SecuritySheetBuilder(), {
-              detents: [SheetSize.LARGE],
-              preferType: SheetType.BOTTOM,
-              dragBar: true,
-            })
+            .bindSheet($$this.isSafetySheetVisible, this.SecuritySheetBuilder(),
+              MaterialSheetStyle.options())
         }
         .padding({
           top: $r('sys.float.padding_level2'),
@@ -445,11 +437,8 @@ export struct SheetCoordinator {
               this.isAppearanceSheetVisible = true;
             }
           })
-            .bindSheet($$this.isAppearanceSheetVisible, this.AppearanceSheetBuilder(), {
-              detents: [SheetSize.LARGE],
-              preferType: SheetType.BOTTOM,
-              dragBar: true,
-            })
+            .bindSheet($$this.isAppearanceSheetVisible, this.AppearanceSheetBuilder(),
+              MaterialSheetStyle.options())
         }
         .padding({
           top: $r('sys.float.padding_level2'),
@@ -487,11 +476,8 @@ export struct SheetCoordinator {
               this.isDataSyncSheetVisible = true;
             }
           })
-            .bindSheet($$this.isDataSyncSheetVisible, this.DataSyncSheetBuilder(), {
-              detents: [SheetSize.LARGE],
-              preferType: SheetType.BOTTOM,
-              dragBar: true,
-            })
+            .bindSheet($$this.isDataSyncSheetVisible, this.DataSyncSheetBuilder(),
+              MaterialSheetStyle.options())
         }
         .padding({
           top: $r('sys.float.padding_level2'),
@@ -529,11 +515,8 @@ export struct SheetCoordinator {
               this.isAgreementSheetVisible = true;
             }
           })
-            .bindSheet($$this.isAgreementSheetVisible, this.AgreementSheetBuilder(), {
-              detents: [SheetSize.LARGE],
-              preferType: SheetType.BOTTOM,
-              dragBar: true,
-            })
+            .bindSheet($$this.isAgreementSheetVisible, this.AgreementSheetBuilder(),
+              MaterialSheetStyle.options())
         }
         .padding({
           top: $r('sys.float.padding_level2'),
@@ -571,11 +554,8 @@ export struct SheetCoordinator {
               this.isFeedbackSheetVisible = true;
             }
           })
-            .bindSheet($$this.isFeedbackSheetVisible, this.FeedbackSheetBuilder(), {
-              detents: [SheetSize.LARGE],
-              preferType: SheetType.BOTTOM,
-              dragBar: true,
-            })
+            .bindSheet($$this.isFeedbackSheetVisible, this.FeedbackSheetBuilder(),
+              MaterialSheetStyle.options())
         }
         .padding({
           top: $r('sys.float.padding_level2'),
@@ -613,11 +593,8 @@ export struct SheetCoordinator {
               this.isAboutSheetVisible = true;
             }
           })
-            .bindSheet($$this.isAboutSheetVisible, this.AboutSheetBuilder(), {
-              detents: [SheetSize.LARGE],
-              preferType: SheetType.BOTTOM,
-              dragBar: true,
-            })
+            .bindSheet($$this.isAboutSheetVisible, this.AboutSheetBuilder(),
+              MaterialSheetStyle.options())
         }
         .padding({
           top: $r('sys.float.padding_level2'),
