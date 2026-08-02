@@ -1,4 +1,6 @@
 import { TokenItem } from "../components/TokenItem";
+import { MaterialSurface } from "../components/MaterialSurface";
+import { MaterialTheme, MaterialThickness } from "../components/MaterialTheme";
 import { FortiConfigDialog } from 'uikit';
 import { TOTPConfigDialog } from 'uikit';
 import { QRCodeDialog } from 'uikit';
@@ -184,32 +186,53 @@ export struct TokenListPage {
   @Builder
   TokenItemSwipeEnd(vm: TokenConfigVM) {
     Row({ space: 10 }) {
-      Button({ type: ButtonType.Circle }) {
-        Text() {
-          SymbolSpan($r('sys.symbol.qrcode'))
-            .fontSize(30)
-            .fontWeight(FontWeight.Medium)
-            .fontColor([Color.White])
-        }
-      }
-      .backgroundColor(Color.Orange)
-      .padding(10)
-      .onClick(() => {
-        this.showQRCodeDialog(vm.config);
-      })
-
-      if (this.TabBarVisible) {
+      // 侧滑操作按钮(Phase 5.7): MaterialSurface 承载语义色材质 + 光感反馈
+      // + 按压形变; 按钮背景按档位映射(沉浸档透明透出材质, 其余档语义色)
+      MaterialSurface({
+        thickness: MaterialThickness.THIN,
+        lightEffect: true,
+        interactive: true,
+        materialColor: Color.Orange,
+        radius: '50%',
+        solidColor: Color.Transparent,
+        fillWidth: false
+      }) {
         Button({ type: ButtonType.Circle }) {
           Text() {
-            SymbolSpan($r('sys.symbol.square_and_pencil_fill'))
+            SymbolSpan($r('sys.symbol.qrcode'))
               .fontSize(30)
               .fontWeight(FontWeight.Medium)
               .fontColor([Color.White])
           }
         }
-        .backgroundColor(Color.Gray)
+        .backgroundColor(MaterialTheme.surfaceBackground(Color.Orange))
         .padding(10)
         .onClick(() => {
+          this.showQRCodeDialog(vm.config);
+        })
+      }
+
+      if (this.TabBarVisible) {
+        MaterialSurface({
+          thickness: MaterialThickness.THIN,
+          lightEffect: true,
+          interactive: true,
+          materialColor: Color.Gray,
+          radius: '50%',
+          solidColor: Color.Transparent,
+          fillWidth: false
+        }) {
+          Button({ type: ButtonType.Circle }) {
+            Text() {
+              SymbolSpan($r('sys.symbol.square_and_pencil_fill'))
+                .fontSize(30)
+                .fontWeight(FontWeight.Medium)
+                .fontColor([Color.White])
+            }
+          }
+          .backgroundColor(MaterialTheme.surfaceBackground(Color.Gray))
+          .padding(10)
+          .onClick(() => {
           if (vm.config.TokenType === otpType.TOTP || vm.config.TokenType === otpType.HOTP ||
             vm.config.TokenType === undefined) {
             this.dialog_totp_config = new CustomDialogController({
@@ -248,42 +271,53 @@ export struct TokenListPage {
             })
             this.dialog_steam_config.open()
           }
-        })
-      }
-
-      Button({ type: ButtonType.Circle }) {
-        Text() {
-          SymbolSpan($r('sys.symbol.trash_fill'))
-            .fontSize(30)
-            .fontWeight(FontWeight.Medium)
-            .fontColor([Color.White])
+          })
         }
       }
-      .backgroundColor(Color.Red)
-      .padding(10)
-      .onClick(async () => {
-        AlertDialog.show({
-          title: $r('app.string.alert_remove_title', vm.config.TokenIssuer),
-          subtitle: vm.config.TokenName,
-          message: $r('app.string.alert_remove_confirm_msg'),
-          autoCancel: true,
-          alignment: DialogAlignment.Center,
-          primaryButton: {
-            defaultFocus: false,
-            value: $r('app.string.dialog_btn_cancel'),
-            action: () => {
-              return
-            }
-          },
-          secondaryButton: {
-            value: $r('app.string.dialog_btn_delete'),
-            fontColor: Color.Red,
-            action: async () => {
-              tkStore.deleteToken(vm.config.TokenUUID);
-            }
+
+      MaterialSurface({
+        thickness: MaterialThickness.THIN,
+        lightEffect: true,
+        interactive: true,
+        materialColor: Color.Red,
+        radius: '50%',
+        solidColor: Color.Transparent,
+        fillWidth: false
+      }) {
+        Button({ type: ButtonType.Circle }) {
+          Text() {
+            SymbolSpan($r('sys.symbol.trash_fill'))
+              .fontSize(30)
+              .fontWeight(FontWeight.Medium)
+              .fontColor([Color.White])
           }
+        }
+        .backgroundColor(MaterialTheme.surfaceBackground(Color.Red))
+        .padding(10)
+        .onClick(async () => {
+          AlertDialog.show({
+            title: $r('app.string.alert_remove_title', vm.config.TokenIssuer),
+            subtitle: vm.config.TokenName,
+            message: $r('app.string.alert_remove_confirm_msg'),
+            autoCancel: true,
+            alignment: DialogAlignment.Center,
+            primaryButton: {
+              defaultFocus: false,
+              value: $r('app.string.dialog_btn_cancel'),
+              action: () => {
+                return
+              }
+            },
+            secondaryButton: {
+              value: $r('app.string.dialog_btn_delete'),
+              fontColor: Color.Red,
+              action: async () => {
+                tkStore.deleteToken(vm.config.TokenUUID);
+              }
+            }
+          })
         })
-      })
+      }
     }
     .margin({ left: 10, right: this.token_preference.app_appearance_token_list_item_suffix_padding })
   }

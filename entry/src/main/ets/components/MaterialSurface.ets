@@ -51,37 +51,70 @@ export struct MaterialSurface {
   @Param lightEffectColor: ResourceColor = Color.White;
   /** 薄材质子树自动反色（THIN/ULTRA_THIN 且系统光感较强时生效），深浅色可读性用 */
   @Param colorInvert: boolean = false;
+  /**
+   * 材质层赋色（官方 materialColor，默认 undefined 不混色）。
+   * 侧滑操作按钮等需要保留语义色（删除红/二维码橙）的表面使用；
+   * 注意纯不透明赋色会遮挡材质滤镜的磨砂效果（官方明确），
+   * 但阴影/光感/形变仍然生效
+   */
+  @Param materialColor: ResourceColor | undefined = undefined;
   /** 材质自带阴影，默认 true；需自定义 shadow 时置 false */
   @Param applyShadow: boolean = true;
   /** 圆角，默认与设置分组卡片一致（MaterialTheme.RADIUS_GROUP）；命名避开基类 borderRadius 属性方法 */
   @Param radius: Length = MaterialTheme.RADIUS_GROUP;
   /** solid / hds 档位的实体背景色 */
   @Param solidColor: ResourceColor = $r('app.color.item_bg');
+  /**
+   * 表面宽度是否填满父级可用宽度。默认 true（卡片语义）；
+   * 行内小表面（如侧滑操作按钮）置 false 为 wrap-content
+   */
+  @Param fillWidth: boolean = true;
   @BuilderParam content?: CustomBuilder = EmptyBuilder;
 
   build() {
     if (MaterialTheme.isImmersiveEffective()) {
-      Column() {
-        if (this.content) {
-          this.content();
+      // 注意：尾随闭包语法后不能再链式调用系统属性（编译期解析为新语句），
+      // 调用方需要的宽度由本组件内部保证；ArkUI 无 wrap-content 宽度字面量，
+      // fillWidth=false 时只能不设置 width 属性，故分支展开
+      if (this.fillWidth) {
+        Column() {
+          if (this.content) {
+            this.content();
+          }
         }
+          .width('100%')
+          .borderRadius(this.radius)
+          .backgroundColor(MaterialTheme.MATERIAL_SURFACE_BG)
+          .systemMaterial(this.createImmersiveMaterial())
+      } else {
+        Column() {
+          if (this.content) {
+            this.content();
+          }
+        }
+          .borderRadius(this.radius)
+          .backgroundColor(MaterialTheme.MATERIAL_SURFACE_BG)
+          .systemMaterial(this.createImmersiveMaterial())
       }
-        // 表面默认填满父级可用宽度（卡片语义），高度由内容决定；
-        // 注意：尾随闭包语法后不能再链式调用系统属性（编译期解析为新语句），
-        // 调用方需要的宽度由本组件内部保证
-        .width('100%')
-        .borderRadius(this.radius)
-        .backgroundColor(MaterialTheme.MATERIAL_SURFACE_BG)
-        .systemMaterial(this.createImmersiveMaterial())
     } else {
-      Column() {
-        if (this.content) {
-          this.content();
+      if (this.fillWidth) {
+        Column() {
+          if (this.content) {
+            this.content();
+          }
         }
+          .width('100%')
+          .borderRadius(this.radius)
+          .backgroundColor(this.solidColor)
+      } else {
+        Column() {
+          if (this.content) {
+            this.content();
+          }
+        }
+          .borderRadius(this.radius)
+          .backgroundColor(this.solidColor)
       }
-        .width('100%')
-        .borderRadius(this.radius)
-        .backgroundColor(this.solidColor)
     }
   }
 
@@ -95,6 +128,7 @@ export struct MaterialSurface {
       interactive: this.interactive,
       lightEffect: this.lightEffect ? { color: this.lightEffectColor } : undefined,
       colorInvert: this.colorInvert,
+      materialColor: this.materialColor,
       applyShadow: this.applyShadow
     });
   }
