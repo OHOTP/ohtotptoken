@@ -33,7 +33,7 @@ export struct SettingItem {
       }
       .alignItems(HorizontalAlign.Start)
       .width('100%')
-      // 分组背景是分组列表唯一的不透明层，Phase 2 由 MaterialSurface 接管；
+      // 分组背景是分组列表唯一的不透明层，Phase 3 由 MaterialSurface 接管；
       // 子项背景须保持透明，不使用阴影（与材质表面冲突）
       .backgroundColor($r('app.color.item_bg'))
       .borderRadius(SETTING_GROUP_RADIUS)

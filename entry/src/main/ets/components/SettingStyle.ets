@@ -5,7 +5,7 @@
  * （左缩进 16 与文字对齐）、页面级左右留白 16。
  * SettingItem 与 SubItem* 系列统一从这里取值，避免数值散落各处。
  *
- * 材质化契约（Phase 1.2 MaterialTheme / Phase 2 MaterialSurface 的对接点）：
+ * 材质化契约（Phase 4.2 MaterialTheme / Phase 3 MaterialSurface 的对接点）：
  * - 分组容器（SettingItem）是分组列表唯一的不透明背景层，SubItem* 子项背景
  *   必须保持透明 —— 不透明子背景会盖住 ImmersiveMaterial 材质层（官方 FAQ 明确）
  * - 分组卡片不使用阴影，阴影与材质表面视觉冲突
