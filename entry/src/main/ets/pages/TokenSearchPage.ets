@@ -1,5 +1,7 @@
 import { TokenItem } from "../components/TokenItem";
 import { PageScaffold } from "../components/PageScaffold";
+import { MaterialSurface } from "../components/MaterialSurface";
+import { MaterialTheme, MaterialThickness } from "../components/MaterialTheme";
 import { FortiConfigDialog } from 'uikit';
 import { TOTPConfigDialog } from 'uikit';
 import { QRCodeDialog } from 'uikit';
@@ -113,20 +115,47 @@ export struct TokenSearchPage {
   @Builder
   SearchBottomBuilder() {
     Column() {
-      Search({
-        placeholder: $r('app.string.token_search_placeholder'),
-        value: this.tokenSearchText
-      })
-        .width('100%')
-        .height(40)
-        .onChange((value: string) => {
-          this.tokenSearchText = value;
-          this.filterCurrentTokens(value);
+      if (MaterialTheme.isImmersiveEffective()) {
+        // 沉浸材质档：搜索框套 MaterialSurface，THIN 厚度（官方搜索框推荐档位）
+        // + 光感反馈；Search 背景置透明透出材质层（材质化契约第 1 条）
+        MaterialSurface({
+          thickness: MaterialThickness.THIN,
+          lightEffect: true,
+          radius: $r('sys.float.ohos_id_search_text_field_border_radius')
+        }) {
+          Search({
+            placeholder: $r('app.string.token_search_placeholder'),
+            value: this.tokenSearchText
+          })
+            .width('100%')
+            .height(40)
+            .backgroundColor(Color.Transparent)
+            .onChange((value: string) => {
+              this.tokenSearchText = value;
+              this.filterCurrentTokens(value);
+            })
+            .onSubmit((value: string) => {
+              this.tokenSearchText = value;
+              this.filterCurrentTokens(value);
+            })
+        }
+      } else {
+        // hds/solid 档：保持现有系统默认样式，不套材质表面
+        Search({
+          placeholder: $r('app.string.token_search_placeholder'),
+          value: this.tokenSearchText
         })
-        .onSubmit((value: string) => {
-          this.tokenSearchText = value;
-          this.filterCurrentTokens(value);
-        })
+          .width('100%')
+          .height(40)
+          .onChange((value: string) => {
+            this.tokenSearchText = value;
+            this.filterCurrentTokens(value);
+          })
+          .onSubmit((value: string) => {
+            this.tokenSearchText = value;
+            this.filterCurrentTokens(value);
+          })
+      }
     }
     .width('100%')
     .padding({ left: 16, right: 16 })
