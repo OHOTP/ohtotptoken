@@ -993,6 +993,42 @@
       "value": "超厚"
     },
     {
+      "name": "setting_group_general",
+      "value": "通用"
+    },
+    {
+      "name": "setting_group_appearance",
+      "value": "外观"
+    },
+    {
+      "name": "setting_group_material",
+      "value": "光感材质"
+    },
+    {
+      "name": "setting_token_item_material",
+      "value": "列表项材质"
+    },
+    {
+      "name": "setting_token_item_material_desc",
+      "value": "为令牌列表项启用光感材质（逐项生效，可能增加滚动开销）"
+    },
+    {
+      "name": "setting_token_item_material_solid",
+      "value": "实体"
+    },
+    {
+      "name": "setting_token_item_material_immersive",
+      "value": "光感"
+    },
+    {
+      "name": "token_item_material_confirm_title",
+      "value": "启用列表项光感材质？"
+    },
+    {
+      "name": "token_item_material_confirm_msg",
+      "value": "为每个令牌列表项单独启用光感材质后，列表滚动时需要逐项实时重采样背景，会增加性能与功耗开销，令牌较多或设备性能较低时可能出现滚动卡顿。\n\n光感效果仅在设备支持沉浸材质且材质模式未设为「实体背景」时生效。确定要启用吗？"
+    },
+    {
       "name": "setting_bottom_tabs_type",
       "value": "底部Tabs类型"
     },

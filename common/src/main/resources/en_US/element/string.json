@@ -993,6 +993,42 @@
       "value": "Ultra Thick"
     },
     {
+      "name": "setting_group_general",
+      "value": "General"
+    },
+    {
+      "name": "setting_group_appearance",
+      "value": "Appearance"
+    },
+    {
+      "name": "setting_group_material",
+      "value": "Immersive Material"
+    },
+    {
+      "name": "setting_token_item_material",
+      "value": "List Item Material"
+    },
+    {
+      "name": "setting_token_item_material_desc",
+      "value": "Enable immersive material for each token list item (per-item, may increase scrolling overhead)"
+    },
+    {
+      "name": "setting_token_item_material_solid",
+      "value": "Solid"
+    },
+    {
+      "name": "setting_token_item_material_immersive",
+      "value": "Immersive"
+    },
+    {
+      "name": "token_item_material_confirm_title",
+      "value": "Enable Immersive Material for List Items?"
+    },
+    {
+      "name": "token_item_material_confirm_msg",
+      "value": "Enabling immersive material for every token list item requires the background to be re-sampled per item on each frame while scrolling, which increases performance and power cost and may cause scrolling jank with many tokens or on low-end devices.\n\nThe effect only applies when the device supports immersive material and Material Mode is not set to Solid. Enable it anyway?"
+    },
+    {
       "name": "setting_bottom_tabs_type",
       "value": "Bottom Tabs Type"
     },

@@ -1,4 +1,4 @@
-import { MaterialPreference, SettingImmersiveStyle, SettingMaterialMode } from 'common';
+import { MaterialPreference, SettingImmersiveStyle, SettingMaterialMode, SettingTokenItemMaterial } from 'common';
 import { AppStorageV2, uiMaterial } from '@kit.ArkUI';
 import { MaterialPolicy, MaterialTier } from '../utils/MaterialPolicy';
 import { SETTING_GROUP_RADIUS } from './SettingStyle';
@@ -106,6 +106,21 @@ export class MaterialTheme {
    */
   static surfaceBackground(solidColor: ResourceColor): ResourceColor {
     return MaterialTheme.isImmersiveEffective() ? MaterialTheme.MATERIAL_SURFACE_BG : solidColor;
+  }
+
+  /**
+   * 令牌列表项逐项光感材质是否生效
+   *
+   * 需同时满足：用户将列表项材质偏好设为 IMMERSIVE（默认 SOLID，选择
+   * 光感时经 Dialog 二次确认）且当前有效档位为 immersive。
+   * 官方性能规则不建议滚动列表逐项设材质（逐项逐帧重采样背景），
+   * 此为用户显式开启的选项；排序页（sortMode）始终不走此分支。
+   *
+   * @returns 可为单个 TokenItem 应用 ImmersiveMaterial 时返回 true
+   */
+  static isTokenItemMaterialEffective(): boolean {
+    return MaterialTheme.materialPref().app_appearance_token_item_material === SettingTokenItemMaterial.IMMERSIVE &&
+      MaterialTheme.isImmersiveEffective();
   }
 
   /**
