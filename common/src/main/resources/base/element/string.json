@@ -710,7 +710,7 @@
     },
     {
       "name": "token_item_slider_desc",
-      "value": "Fine-tune the size and clearance distance of the token interface."
+      "value": "Fine-tune the size and clearance distance of the token interface. Icon background size and radius only take effect after enabling icon background in the \"Function\" group."
     },
     {
       "name": "token_item_hight",
@@ -738,11 +738,15 @@
     },
     {
       "name": "token_logo_bg_size",
-      "value": "Background"
+      "value": "Icon Background Size"
     },
     {
       "name": "token_logo_bg_r",
-      "value": "Background Radius"
+      "value": "Icon Background Radius"
+    },
+    {
+      "name": "token_item_radius",
+      "value": "Card Radius"
     },
     {
       "name": "token_font_slider",

@@ -290,7 +290,7 @@ export struct TokenItem {
         this.TokenRowContent(true)
       }
       .width('100%')
-      .borderRadius(MaterialTheme.RADIUS_GROUP)
+      .borderRadius(this.token_preference.app_appearance_item_radius)
       .backgroundColor($r('app.color.item_bg'))
       .margin({
         left: this.token_preference.app_appearance_token_list_item_prefix_padding,
@@ -301,7 +301,7 @@ export struct TokenItem {
         if (MaterialTheme.isTokenItemMaterialEffective()) {
           // 列表项光感材质：用户在设置中显式开启（官方不建议滚动列表逐项
           // 材质，开启前已经 Dialog 二次确认）；内容背景透明透出材质层
-          MaterialSurface() {
+          MaterialSurface({ radius: this.token_preference.app_appearance_item_radius }) {
             this.TokenRowContent(false)
           }
         } else {
@@ -309,7 +309,7 @@ export struct TokenItem {
             this.TokenRowContent(false)
           }
           .width('100%')
-          .borderRadius(MaterialTheme.RADIUS_GROUP)
+          .borderRadius(this.token_preference.app_appearance_item_radius)
           .backgroundColor($r('app.color.item_bg'))
         }
       }

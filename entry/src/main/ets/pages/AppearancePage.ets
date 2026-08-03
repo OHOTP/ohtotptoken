@@ -260,6 +260,15 @@ export struct AppearancePage {
                       step: 1
                     },
                     {
+                      // 卡片圆角：默认 16vp 取自官方设计指南「圆角参数」普通卡片/内容容器档；
+                      // 范围 0~32 步进 2，对齐系统圆角 Token 全量表（level1~level16）
+                      name: $r('app.string.token_item_radius'),
+                      default: this.token_preference.app_appearance_item_radius,
+                      min: 0,
+                      max: 32,
+                      step: 2
+                    },
+                    {
                       name: $r('app.string.token_list_item_prefix_padding'),
                       default: this.token_preference.app_appearance_token_list_item_prefix_padding,
                       min: 0,
@@ -308,11 +317,16 @@ export struct AppearancePage {
                         break;
                       }
                       case 6: {
+                        AppPreference.setPreference(PREF_KEYS.APPEARANCE_ITEM_RADIUS, value);
+                        this.token_preference.app_appearance_item_radius = value;
+                        break;
+                      }
+                      case 7: {
                         AppPreference.setPreference(PREF_KEYS.APPEARANCE_TOKEN_LIST_ITEM_PREFIX_PADDING, value);
                         this.token_preference.app_appearance_token_list_item_prefix_padding = value;
                         break;
                       }
-                      case 7: {
+                      case 8: {
                         AppPreference.setPreference(PREF_KEYS.APPEARANCE_TOKEN_LIST_ITEM_SUFFIX_PADDING, value);
                         this.token_preference.app_appearance_token_list_item_suffix_padding = value;
                         break;

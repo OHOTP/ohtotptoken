@@ -718,7 +718,7 @@
     },
     {
       "name": "token_item_slider_desc",
-      "value": "微调令牌界面的大小和间距。"
+      "value": "微调令牌界面的大小和间距。图标背景尺寸与圆角仅在「功能」分组中启用图标背景后生效。"
     },
     {
       "name": "token_item_hight",
@@ -746,11 +746,15 @@
     },
     {
       "name": "token_logo_bg_size",
-      "value": "背景"
+      "value": "图标背景尺寸"
     },
     {
       "name": "token_logo_bg_r",
-      "value": "背景圆角"
+      "value": "图标背景圆角"
+    },
+    {
+      "name": "token_item_radius",
+      "value": "卡片圆角"
     },
     {
       "name": "token_font_slider",

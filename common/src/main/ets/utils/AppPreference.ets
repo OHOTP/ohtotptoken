@@ -93,6 +93,8 @@ export enum PREF_KEYS {
   APPEARANCE_ITEM_HEIGHT = 'app_appearance_item_height',
   /** Token项目间距 */
   APPEARANCE_ITEM_SPACE = 'app_appearance_item_space',
+  /** Token项目卡片圆角 */
+  APPEARANCE_ITEM_RADIUS = 'app_appearance_item_radius',
   /** Logo大小 */
   APPEARANCE_LOGO_SIZE = 'app_appearance_logo_size',
   /** Logo背景大小 */
@@ -336,6 +338,7 @@ export class TokenPreference {
   @Trace app_appearance_swap_host_user_enable = false;
   @Trace app_appearance_item_height = 60;
   @Trace app_appearance_item_space = 10;
+  @Trace app_appearance_item_radius = 16;
   @Trace app_appearance_logo_size = 40;
   @Trace app_appearance_logo_background = false;
   @Trace app_appearance_logo_background_size = 45;
@@ -481,6 +484,8 @@ export class AppPreference {
     [PREF_KEYS.APPEARANCE_LOGO_BACKGROUND, false],
     [PREF_KEYS.APPEARANCE_ITEM_HEIGHT, 60],
     [PREF_KEYS.APPEARANCE_ITEM_SPACE, 10],
+    // 卡片圆角默认 16vp：官方设计指南「圆角参数」中普通卡片/内容容器档位
+    [PREF_KEYS.APPEARANCE_ITEM_RADIUS, 16],
     [PREF_KEYS.APPEARANCE_LOGO_SIZE, 40],
     [PREF_KEYS.APPEARANCE_LOGO_BACKGROUND_SIZE, 45],
     [PREF_KEYS.APPEARANCE_LOGO_BACKGROUND_RADIUS, 5],
@@ -591,6 +596,7 @@ export class AppPreference {
     token_appearance.app_appearance_item_height =
       AppPreference.getPreference(PREF_KEYS.APPEARANCE_ITEM_HEIGHT) as number;
     token_appearance.app_appearance_item_space = AppPreference.getPreference(PREF_KEYS.APPEARANCE_ITEM_SPACE) as number;
+    token_appearance.app_appearance_item_radius = AppPreference.getPreference(PREF_KEYS.APPEARANCE_ITEM_RADIUS) as number;
     token_appearance.app_appearance_logo_size = AppPreference.getPreference(PREF_KEYS.APPEARANCE_LOGO_SIZE) as number;
     token_appearance.app_appearance_logo_background_size =
       AppPreference.getPreference(PREF_KEYS.APPEARANCE_LOGO_BACKGROUND_SIZE) as number;
