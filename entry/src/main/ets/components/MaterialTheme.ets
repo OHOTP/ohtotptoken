@@ -114,7 +114,7 @@ export class MaterialTheme {
    * 需同时满足：用户将列表项材质偏好设为 IMMERSIVE（默认 SOLID，选择
    * 光感时经 Dialog 二次确认）且当前有效档位为 immersive。
    * 官方性能规则不建议滚动列表逐项设材质（逐项逐帧重采样背景），
-   * 此为用户显式开启的选项；排序页（sortMode）始终不走此分支。
+   * 此为用户显式开启的选项；排序页（sortMode）与主列表共用本判定。
    *
    * @returns 可为单个 TokenItem 应用 ImmersiveMaterial 时返回 true
    */

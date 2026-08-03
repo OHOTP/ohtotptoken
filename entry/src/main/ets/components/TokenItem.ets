@@ -285,13 +285,24 @@ export struct TokenItem {
   build() {
     if (this.sortMode) {
       // 排序模式：禁用上下文菜单和长按手势，Suffix 显示排序图标；
-      // 排序页不做逐项材质（用户决策），保持实体卡片
+      // 材质与主列表一致跟随设置（逐项光感为用户显式开启项，开启前经 Dialog 二次确认）
       Column() {
-        this.TokenRowContent(true)
+        if (MaterialTheme.isTokenItemMaterialEffective()) {
+          // 内容背景透明透出材质层（不透明背景会盖住 ImmersiveMaterial）
+          MaterialSurface({ radius: this.token_preference.app_appearance_item_radius }) {
+            this.TokenRowContent(true)
+          }
+        } else {
+          Column() {
+            this.TokenRowContent(true)
+          }
+          .width('100%')
+          .borderRadius(this.token_preference.app_appearance_item_radius)
+          .backgroundColor($r('app.color.item_bg'))
+        }
       }
-      .width('100%')
-      .borderRadius(this.token_preference.app_appearance_item_radius)
-      .backgroundColor($r('app.color.item_bg'))
+      // 外层只带 margin 不设 width：width('100%')+margin 会把卡片撑出列表右边界；
+      // 与下方非排序分支结构一致，margin 由外层承担，宽度交给 ListItem 约束
       .margin({
         left: this.token_preference.app_appearance_token_list_item_prefix_padding,
         right: this.token_preference.app_appearance_token_list_item_suffix_padding
@@ -374,9 +385,11 @@ export struct TokenItem {
 
   @Builder
   TokenSortIconBuilder() {
+    // 与主页验证码区（TokenCodeBuilder）同款左右内边距，排序图标不贴卡片边缘
     SymbolGlyph($r('sys.symbol.list_bullet'))
       .fontSize(24)
       .fontColor([$r('sys.color.icon_secondary')])
+      .padding({ left: $r('sys.float.ohos_id_text_overlay_menu_button_padding_left'), right: $r('sys.float.ohos_id_text_overlay_menu_button_padding_right') })
   }
 
   @Builder
