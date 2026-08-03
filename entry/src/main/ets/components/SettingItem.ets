@@ -29,7 +29,8 @@ export struct SettingItem {
       // 分组背景是分组列表唯一的背景层（Phase 5.3 起由 MaterialSurface 接管：
       // 沉浸档渲染 ImmersiveMaterial，其余档位回落 item_bg 实体色；
       // 圆角/实体色均取 MaterialSurface 默认值），子项背景须保持透明，
-      // 不使用阴影（与材质表面冲突）
+      // 不使用阴影（与材质表面冲突）；光感反馈跟随用户「光源反馈」偏好
+      // （跟随组件=关闭，全部开启=由 MaterialSurface 集中点亮）
       MaterialSurface() {
         Column() {
           if (this.subItemBuilder) {

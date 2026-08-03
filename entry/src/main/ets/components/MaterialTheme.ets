@@ -1,4 +1,4 @@
-import { MaterialPreference, SettingImmersiveStyle, SettingMaterialMode, SettingTokenItemMaterial } from 'common';
+import { MaterialPreference, SettingImmersiveStyle, SettingLightEffectMode, SettingMaterialMode, SettingTokenItemMaterial } from 'common';
 import { AppStorageV2, uiMaterial } from '@kit.ArkUI';
 import { MaterialPolicy, MaterialTier } from '../utils/MaterialPolicy';
 import { SETTING_GROUP_RADIUS } from './SettingStyle';
@@ -121,6 +121,18 @@ export class MaterialTheme {
   static isTokenItemMaterialEffective(): boolean {
     return MaterialTheme.materialPref().app_appearance_token_item_material === SettingTokenItemMaterial.IMMERSIVE &&
       MaterialTheme.isImmersiveEffective();
+  }
+
+  /**
+   * 光源反馈是否全局开启
+   *
+   * 用户偏好为 ALL 时所有沉浸材质表面启用触摸光感反馈（MaterialSurface
+   * 在构造材质时与本方法取或）；DEFAULT 时各表面按自身 lightEffect 设置决定。
+   *
+   * @returns 全局开启返回 true
+   */
+  static isLightEffectAll(): boolean {
+    return MaterialTheme.materialPref().app_appearance_light_effect_mode === SettingLightEffectMode.ALL;
   }
 
   /**

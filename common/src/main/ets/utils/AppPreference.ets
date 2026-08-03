@@ -171,6 +171,8 @@ export enum PREF_KEYS {
   APPEARANCE_IMMERSIVE_STYLE = 'app_appearance_immersive_style',
   /** 令牌列表项材质（实体/光感） */
   APPEARANCE_TOKEN_ITEM_MATERIAL = 'app_appearance_token_item_material',
+  /** 光源反馈模式（跟随组件/全部开启） */
+  APPEARANCE_LIGHT_EFFECT_MODE = 'app_appearance_light_effect_mode',
 }
 
 /** 主密码旧偏好键名（已废弃，仅用于兼容性检测与清理） */
@@ -324,6 +326,26 @@ export const AVAILABLE_TOKEN_ITEM_MATERIALS: EnumSelectOption[] = [
   { label: $r('app.string.setting_token_item_material_immersive'), value: SettingTokenItemMaterial.IMMERSIVE },
 ];
 
+/**
+ * 光源反馈模式枚举
+ * DEFAULT：跟随组件（各沉浸材质表面按自身 lightEffect 设置决定是否启用，默认）
+ * ALL：全部开启（所有沉浸材质表面启用触摸光感反馈）
+ */
+export enum SettingLightEffectMode {
+  /** 跟随组件（默认） */
+  DEFAULT,
+  /** 全部开启 */
+  ALL,
+}
+
+/**
+ * 当前支持的光源反馈模式选项数组
+ */
+export const AVAILABLE_LIGHT_EFFECT_MODES: EnumSelectOption[] = [
+  { label: $r('app.string.setting_light_effect_mode_default'), value: SettingLightEffectMode.DEFAULT },
+  { label: $r('app.string.setting_light_effect_mode_all'), value: SettingLightEffectMode.ALL },
+];
+
 
 /**
  * Token外观配置类
@@ -388,6 +410,8 @@ export class MaterialPreference {
   @Trace app_appearance_immersive_style: number = SettingImmersiveStyle.REGULAR;
   /** 令牌列表项材质（SettingTokenItemMaterial：SOLID/IMMERSIVE，默认 SOLID） */
   @Trace app_appearance_token_item_material: number = SettingTokenItemMaterial.SOLID;
+  /** 光源反馈模式（SettingLightEffectMode：DEFAULT/ALL，默认 DEFAULT） */
+  @Trace app_appearance_light_effect_mode: number = SettingLightEffectMode.DEFAULT;
 }
 
 /**
@@ -477,6 +501,8 @@ export class AppPreference {
     [PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE, SettingImmersiveStyle.REGULAR],
     // 令牌列表项材质（默认实体，光感需用户显式确认开启）
     [PREF_KEYS.APPEARANCE_TOKEN_ITEM_MATERIAL, SettingTokenItemMaterial.SOLID],
+    // 光源反馈模式（默认跟随组件）
+    [PREF_KEYS.APPEARANCE_LIGHT_EFFECT_MODE, SettingLightEffectMode.DEFAULT],
   ]);
   private static appearance_default: Map<string, SettingValue> = new Map<string, SettingValue>([
     // 外观-自定义
@@ -673,6 +699,8 @@ export class AppPreference {
       AppPreference.getPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE) as number;
     material_preference.app_appearance_token_item_material =
       AppPreference.getPreference(PREF_KEYS.APPEARANCE_TOKEN_ITEM_MATERIAL) as number;
+    material_preference.app_appearance_light_effect_mode =
+      AppPreference.getPreference(PREF_KEYS.APPEARANCE_LIGHT_EFFECT_MODE) as number;
   }
 
   /**

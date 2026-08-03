@@ -44,7 +44,8 @@ export struct MaterialSurface {
   @Param interactive: boolean = false;
   /**
    * 光感交互反馈开关。官方 lightEffect 为对象类型（传对象启用/undefined 关闭），
-   * 组件对外暴露 boolean，内部映射为 { color } / undefined
+   * 组件对外暴露 boolean，内部映射为 { color } / undefined；
+   * 用户光源反馈偏好为「全部开启」时等效于本开关为 true（取或）
    */
   @Param lightEffect: boolean = false;
   /** 光感颜色，默认 Color.White（官方默认） */
@@ -126,7 +127,7 @@ export struct MaterialSurface {
     return new uiMaterial.ImmersiveMaterial({
       style: this.mapThickness(this.thickness ?? MaterialTheme.preferredThickness()),
       interactive: this.interactive,
-      lightEffect: this.lightEffect ? { color: this.lightEffectColor } : undefined,
+      lightEffect: (this.lightEffect || MaterialTheme.isLightEffectAll()) ? { color: this.lightEffectColor } : undefined,
       colorInvert: this.colorInvert,
       materialColor: this.materialColor,
       applyShadow: this.applyShadow

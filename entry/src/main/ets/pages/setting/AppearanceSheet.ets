@@ -4,7 +4,7 @@ import { MaterialPolicy } from '../../utils/MaterialPolicy';
 import { showSnackBar, SnackBarNotifyType } from 'common';
 import { SubItemToggle } from '../../components/SubItemToggle'
 import { AppStorageV2, curves } from '@kit.ArkUI';
-import { AppPreference, SettingColorMode, SettingTopEffectType, SettingBottomTabsType, TokenPreference, MaterialPreference, AVAILABLE_TOP_EFFECT_TYPES, AVAILABLE_BOTTOM_TABS_TYPES, AVAILABLE_MATERIAL_MODES, AVAILABLE_IMMERSIVE_STYLES, AVAILABLE_TOKEN_ITEM_MATERIALS, SettingMaterialMode, SettingImmersiveStyle, SettingTokenItemMaterial, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES } from 'common';
+import { AppPreference, SettingColorMode, SettingTopEffectType, SettingBottomTabsType, TokenPreference, MaterialPreference, AVAILABLE_TOP_EFFECT_TYPES, AVAILABLE_BOTTOM_TABS_TYPES, AVAILABLE_MATERIAL_MODES, AVAILABLE_IMMERSIVE_STYLES, AVAILABLE_TOKEN_ITEM_MATERIALS, AVAILABLE_LIGHT_EFFECT_MODES, SettingMaterialMode, SettingImmersiveStyle, SettingTokenItemMaterial, SettingLightEffectMode, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES } from 'common';
 import { SubItemButton } from '../../components/SubItemButton';
 import { SettingItem } from '../../components/SettingItem';
 import { SubItemDivider } from '../../components/SubItemDivider';
@@ -209,6 +209,21 @@ export struct AppearanceSheet {
                   onChange: (value: number) => {
                     AppPreference.setPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE, value);
                     this.material_preference.app_appearance_immersive_style = value;
+                  }
+                })
+
+                SubItemDivider()
+
+                SubItemEnumSelect({
+                  icon: $r('sys.symbol.circle_lefthalf_inset_filled'),
+                  title: $r('app.string.setting_light_effect_mode'),
+                  options: AVAILABLE_LIGHT_EFFECT_MODES,
+                  description: $r('app.string.setting_light_effect_mode_desc'),
+                  selected: AppPreference.getPreference(PREF_KEYS.APPEARANCE_LIGHT_EFFECT_MODE) as number ??
+                    SettingLightEffectMode.DEFAULT,
+                  onChange: (value: number) => {
+                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_LIGHT_EFFECT_MODE, value);
+                    this.material_preference.app_appearance_light_effect_mode = value;
                   }
                 })
 

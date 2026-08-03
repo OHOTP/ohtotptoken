@@ -1017,6 +1017,22 @@
       "value": "為令牌清單項目啟用光感材質（逐項生效，可能增加捲動開銷）"
     },
     {
+      "name": "setting_light_effect_mode",
+      "value": "光源回饋"
+    },
+    {
+      "name": "setting_light_effect_mode_desc",
+      "value": "觸摸時材質表面的光斑回饋；跟隨元件保留各表面自身設定，全部開啟為所有光感表面啟用"
+    },
+    {
+      "name": "setting_light_effect_mode_default",
+      "value": "跟隨元件"
+    },
+    {
+      "name": "setting_light_effect_mode_all",
+      "value": "全部開啟"
+    },
+    {
       "name": "setting_token_item_material_solid",
       "value": "實體"
     },

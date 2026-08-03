@@ -1017,6 +1017,22 @@
       "value": "为令牌列表项启用光感材质（逐项生效，可能增加滚动开销）"
     },
     {
+      "name": "setting_light_effect_mode",
+      "value": "光源反馈"
+    },
+    {
+      "name": "setting_light_effect_mode_desc",
+      "value": "触摸时材质表面的光斑反馈；跟随组件保留各表面自身设置，全部开启为所有光感表面启用"
+    },
+    {
+      "name": "setting_light_effect_mode_default",
+      "value": "跟随组件"
+    },
+    {
+      "name": "setting_light_effect_mode_all",
+      "value": "全部开启"
+    },
+    {
       "name": "setting_token_item_material_solid",
       "value": "实体"
     },
