@@ -1,4 +1,6 @@
 import { BusinessError } from '@kit.BasicServicesKit';
+import { MaterialPolicy } from '../../utils/MaterialPolicy';
+
 import { showSnackBar, SnackBarNotifyType } from 'common';
 import { SubItemToggle } from '../../components/SubItemToggle'
 import { AppStorageV2, curves } from '@kit.ArkUI';
@@ -12,6 +14,7 @@ import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } 
 import { DlpAntiPeepManager } from 'common';
 import { common } from '@kit.AbilityKit';
 import { SETTING_PAGE_INSET } from '../../components/SettingStyle';
+import { MaterialTheme } from '../../components/MaterialTheme';
 
 @Preview
 @ComponentV2
@@ -147,12 +150,16 @@ export struct SecuritySheet {
           .height('100%')
           .scrollBar(BarState.Off)
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-          .backgroundColor($r('app.color.window_background'))
+          // 滚动末端抬高底部避让区(导航条/小横条)，避免最后一项被遮挡
+          .contentEndOffset(this.window.AvoidBottomHeight)
+          // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
+          .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
           .layoutWeight(1)
         }
         .width('100%')
         .height('100%')
-        .backgroundColor($r('app.color.window_background'))
+        // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
+        .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
       }
       .mode(NavigationMode.Stack)
       .bindToScrollable([this.sheetScroller])
@@ -177,7 +184,7 @@ export struct SecuritySheet {
           },
           systemMaterialEffect: {
             materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+            materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
           }
         },
         content: {
@@ -189,6 +196,7 @@ export struct SecuritySheet {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.window_background'))
+    // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
+    .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
   }
 }

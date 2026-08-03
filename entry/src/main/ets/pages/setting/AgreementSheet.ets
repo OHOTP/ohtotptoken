@@ -1,4 +1,6 @@
 import { SubItemButton } from '../../components/SubItemButton';
+import { MaterialPolicy } from '../../utils/MaterialPolicy';
+
 import { SettingItem } from '../../components/SettingItem';
 import { SubItemDivider } from '../../components/SubItemDivider';
 import { throttle } from 'common';
@@ -6,12 +8,16 @@ import { ROUTE_NAMES } from 'common';
 import { WebPage, WebPageParams } from '../WebPage';
 import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import { SETTING_PAGE_INSET } from '../../components/SettingStyle';
+import { MaterialTheme } from '../../components/MaterialTheme';
+import { AppWindowInfo } from 'common';
+import { AppStorageV2 } from '@kit.ArkUI';
 
 @Preview
 @ComponentV2
 export struct AgreementSheet {
   pageInfos: NavPathStack = new NavPathStack();
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
+  @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   private sheetScroller: Scroller = new Scroller();
 
   @Builder
@@ -57,16 +63,21 @@ export struct AgreementSheet {
           .height('100%')
           .scrollBar(BarState.Off)
           .edgeEffect(EdgeEffect.Spring, {alwaysEnabled: true})
-          .backgroundColor($r('app.color.window_background'))
+          // 滚动末端抬高底部避让区(导航条/小横条)，避免最后一项被遮挡
+          .contentEndOffset(this.window.AvoidBottomHeight)
+          // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
+          .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
           .layoutWeight(1)
         }
         .width('100%')
         .height('100%')
-        .backgroundColor($r('app.color.window_background'))
+        // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
+        .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
       }
       .width('100%')
       .height('100%')
-      .backgroundColor($r('app.color.window_background'))
+      // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
+      .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
       .mode(NavigationMode.Stack)
       .navDestination(this.navDestinationBuilder)
       .bindToScrollable([this.sheetScroller])
@@ -91,7 +102,7 @@ export struct AgreementSheet {
           },
           systemMaterialEffect: {
             materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+            materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
           }
         },
         content: {

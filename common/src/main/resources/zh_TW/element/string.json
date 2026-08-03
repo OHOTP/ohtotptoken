@@ -718,7 +718,7 @@
     },
     {
       "name": "token_item_slider_desc",
-      "value": "微調令牌介面的大小和間距。"
+      "value": "微調令牌介面的大小和間距。圖標背景尺寸與圓角僅在「功能」分組中啟用圖標背景後生效。"
     },
     {
       "name": "token_item_hight",
@@ -746,11 +746,15 @@
     },
     {
       "name": "token_logo_bg_size",
-      "value": "背景"
+      "value": "圖標背景尺寸"
     },
     {
       "name": "token_logo_bg_r",
-      "value": "背景半徑"
+      "value": "圖標背景圓角"
+    },
+    {
+      "name": "token_item_radius",
+      "value": "卡片圓角"
     },
     {
       "name": "token_font_slider",
@@ -943,6 +947,106 @@
     {
       "name": "setting_top_effect_type_immersive_gradient_blur",
       "value": "沉浸式漸變模糊"
+    },
+    {
+      "name": "setting_material_mode",
+      "value": "材質模式"
+    },
+    {
+      "name": "setting_material_mode_desc",
+      "value": "為卡片與表面啟用沉浸光感材質（需要裝置支援）"
+    },
+    {
+      "name": "setting_material_mode_auto",
+      "value": "自動"
+    },
+    {
+      "name": "setting_material_mode_immersive",
+      "value": "沉浸光感"
+    },
+    {
+      "name": "setting_material_mode_solid",
+      "value": "實體背景"
+    },
+    {
+      "name": "setting_immersive_style",
+      "value": "材質厚度"
+    },
+    {
+      "name": "setting_immersive_style_desc",
+      "value": "沉浸材質的厚度檔位"
+    },
+    {
+      "name": "setting_immersive_style_ultra_thin",
+      "value": "超薄"
+    },
+    {
+      "name": "setting_immersive_style_thin",
+      "value": "薄"
+    },
+    {
+      "name": "setting_immersive_style_regular",
+      "value": "常規"
+    },
+    {
+      "name": "setting_immersive_style_thick",
+      "value": "厚"
+    },
+    {
+      "name": "setting_immersive_style_ultra_thick",
+      "value": "超厚"
+    },
+    {
+      "name": "setting_group_general",
+      "value": "一般"
+    },
+    {
+      "name": "setting_group_appearance",
+      "value": "外觀"
+    },
+    {
+      "name": "setting_group_material",
+      "value": "光感材質"
+    },
+    {
+      "name": "setting_token_item_material",
+      "value": "清單項目材質"
+    },
+    {
+      "name": "setting_token_item_material_desc",
+      "value": "為令牌清單項目啟用光感材質（逐項生效，可能增加捲動開銷）"
+    },
+    {
+      "name": "setting_light_effect_mode",
+      "value": "光源回饋"
+    },
+    {
+      "name": "setting_light_effect_mode_desc",
+      "value": "觸摸時材質表面的光斑回饋；跟隨元件保留各表面自身設定，全部開啟為所有光感表面啟用"
+    },
+    {
+      "name": "setting_light_effect_mode_default",
+      "value": "跟隨元件"
+    },
+    {
+      "name": "setting_light_effect_mode_all",
+      "value": "全部開啟"
+    },
+    {
+      "name": "setting_token_item_material_solid",
+      "value": "實體"
+    },
+    {
+      "name": "setting_token_item_material_immersive",
+      "value": "光感"
+    },
+    {
+      "name": "token_item_material_confirm_title",
+      "value": "啟用清單項目光感材質？"
+    },
+    {
+      "name": "token_item_material_confirm_msg",
+      "value": "為每個令牌清單項目單獨啟用光感材質後，清單捲動時需要逐項即時重新取樣背景，會增加效能與功耗開銷，令牌較多或裝置效能較低時可能出現捲動卡頓。\n\n光感效果僅在裝置支援沉浸材質且材質模式未設為「實體背景」時生效。確定要啟用嗎？"
     },
     {
       "name": "setting_bottom_tabs_type",

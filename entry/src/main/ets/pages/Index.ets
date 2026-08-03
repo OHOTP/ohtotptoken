@@ -1,5 +1,5 @@
 import { bundleManager,common } from '@kit.AbilityKit';
-import { TokenConfig } from 'common';
+import { TokenConfig, dialogSystemMaterial } from 'common';
 import { util, url } from '@kit.ArkTS';
 // [冷启动优化] 文件 I/O 仅在 deferredInit 中使用
 import lazy { fileIo as fs } from '@kit.CoreFileKit';
@@ -130,6 +130,7 @@ struct Index {
   };
   //拖拽文件弹框
   private DropFilesDialogController: CustomDialogController | null = new CustomDialogController({
+    systemMaterial: dialogSystemMaterial(),
     builder: DropFilesDialog({}),
     cancel: () => {},
     autoCancel: true,
@@ -331,6 +332,7 @@ struct Index {
 
   //region 导入
   private password_input_dialog: CustomDialogController | null = new CustomDialogController({
+    systemMaterial: dialogSystemMaterial(),
     builder: EncryptionPassWordDialog({
       cancel: () => {},
       confirm: (password: string) => {
@@ -607,6 +609,7 @@ struct Index {
         });
       } else if (code.startsWith('otpauth://')) {
         this.dialog_totp_config = new CustomDialogController({
+          systemMaterial: dialogSystemMaterial(),
           builder: TOTPConfigDialog({
             scan_code_original_Value: code,
             confirm: async (new_conf): Promise<boolean> => {
@@ -628,6 +631,7 @@ struct Index {
 
   openTotpAddDialog(): void {
     this.dialog_totp_config = new CustomDialogController({
+      systemMaterial: dialogSystemMaterial(),
       builder: TOTPConfigDialog({
         confirm: async (new_conf): Promise<boolean> => {
           return await this.updateTokenConfig(JSON.parse(new_conf), true)
@@ -639,6 +643,7 @@ struct Index {
 
   openFortiAddDialog(): void {
     this.dialog_forti_config = new CustomDialogController({
+      systemMaterial: dialogSystemMaterial(),
       builder: FortiConfigDialog({
         confirm: async (new_conf): Promise<boolean> => {
           return await this.updateTokenConfig(JSON.parse(new_conf), true)
@@ -650,6 +655,7 @@ struct Index {
 
   openSteamAddDialog(): void {
     this.dialog_steam_config = new CustomDialogController({
+      systemMaterial: dialogSystemMaterial(),
       builder: SteamConfigDialog({
         confirm: async (new_conf): Promise<boolean> => {
           return await this.updateTokenConfig(JSON.parse(new_conf), true)
@@ -731,7 +737,6 @@ struct Index {
       tokens: this.CurrentTokens,
       scrollEffectType: this.currentScrollEffectType,
       scroller: this.settingEntryScroller,
-      bottomAvoidHeight: this.window.AvoidBottomHeight,
       backupReload: async (conf) => {
         await this.updateTokenConfigs(conf);
         tkStore.sortTokens();

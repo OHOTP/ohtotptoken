@@ -14,7 +14,7 @@ function EmptyBuilder() {
  * 注意:
  * - 本组件为非滚动容器;内部滚动组件(List/Grid/Scroll)若需在安全区内裁剪,
  *   请使用滚动组件自身的 clipContent(ContentClipMode.SAFE_AREA);
- * - 沉浸材质表面由 Phase 2 的 MaterialSurface 承载,本组件保持实体背景作为
+ * - 沉浸材质表面由 Phase 3 的 MaterialSurface 承载,本组件保持实体背景作为
  *   solid 档位回退,不在此处叠加材质。
  */
 @Preview

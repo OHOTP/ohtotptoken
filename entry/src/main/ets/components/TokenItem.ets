@@ -1,5 +1,5 @@
 import { systemDateTime } from '@kit.BasicServicesKit';
-import { otpType, TokenConfig } from 'common';
+import { otpType, TokenConfig, dialogSystemMaterial } from 'common';
 import { convertToken2URI, copyText, generateOTP } from 'common';
 import { TokenIcon } from 'uikit';
 import { SteamUtils } from 'common';
@@ -12,13 +12,10 @@ import { QRCodeDialog } from 'uikit';
 import { AppWindowInfo } from 'common';
 import { TokenStore } from 'common';
 import { ConfigurationConstant, common } from '@kit.AbilityKit';
-import {
-  HdsListItemCard,
-  PrefixCustomBuilder,
-  SuffixCustomBuilder
-} from '@kit.UIDesignKit';
 import { CommonConstants } from 'common';
 import { AppFonts } from 'common';
+import { MaterialSurface } from './MaterialSurface';
+import { MaterialTheme } from './MaterialTheme';
 
 let current_token_hide_map: Map<string, boolean> = new Map();
 let tkStore = TokenStore.getInstance();
@@ -287,43 +284,61 @@ export struct TokenItem {
 
   build() {
     if (this.sortMode) {
-      // 排序模式：禁用上下文菜单和长按手势，Suffix 显示排序图标
+      // 排序模式：禁用上下文菜单和长按手势，Suffix 显示排序图标；
+      // 材质与主列表一致跟随设置（逐项光感为用户显式开启项，开启前经 Dialog 二次确认）
       Column() {
-        HdsListItemCard({
-          prefixItem: new PrefixCustomBuilder((): void => { this.TokenIconBuilder() }),
-          textItem: {
-            customBuilder: (): void => { this.TextContentBuilder() }
-          },
-          suffixItem: new SuffixCustomBuilder((): void => { this.TokenSortIconBuilder() }),
-          cardHeight: this.token_preference.app_appearance_item_height,
-          cardPrefixMargin: this.token_preference.app_appearance_token_list_item_prefix_padding,
-          cardSuffixMargin: this.token_preference.app_appearance_token_list_item_suffix_padding,
-          cardBackgroundColor: $r('app.color.item_bg'),
-        })
+        if (MaterialTheme.isTokenItemMaterialEffective()) {
+          // 内容背景透明透出材质层（不透明背景会盖住 ImmersiveMaterial）
+          MaterialSurface({ radius: this.token_preference.app_appearance_item_radius }) {
+            this.TokenRowContent(true)
+          }
+        } else {
+          Column() {
+            this.TokenRowContent(true)
+          }
+          .width('100%')
+          .borderRadius(this.token_preference.app_appearance_item_radius)
+          .backgroundColor($r('app.color.item_bg'))
+        }
       }
+      // 外层只带 margin 不设 width：width('100%')+margin 会把卡片撑出列表右边界；
+      // 与下方非排序分支结构一致，margin 由外层承担，宽度交给 ListItem 约束
+      .margin({
+        left: this.token_preference.app_appearance_token_list_item_prefix_padding,
+        right: this.token_preference.app_appearance_token_list_item_suffix_padding
+      })
     } else {
       Column() {
-        HdsListItemCard({
-          prefixItem: new PrefixCustomBuilder((): void => { this.TokenIconBuilder() }),
-          textItem: {
-            customBuilder: (): void => { this.TextContentBuilder() }
-          },
-          suffixItem: new SuffixCustomBuilder((): void => { this.TokenCodeBuilder() }),
-          cardHeight: this.token_preference.app_appearance_item_height,
-          cardPrefixMargin: this.token_preference.app_appearance_token_list_item_prefix_padding,
-          cardSuffixMargin: this.token_preference.app_appearance_token_list_item_suffix_padding,
-          cardBackgroundColor: $r('app.color.item_bg'),
-          onClick: () => {
-            if (this.TokenHide && this.token_preference.app_safety_hide_token_enable) {
-              this.TokenHide = !this.TokenHide;
-              current_token_hide_map[this.Config.TokenUUID] = false;
-            } else if (this.token_preference.app_safety_hide_token_enable) {
-              this.TokenHide = !this.TokenHide;
-              current_token_hide_map[this.Config.TokenUUID] = true;
-            }
+        if (MaterialTheme.isTokenItemMaterialEffective()) {
+          // 列表项光感材质：用户在设置中显式开启（官方不建议滚动列表逐项
+          // 材质，开启前已经 Dialog 二次确认）；内容背景透明透出材质层
+          MaterialSurface({ radius: this.token_preference.app_appearance_item_radius }) {
+            this.TokenRowContent(false)
           }
-        })
+        } else {
+          Column() {
+            this.TokenRowContent(false)
+          }
+          .width('100%')
+          .borderRadius(this.token_preference.app_appearance_item_radius)
+          .backgroundColor($r('app.color.item_bg'))
+        }
       }
+      // 卡片左右边距跟随设置中的「左侧边距/右侧边距」，实体与光感两种模式等宽；
+      // 卡片内部内容边距固定为 0（见 TokenRowContent）
+      .margin({
+        left: this.token_preference.app_appearance_token_list_item_prefix_padding,
+        right: this.token_preference.app_appearance_token_list_item_suffix_padding
+      })
+      .onClick(() => {
+        if (this.TokenHide && this.token_preference.app_safety_hide_token_enable) {
+          this.TokenHide = !this.TokenHide;
+          current_token_hide_map[this.Config.TokenUUID] = false;
+        } else if (this.token_preference.app_safety_hide_token_enable) {
+          this.TokenHide = !this.TokenHide;
+          current_token_hide_map[this.Config.TokenUUID] = true;
+        }
+      })
       .gesture(
         LongPressGesture({ duration: this.token_preference.app_appearance_long_press_duration })
           .onAction(() => {
@@ -331,7 +346,12 @@ export struct TokenItem {
           })
       )
       .bindContextMenu(this.isLongPressMenuShown, this.TokenRightCtxMenu, {
-        preview: MenuPreviewMode.IMAGE,
+        // 预览走 CustomBuilder 自绘实体卡片，而非 MenuPreviewMode.IMAGE 组件截图：
+        // 沉浸材质由 materialFilter 在合成时采样窗口背景实现，不属于组件自身像素，
+        // 截图对效果类属性官方明确"可能产生非用户预期的结果"（材质层丢失只剩透明
+        // 背景+图标文字）；实体模式下截图即为所见，仍用 IMAGE
+        preview: MaterialTheme.isTokenItemMaterialEffective() ? this.TokenMenuPreview : MenuPreviewMode.IMAGE,
+        previewBorderRadius: this.token_preference.app_appearance_item_radius,
         hapticFeedbackMode: HapticFeedbackMode.AUTO,
         onDisappear: () => {
           this.isLongPressMenuShown = false;
@@ -341,11 +361,60 @@ export struct TokenItem {
     }
   }
 
+  /**
+   * 列表项内容行（自绘，替代原 HdsListItemCard）：图标 + 文本 + suffix。
+   * 实体与光感两种模式的可见背景边界统一由本行所在表面决定；
+   * 卡片左右边距（外层 .margin）跟随设置中的「左侧边距/右侧边距」，
+   * 卡片内部内容边距固定为 0（图标/验证码 builder 自带少量间距）
+   */
+  @Builder
+  TokenRowContent(sort: boolean) {
+    Row() {
+      this.TokenIconBuilder()
+      Column() {
+        this.TextContentBuilder()
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+
+      if (sort) {
+        this.TokenSortIconBuilder()
+      } else {
+        this.TokenCodeBuilder()
+      }
+    }
+    .width('100%')
+    .height(this.token_preference.app_appearance_item_height)
+    .alignItems(VerticalAlign.Center)
+  }
+
   @Builder
   TokenSortIconBuilder() {
+    // 与主页验证码区（TokenCodeBuilder）同款左右内边距，排序图标不贴卡片边缘
     SymbolGlyph($r('sys.symbol.list_bullet'))
       .fontSize(24)
       .fontColor([$r('sys.color.icon_secondary')])
+      .padding({ left: $r('sys.float.ohos_id_text_overlay_menu_button_padding_left'), right: $r('sys.float.ohos_id_text_overlay_menu_button_padding_right') })
+  }
+
+  /**
+   * 长按菜单的自定义预览（材质模式专用，替代 MenuPreviewMode.IMAGE 截图）。
+   * 自绘实体卡片：内容复用 TokenRowContent，背景用与 solid 档位一致的
+   * item_bg + 卡片圆角；材质列表项浮起后呈现实体卡是长按预览的标准观感。
+   * 预览可布局区域默认扣除左右各 16vp（layoutRegionMargin 默认值），
+   * width('100%') 与列表卡片视觉宽度基本一致。
+   * 必须 @LocalBuilder：preview 是 CustomBuilder 参数，普通 @Builder 以
+   * this.TokenMenuPreview 传入时 this 被重绑定，菜单弹出即崩
+   * （TypeError: observeComponentCreation2 of undefined，已真机踩坑）
+   */
+  @LocalBuilder
+  TokenMenuPreview() {
+    Column() {
+      this.TokenRowContent(false)
+    }
+    .width('100%')
+    .borderRadius(this.token_preference.app_appearance_item_radius)
+    .backgroundColor($r('app.color.item_bg'))
   }
 
   @Builder
@@ -366,6 +435,7 @@ export struct TokenItem {
       MenuItem({ symbolStartIcon: this.menu_icon_qrcode, content: $r('app.string.token_right_menu_show_qrcode') })
         .onClick(() => {
           this.dialog_qrcode = new CustomDialogController({
+            systemMaterial: dialogSystemMaterial(),
             builder: QRCodeDialog({
               content: convertToken2URI(this.Config),
               winSize: this.window.Size
@@ -379,6 +449,7 @@ export struct TokenItem {
           if (this.Config.TokenType === otpType.TOTP || this.Config.TokenType === otpType.HOTP ||
             this.Config.TokenType === undefined) { // default
             this.dialog_totp_config = new CustomDialogController({
+              systemMaterial: dialogSystemMaterial(),
               builder: TOTPConfigDialog({
                 conf_json: JSON.stringify(this.Config),
                 confirm: async (new_conf): Promise<boolean> => {
@@ -389,6 +460,7 @@ export struct TokenItem {
             this.dialog_totp_config.open()
           } else if (this.Config.TokenType === otpType.Forti) { // forti
             this.dialog_forti_config = new CustomDialogController({
+              systemMaterial: dialogSystemMaterial(),
               builder: FortiConfigDialog({
                 conf_json: JSON.stringify(this.Config),
                 confirm: async (new_conf): Promise<boolean> => {
@@ -399,6 +471,7 @@ export struct TokenItem {
             this.dialog_forti_config.open()
           } else if (this.Config.TokenType === otpType.Steam) { // steam
             this.dialog_steam_config = new CustomDialogController({
+              systemMaterial: dialogSystemMaterial(),
               builder: SteamConfigDialog({
                 conf_json: JSON.stringify(this.Config),
                 confirm: async (new_conf): Promise<boolean> => {

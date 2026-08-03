@@ -1,4 +1,6 @@
-import { TokenConfig } from 'common';
+import { TokenConfig, dialogSystemMaterial } from 'common';
+import { MaterialPolicy } from '../../utils/MaterialPolicy';
+
 import { BusinessError } from '@kit.BasicServicesKit';
 import { bundleManager,common } from '@kit.AbilityKit';
 import { convertToken2URI, generateFileNameWithDate } from 'common'
@@ -10,7 +12,7 @@ import { EncryptionPassWordDialog } from '../../dialogs/EncryptionPassWordDialog
 import { restoreFromBackup, saveBackupToFile, TokenBackup } from 'common';
 import { showSaveFilePicker, showSelectFilePicker, writeFileContent } from 'common';
 import { SubItemDivider } from '../../components/SubItemDivider';
-import { LengthMetrics } from '@kit.ArkUI';
+import { LengthMetrics, AppStorageV2 } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppPreference, SettingValue, PREF_KEYS, ROUTE_NAMES } from 'common';
 import { throttle } from 'common';
@@ -21,6 +23,8 @@ import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } 
 import { TokenImporterRegistry, TokenImporter } from 'common';
 import { URIConfigDialog } from '../../dialogs/URIConfigDialog';
 import { SETTING_PAGE_INSET } from '../../components/SettingStyle';
+import { MaterialTheme } from '../../components/MaterialTheme';
+import { AppWindowInfo } from 'common';
 
 @Preview
 @ComponentV2
@@ -34,6 +38,7 @@ export struct BackupAndMigrationSheet {
   @Local cloudBackupEnabled: boolean = false;
   @Local isHuaweiLoggedIn: boolean = false;
   @Local importers: TokenImporter[] = [];
+  @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   private sheetScroller: Scroller = new Scroller();
 
   //备份时是否为导出模式
@@ -56,6 +61,7 @@ export struct BackupAndMigrationSheet {
 
   //region 加密导入导出
   private password_input_dialog: CustomDialogController | null = new CustomDialogController({
+    systemMaterial: dialogSystemMaterial(),
     builder: EncryptionPassWordDialog({
       cancel: () => {},
       confirm: (password: string) => {
@@ -293,6 +299,7 @@ export struct BackupAndMigrationSheet {
                           // URI 导入需要组件上下文，在此创建 CustomDialogController
                           if (!this.uriDialogController) {
                             this.uriDialogController = new CustomDialogController({
+                              systemMaterial: dialogSystemMaterial(),
                               builder: URIConfigDialog({
                                 confirm: async (tokens: Array<TokenConfig>): Promise<boolean> => {
                                   this.backupReload(tokens);
@@ -367,15 +374,20 @@ export struct BackupAndMigrationSheet {
           .layoutWeight(1)
           .scrollBar(BarState.Off)
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-          .backgroundColor($r('app.color.window_background'))
+          // 滚动末端抬高底部避让区(导航条/小横条)，避免最后一项被遮挡
+          .contentEndOffset(this.window.AvoidBottomHeight)
+          // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
+          .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
         }
         .width('100%')
         .height('100%')
-        .backgroundColor($r('app.color.window_background'))
+        // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
+        .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
       }
       .width('100%')
       .height('100%')
-      .backgroundColor($r('app.color.window_background'))
+      // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
+      .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
       .mode(NavigationMode.Stack)
       .navDestination(this.navDestinationBuilder)
       .bindToScrollable([this.sheetScroller])
@@ -400,7 +412,7 @@ export struct BackupAndMigrationSheet {
           },
           systemMaterialEffect: {
             materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+            materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
           }
         },
         content: {
@@ -412,7 +424,8 @@ export struct BackupAndMigrationSheet {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.window_background'))
+    // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
+    .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
   }
 
   private showHuaweiAccountRequiredDialog(): void {

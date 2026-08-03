@@ -51,6 +51,14 @@ Open source OTP Authenticator for HarmonyOS NEXT.
 - [iamhyc/Aigis](https://github.com/iamhyc/Aigis)
 - [nanopb/nanopb](https://github.com/nanopb/nanopb): protobuf for google authenticator migration
 
+## Contributing
+
+Contributions are welcome! Please read the [Contribution Guidelines](CONTRIBUTING.md) (in Chinese) before opening a pull request.
+
+> ⚠️ **Pull Requests must target the [`dev`](https://github.com/OHOTP/ohtotptoken/tree/dev) branch**, not `main`. The `main` branch is reserved for releases and is tied to the auto-release CI.
+
+---
+
 ## Contributors
 
 <a href="https://github.com/OHOTP/ohtotptoken/graphs/contributors">

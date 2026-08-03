@@ -1,8 +1,10 @@
 import { BusinessError } from '@kit.BasicServicesKit';
+import { MaterialPolicy } from '../../utils/MaterialPolicy';
+
 import { showSnackBar, SnackBarNotifyType } from 'common';
 import { SubItemToggle } from '../../components/SubItemToggle'
 import { AppStorageV2, curves } from '@kit.ArkUI';
-import { AppPreference, SettingColorMode, SettingTopEffectType, SettingBottomTabsType, TokenPreference, AVAILABLE_TOP_EFFECT_TYPES, AVAILABLE_BOTTOM_TABS_TYPES, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES } from 'common';
+import { AppPreference, SettingColorMode, SettingTopEffectType, SettingBottomTabsType, TokenPreference, MaterialPreference, AVAILABLE_TOP_EFFECT_TYPES, AVAILABLE_BOTTOM_TABS_TYPES, AVAILABLE_MATERIAL_MODES, AVAILABLE_IMMERSIVE_STYLES, AVAILABLE_TOKEN_ITEM_MATERIALS, AVAILABLE_LIGHT_EFFECT_MODES, SettingMaterialMode, SettingImmersiveStyle, SettingTokenItemMaterial, SettingLightEffectMode, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES } from 'common';
 import { SubItemButton } from '../../components/SubItemButton';
 import { SettingItem } from '../../components/SettingItem';
 import { SubItemDivider } from '../../components/SubItemDivider';
@@ -15,6 +17,7 @@ import { throttle } from 'common';
 import { AppearancePage } from '../AppearancePage';
 import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import { SETTING_PAGE_INSET } from '../../components/SettingStyle';
+import { MaterialTheme } from '../../components/MaterialTheme';
 
 @Preview
 @ComponentV2
@@ -23,7 +26,13 @@ export struct AppearanceSheet {
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Local debug_mode_is_on: boolean = AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON) as boolean;
   @Local token_preference: TokenPreference = AppStorageV2.connect(TokenPreference) as TokenPreference;
+  @Local material_preference: MaterialPreference = AppStorageV2.connect(MaterialPreference) as MaterialPreference;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
+  /**
+   * 列表项材质选择取消时的重置标记：Select 内部会暂存用户点选值，
+   * 取消确认后通过 rev 奇偶切换强制重建 Select 子树，显示回真实偏好值
+   */
+  @Local token_item_material_rev: number = 0;
   private sheetScroller: Scroller = new Scroller();
   private appCtx = AppStorage.get<common.UIAbilityContext>('appContext') as common.UIAbilityContext;
 
@@ -34,13 +43,57 @@ export struct AppearanceSheet {
     }
   }
 
+  /**
+   * 列表项材质选择行（独立 @Builder 以便取消确认时经 rev 切换强制重建，
+   * 还原 Select 的暂存显示值）
+   */
+  @Builder
+  TokenItemMaterialSelectBuilder() {
+    SubItemEnumSelect({
+      icon: $r('sys.symbol.list_bullet'),
+      title: $r('app.string.setting_token_item_material'),
+      options: AVAILABLE_TOKEN_ITEM_MATERIALS,
+      description: $r('app.string.setting_token_item_material_desc'),
+      selected: this.material_preference.app_appearance_token_item_material,
+      onChange: (value: number) => {
+        if (value === SettingTokenItemMaterial.IMMERSIVE) {
+          // 选择光感：Dialog 二次确认并说明逐项材质的性能影响
+          this.getUIContext().showAlertDialog({
+            title: $r('app.string.token_item_material_confirm_title'),
+            message: $r('app.string.token_item_material_confirm_msg'),
+            autoCancel: true,
+            alignment: DialogAlignment.Center,
+            primaryButton: {
+              value: $r('app.string.dialog_btn_cancel'),
+              action: () => {
+                // 还原 Select 显示（内部暂存了「光感」，强制重建回到实体）
+                this.token_item_material_rev++;
+              }
+            },
+            secondaryButton: {
+              value: $r('app.string.dialog_btn_confirm'),
+              action: () => {
+                AppPreference.setPreference(PREF_KEYS.APPEARANCE_TOKEN_ITEM_MATERIAL, value);
+                this.material_preference.app_appearance_token_item_material = value;
+              }
+            }
+          })
+        } else {
+          AppPreference.setPreference(PREF_KEYS.APPEARANCE_TOKEN_ITEM_MATERIAL, value);
+          this.material_preference.app_appearance_token_item_material = value;
+        }
+      }
+    })
+  }
+
   build() {
     Column() {
       HdsNavigation(this.pageInfos) {
         Column() {
           List({ scroller: this.sheetScroller, space: 10 }) {
+            // 通用分组
             ListItem() {
-              SettingItem({ title: "" }) {
+              SettingItem({ title: $r('app.string.setting_group_general') }) {
                 SubItemToggle({
                   icon: $r('sys.symbol.chevron_up_2_circle'),
                   title: $r('app.string.show_next_token'),
@@ -52,9 +105,9 @@ export struct AppearanceSheet {
                   }
                 })
 
-                SubItemDivider()
-
                 if (this.debug_mode_is_on) {
+                  SubItemDivider()
+
                   SubItemToggle({
                     icon: $r('sys.symbol.gearshape'),
                     title: $r('app.string.debug_mode'),
@@ -67,10 +120,14 @@ export struct AppearanceSheet {
                       AppPreference.setPreference(PREF_KEYS.DEBUG_MODE_ON, IsOn);
                     }
                   })
-
-                  SubItemDivider()
                 }
+              }
+            }
+            .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
 
+            // 外观分组
+            ListItem() {
+              SettingItem({ title: $r('app.string.setting_group_appearance') }) {
                 SubItemSelect({
                   icon: $r('sys.symbol.dark'),
                   title: $r('app.string.setting_color_mode'),
@@ -123,18 +180,80 @@ export struct AppearanceSheet {
               }
             }
             .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
+
+            // 光感材质分组
+            ListItem() {
+              SettingItem({ title: $r('app.string.setting_group_material') }) {
+                SubItemEnumSelect({
+                  icon: $r('sys.symbol.rectangle_stack'),
+                  title: $r('app.string.setting_material_mode'),
+                  options: AVAILABLE_MATERIAL_MODES,
+                  description: $r('app.string.setting_material_mode_desc'),
+                  selected: AppPreference.getPreference(PREF_KEYS.APPEARANCE_MATERIAL_MODE) as number ??
+                    SettingMaterialMode.AUTO,
+                  onChange: (value: number) => {
+                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_MATERIAL_MODE, value);
+                    this.material_preference.app_appearance_material_mode = value;
+                  }
+                })
+
+                SubItemDivider()
+
+                SubItemEnumSelect({
+                  icon: $r('sys.symbol.rectangle_split_3x1'),
+                  title: $r('app.string.setting_immersive_style'),
+                  options: AVAILABLE_IMMERSIVE_STYLES,
+                  description: $r('app.string.setting_immersive_style_desc'),
+                  selected: AppPreference.getPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE) as number ??
+                    SettingImmersiveStyle.REGULAR,
+                  onChange: (value: number) => {
+                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE, value);
+                    this.material_preference.app_appearance_immersive_style = value;
+                  }
+                })
+
+                SubItemDivider()
+
+                SubItemEnumSelect({
+                  icon: $r('sys.symbol.circle_lefthalf_inset_filled'),
+                  title: $r('app.string.setting_light_effect_mode'),
+                  options: AVAILABLE_LIGHT_EFFECT_MODES,
+                  description: $r('app.string.setting_light_effect_mode_desc'),
+                  selected: AppPreference.getPreference(PREF_KEYS.APPEARANCE_LIGHT_EFFECT_MODE) as number ??
+                    SettingLightEffectMode.DEFAULT,
+                  onChange: (value: number) => {
+                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_LIGHT_EFFECT_MODE, value);
+                    this.material_preference.app_appearance_light_effect_mode = value;
+                  }
+                })
+
+                SubItemDivider()
+
+                // rev 奇偶切换两个相同分支，取消确认时强制重建 Select 还原显示
+                if (this.token_item_material_rev % 2 === 0) {
+                  this.TokenItemMaterialSelectBuilder()
+                } else {
+                  this.TokenItemMaterialSelectBuilder()
+                }
+              }
+            }
+            .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
           }
           .clip(false)
           .width('100%')
           .height('100%')
           .scrollBar(BarState.Off)
           .edgeEffect(EdgeEffect.Spring, {alwaysEnabled: true})
-          .backgroundColor($r('app.color.window_background'))
+          // 滚动末端抬高底部避让区(导航条/小横条)，避免最后一项被遮挡
+          .contentEndOffset(this.window.AvoidBottomHeight)
+          // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
+          .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
           .layoutWeight(1)
         }
         .width('100%')
         .height('100%')
-        .backgroundColor($r('app.color.window_background'))
+        // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
+        .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
       }
       .mode(NavigationMode.Stack)
       .navDestination(this.navDestinationBuilder)
@@ -160,7 +279,7 @@ export struct AppearanceSheet {
           },
           systemMaterialEffect: {
             materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+            materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
           }
         },
         content: {
@@ -172,6 +291,7 @@ export struct AppearanceSheet {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.window_background'))
+    // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
+    .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
   }
 }

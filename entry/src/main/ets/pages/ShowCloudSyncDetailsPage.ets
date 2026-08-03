@@ -1,4 +1,6 @@
 import { common, Want } from '@kit.AbilityKit';
+import { MaterialPolicy } from '../utils/MaterialPolicy';
+
 import { AppStorageV2, promptAction, LengthMetrics } from '@kit.ArkUI';
 import { SettingItem } from '../components/SettingItem';
 import { AppPreference, SettingValue, PREF_KEYS, ROUTE_NAMES } from 'common';
@@ -487,7 +489,7 @@ export struct ShowCloudSyncDetailsPage {
         },
         systemMaterialEffect: {
           materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
         }
       },
       content: {

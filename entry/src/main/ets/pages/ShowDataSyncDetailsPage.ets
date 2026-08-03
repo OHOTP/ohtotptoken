@@ -1,4 +1,6 @@
 import { AppStorageV2 } from '@kit.ArkUI';
+import { MaterialPolicy } from '../utils/MaterialPolicy';
+
 import { TopNavigationView } from '../components/TopNavigationView';
 import { SettingItem } from '../components/SettingItem';
 import { AppPreference, SettingValue, PREF_KEYS } from 'common';
@@ -161,7 +163,7 @@ export struct ShowDataSyncDetailsPage {
         },
         systemMaterialEffect: {
           materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
         }
       },
       content: {

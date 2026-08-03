@@ -1,9 +1,11 @@
 import { TokenItem } from "../components/TokenItem";
+import { MaterialSurface } from "../components/MaterialSurface";
+import { MaterialTheme, MaterialThickness } from "../components/MaterialTheme";
 import { FortiConfigDialog } from 'uikit';
 import { TOTPConfigDialog } from 'uikit';
 import { QRCodeDialog } from 'uikit';
 import { SteamConfigDialog } from 'uikit';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, dialogSystemMaterial } from 'common';
 import { otpType, TokenConfig, TokenConfigVM } from 'common';
 import { TokenStore } from 'common';
 import { convertToken2URI } from 'common';
@@ -13,6 +15,7 @@ import { GenericDataSource } from 'common';
 import { showSnackBar, SnackBarNotifyType } from 'common';
 import { common } from "@kit.AbilityKit";
 import { hilog } from "@kit.PerformanceAnalysisKit";
+import { HdsListItem } from '@kit.UIDesignKit';
 
 let tkStore = TokenStore.getInstance();
 
@@ -115,41 +118,17 @@ export struct TokenListPage {
       Column() {
         List({ space: this.token_preference.app_appearance_item_space, initialIndex: 0, scroller: this.listScroller }) {
           // key = vm.objid：变更 objid 后 LazyForEach 视为"新数据"，销毁旧组件并创建新实例
+          // HdsListItem 内部封装 ListItem：内容走 customItemBuilder 自绘（宽度/边距自控），
+          // 侧滑走 swipeActionOptions（spike 已验证自定义 builder 行为与 ListItem.swipeAction 一致）
           LazyForEach(this.dataSource, (vm: TokenConfigVM) => {
-            ListItem() {
-              TokenItem({
-                Config: vm.config,
-                Update: async (conf_new): Promise<boolean> => {
-                  return await this.updateSingleToken(conf_new, false);
-                }
-              })
-                .bindPopup(this.token_copy_guide_popup && vm.config.TokenUUID === this.dataSource.getData(0)?.config.TokenUUID, {
-                  placement: Placement.Left,
-                  message: this.getUIContext().getHostContext()?.resourceManager
-                    .getStringSync($r('app.string.token_copy_guide_popup').id),
-                  onStateChange: (e) => {
-                    if (!e.isVisible) {
-                      this.token_copy_guide_popup = false
-                    }
+            HdsListItem({
+              customItemBuilder: (): void => { this.TokenItemContentBuilder(vm) },
+              swipeActionOptions: {
+                end: {
+                  builder: (): void => {
+                    this.TokenItemSwipeEnd(vm)
                   },
-                  primaryButton: {
-                    value: this.getUIContext().getHostContext()?.resourceManager
-                      .getStringSync($r('app.string.token_copy_guide_popup_Confirm').id),
-                    action: () => {
-                      if (AppPreference.getPreference(PREF_KEYS.SHOW_GUIDE_TIPS) as boolean) {
-                        AppPreference.setPreference(PREF_KEYS.SHOW_GUIDE_TIPS, false)
-                      }
-                      this.token_copy_guide_popup = false;
-                    }
-                  }
-                })
-
-            }
-            .swipeAction({
-              end: {
-                builder: () => {
-                  this.TokenItemSwipeEnd(vm)
-                },
+                }
               }
             })
           }, (vm: TokenConfigVM) => vm.objid) // keyGenerator: objid 变化 = 组件重建
@@ -172,6 +151,7 @@ export struct TokenListPage {
 
   showQRCodeDialog(conf: TokenConfig): void {
     this.dialog_qrcode = new CustomDialogController({
+      systemMaterial: dialogSystemMaterial(),
       builder: QRCodeDialog({
         content: convertToken2URI(conf),
         winSize: this.appWindowSize
@@ -180,38 +160,96 @@ export struct TokenListPage {
     this.dialog_qrcode.open();
   }
 
+  /**
+   * 单个令牌项内容（供 HdsListItem.customItemBuilder 引用）。
+   * 注意：组件创建必须发生在 @Builder 方法内——直接在普通箭头闭包里写
+   * TokenItem({...}) 不会被编译器转换为组件创建，运行时按类构造器直接调用，
+   * 抛 "class constructor cannot called without 'new'"（已踩坑，faultlog 实证）
+   */
+  @Builder
+  TokenItemContentBuilder(vm: TokenConfigVM) {
+    TokenItem({
+      Config: vm.config,
+      Update: async (conf_new): Promise<boolean> => {
+        return await this.updateSingleToken(conf_new, false);
+      }
+    })
+      .bindPopup(this.token_copy_guide_popup && vm.config.TokenUUID === this.dataSource.getData(0)?.config.TokenUUID, {
+        placement: Placement.Left,
+        message: this.getUIContext().getHostContext()?.resourceManager
+          .getStringSync($r('app.string.token_copy_guide_popup').id),
+        onStateChange: (e) => {
+          if (!e.isVisible) {
+            this.token_copy_guide_popup = false;
+          }
+        },
+        primaryButton: {
+          value: this.getUIContext().getHostContext()?.resourceManager
+            .getStringSync($r('app.string.token_copy_guide_popup_Confirm').id),
+          action: () => {
+            if (AppPreference.getPreference(PREF_KEYS.SHOW_GUIDE_TIPS) as boolean) {
+              AppPreference.setPreference(PREF_KEYS.SHOW_GUIDE_TIPS, false);
+            }
+            this.token_copy_guide_popup = false;
+          }
+        }
+      })
+  }
+
   @Builder
   TokenItemSwipeEnd(vm: TokenConfigVM) {
     Row({ space: 10 }) {
-      Button({ type: ButtonType.Circle }) {
-        Text() {
-          SymbolSpan($r('sys.symbol.qrcode'))
-            .fontSize(30)
-            .fontWeight(FontWeight.Medium)
-            .fontColor([Color.White])
-        }
-      }
-      .backgroundColor(Color.Orange)
-      .padding(10)
-      .onClick(() => {
-        this.showQRCodeDialog(vm.config);
-      })
-
-      if (this.TabBarVisible) {
+      // 侧滑操作按钮(Phase 5.7): MaterialSurface 承载语义色材质 + 光感反馈
+      // + 按压形变; 按钮背景按档位映射(沉浸档透明透出材质, 其余档语义色)
+      MaterialSurface({
+        thickness: MaterialThickness.THIN,
+        lightEffect: true,
+        interactive: true,
+        materialColor: Color.Orange,
+        radius: '50%',
+        solidColor: Color.Transparent,
+        fillWidth: false
+      }) {
         Button({ type: ButtonType.Circle }) {
           Text() {
-            SymbolSpan($r('sys.symbol.square_and_pencil_fill'))
+            SymbolSpan($r('sys.symbol.qrcode'))
               .fontSize(30)
               .fontWeight(FontWeight.Medium)
               .fontColor([Color.White])
           }
         }
-        .backgroundColor(Color.Gray)
+        .backgroundColor(MaterialTheme.surfaceBackground(Color.Orange))
         .padding(10)
         .onClick(() => {
+          this.showQRCodeDialog(vm.config);
+        })
+      }
+
+      if (this.TabBarVisible) {
+        MaterialSurface({
+          thickness: MaterialThickness.THIN,
+          lightEffect: true,
+          interactive: true,
+          materialColor: Color.Gray,
+          radius: '50%',
+          solidColor: Color.Transparent,
+          fillWidth: false
+        }) {
+          Button({ type: ButtonType.Circle }) {
+            Text() {
+              SymbolSpan($r('sys.symbol.square_and_pencil_fill'))
+                .fontSize(30)
+                .fontWeight(FontWeight.Medium)
+                .fontColor([Color.White])
+            }
+          }
+          .backgroundColor(MaterialTheme.surfaceBackground(Color.Gray))
+          .padding(10)
+          .onClick(() => {
           if (vm.config.TokenType === otpType.TOTP || vm.config.TokenType === otpType.HOTP ||
             vm.config.TokenType === undefined) {
             this.dialog_totp_config = new CustomDialogController({
+              systemMaterial: dialogSystemMaterial(),
               builder: TOTPConfigDialog({
                 conf_json: JSON.stringify(vm.config),
                 confirm: async (new_conf): Promise<boolean> => {
@@ -223,6 +261,7 @@ export struct TokenListPage {
             this.dialog_totp_config.open()
           } else if (vm.config.TokenType === otpType.Forti) {
             this.dialog_forti_config = new CustomDialogController({
+              systemMaterial: dialogSystemMaterial(),
               builder: FortiConfigDialog({
                 conf_json: JSON.stringify(vm.config),
                 confirm: async (new_conf): Promise<boolean> => {
@@ -234,6 +273,7 @@ export struct TokenListPage {
             this.dialog_forti_config.open()
           } else if (vm.config.TokenType === otpType.Steam) {
             this.dialog_steam_config = new CustomDialogController({
+              systemMaterial: dialogSystemMaterial(),
               builder: SteamConfigDialog({
                 conf_json: JSON.stringify(vm.config),
                 confirm: async (new_conf): Promise<boolean> => {
@@ -244,42 +284,53 @@ export struct TokenListPage {
             })
             this.dialog_steam_config.open()
           }
-        })
-      }
-
-      Button({ type: ButtonType.Circle }) {
-        Text() {
-          SymbolSpan($r('sys.symbol.trash_fill'))
-            .fontSize(30)
-            .fontWeight(FontWeight.Medium)
-            .fontColor([Color.White])
+          })
         }
       }
-      .backgroundColor(Color.Red)
-      .padding(10)
-      .onClick(async () => {
-        AlertDialog.show({
-          title: $r('app.string.alert_remove_title', vm.config.TokenIssuer),
-          subtitle: vm.config.TokenName,
-          message: $r('app.string.alert_remove_confirm_msg'),
-          autoCancel: true,
-          alignment: DialogAlignment.Center,
-          primaryButton: {
-            defaultFocus: false,
-            value: $r('app.string.dialog_btn_cancel'),
-            action: () => {
-              return
-            }
-          },
-          secondaryButton: {
-            value: $r('app.string.dialog_btn_delete'),
-            fontColor: Color.Red,
-            action: async () => {
-              tkStore.deleteToken(vm.config.TokenUUID);
-            }
+
+      MaterialSurface({
+        thickness: MaterialThickness.THIN,
+        lightEffect: true,
+        interactive: true,
+        materialColor: Color.Red,
+        radius: '50%',
+        solidColor: Color.Transparent,
+        fillWidth: false
+      }) {
+        Button({ type: ButtonType.Circle }) {
+          Text() {
+            SymbolSpan($r('sys.symbol.trash_fill'))
+              .fontSize(30)
+              .fontWeight(FontWeight.Medium)
+              .fontColor([Color.White])
           }
+        }
+        .backgroundColor(MaterialTheme.surfaceBackground(Color.Red))
+        .padding(10)
+        .onClick(async () => {
+          AlertDialog.show({
+            title: $r('app.string.alert_remove_title', vm.config.TokenIssuer),
+            subtitle: vm.config.TokenName,
+            message: $r('app.string.alert_remove_confirm_msg'),
+            autoCancel: true,
+            alignment: DialogAlignment.Center,
+            primaryButton: {
+              defaultFocus: false,
+              value: $r('app.string.dialog_btn_cancel'),
+              action: () => {
+                return
+              }
+            },
+            secondaryButton: {
+              value: $r('app.string.dialog_btn_delete'),
+              fontColor: Color.Red,
+              action: async () => {
+                tkStore.deleteToken(vm.config.TokenUUID);
+              }
+            }
+          })
         })
-      })
+      }
     }
     .margin({ left: 10, right: this.token_preference.app_appearance_token_list_item_suffix_padding })
   }

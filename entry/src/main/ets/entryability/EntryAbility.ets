@@ -8,10 +8,11 @@ import {
 import { hilog, hiTraceMeter } from '@kit.PerformanceAnalysisKit';
 import { AppStorageV2, window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
-import { AppPreference, SettingColorMode, PREF_KEYS, EVENT_NAMES, AppWindowInfo } from 'common';
+import { AppPreference, SettingColorMode, PREF_KEYS, EVENT_NAMES, AppWindowInfo, setDialogSystemMaterialProvider } from 'common';
 import { relationalStore  } from '@kit.ArkData';
 import { DeviceInfoHelper } from 'common';
 import { MaterialPolicy } from '../utils/MaterialPolicy';
+import { MaterialTheme } from '../components/MaterialTheme';
 import { DlpAntiPeepManager } from 'common';
 import { registerHdsSnackBar } from '../utils/HdsSnackBarUtils';
 import { formInfo } from '@kit.FormKit';
@@ -91,6 +92,8 @@ export default class EntryAbility extends UIAbility {
     DeviceInfoHelper.getInstance().init();
     // 初始化材质策略（API 26 沉浸光感能力检测与回退档位判定）
     MaterialPolicy.getInstance().init();
+    // 注入弹窗背板材质 provider（Phase 5.5：用户 SOLID 偏好时单独关闭弹窗默认材质）
+    setDialogSystemMaterialProvider(() => MaterialTheme.dialogSystemMaterial());
 
     //监听前后台变化
     let applicationStateChangeCallback: ApplicationStateChangeCallback = {

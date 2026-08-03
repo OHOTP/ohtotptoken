@@ -1,4 +1,4 @@
-import { otpType, TokenConfig } from 'common';
+import { otpType, TokenConfig, dialogSystemMaterial } from 'common';
 import { url } from '@kit.ArkTS';
 import { HMACAlgorithm, ScanBarCode } from 'common';
 import { TokenIcon } from '../components/TokenIcon';
@@ -19,6 +19,7 @@ export struct TOTPConfigDialog {
   confirm: (new_conf: string) => Promise<boolean> = async () => false;
 
   dialog_icon_config = new CustomDialogController({
+    systemMaterial: dialogSystemMaterial(),
     builder: SelectIconDialog({
       issuer: this.conf.TokenIssuer,
       currentIconPath: this.conf.TokenIconPath,

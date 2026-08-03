@@ -1,4 +1,6 @@
 import { webview } from '@kit.ArkWeb';
+import { MaterialPolicy } from '../utils/MaterialPolicy';
+
 import { CommonConstants } from 'common';
 import { PageScaffold } from '../components/PageScaffold';
 import { hdsMaterial, HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
@@ -53,7 +55,7 @@ export struct WebPage {
         },
         systemMaterialEffect: {
           materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
         }
       },
       content: {

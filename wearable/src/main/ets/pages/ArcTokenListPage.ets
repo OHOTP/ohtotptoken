@@ -1,5 +1,5 @@
 import { QRCodeDialog } from 'uikit';
-import { TokenPreference, EVENT_NAMES } from 'common';
+import { TokenPreference, EVENT_NAMES, dialogSystemMaterial } from 'common';
 import { TokenConfig, TokenIconPacks } from 'common';
 import { TokenStore } from 'common';
 import { convertToken2URI } from 'common';
@@ -148,6 +148,7 @@ export struct ArcTokenListPage {
       .padding(10)
       .onClick(() => {
         this.dialog_qrcode = new CustomDialogController({
+          systemMaterial: dialogSystemMaterial(),
           builder: QRCodeDialog({
             content: convertToken2URI(conf),
             winSize: this.window.Size
