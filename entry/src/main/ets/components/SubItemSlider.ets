@@ -25,8 +25,9 @@ export struct SubItemSlider {
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   @Local collapsed: boolean = true;
 
-  @Local slider_values: number[] = this.items.map((item) => item.default);
-  @Local tips_value: number[] = this.slider_values;
+  // 拖动气泡的实时值；右侧已提交数值直接读 item.default（随偏好@Trace联动，
+  // 恢复默认等外部变更也能同步），不再用 @Local 快照，避免两处状态脱节
+  @Local tips_value: number[] = this.items.map((item) => item.default);
 
   build() {
     Column() {
@@ -102,11 +103,10 @@ export struct SubItemSlider {
               .onChange((value, mode) => {
                 this.tips_value[index] = value;
                 if (mode === SliderChangeMode.End) {
-                  this.slider_values[index] = value;
                   this.onChange(index, value);
                 }
               })
-            Text(this.slider_values[index].toString())
+            Text(item.default.toString())
               .width('10%')
               .textAlign(TextAlign.End)
               .textOverflow({ overflow: TextOverflow.MARQUEE })
