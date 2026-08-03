@@ -313,7 +313,8 @@ export struct TokenItem {
           .backgroundColor($r('app.color.item_bg'))
         }
       }
-      // 左右边距采用设置中的「左侧边距/右侧边距」值，实体与光感两种模式等宽
+      // 卡片左右边距跟随设置中的「左侧边距/右侧边距」，实体与光感两种模式等宽；
+      // 卡片内部内容边距固定为 0（见 TokenRowContent）
       .margin({
         left: this.token_preference.app_appearance_token_list_item_prefix_padding,
         right: this.token_preference.app_appearance_token_list_item_suffix_padding
@@ -346,8 +347,9 @@ export struct TokenItem {
 
   /**
    * 列表项内容行（自绘，替代原 HdsListItemCard）：图标 + 文本 + suffix。
-   * 实体与光感两种模式的可见背景边界统一由本行所在表面决定，
-   * 左右内边距与外层边距均采用设置中的「左侧边距/右侧边距」值
+   * 实体与光感两种模式的可见背景边界统一由本行所在表面决定；
+   * 卡片左右边距（外层 .margin）跟随设置中的「左侧边距/右侧边距」，
+   * 卡片内部内容边距固定为 0（图标/验证码 builder 自带少量间距）
    */
   @Builder
   TokenRowContent(sort: boolean) {
@@ -368,10 +370,6 @@ export struct TokenItem {
     .width('100%')
     .height(this.token_preference.app_appearance_item_height)
     .alignItems(VerticalAlign.Center)
-    .padding({
-      left: this.token_preference.app_appearance_token_list_item_prefix_padding,
-      right: this.token_preference.app_appearance_token_list_item_suffix_padding
-    })
   }
 
   @Builder
