@@ -12,13 +12,10 @@ import { QRCodeDialog } from 'uikit';
 import { AppWindowInfo } from 'common';
 import { TokenStore } from 'common';
 import { ConfigurationConstant, common } from '@kit.AbilityKit';
-import {
-  HdsListItemCard,
-  PrefixCustomBuilder,
-  SuffixCustomBuilder
-} from '@kit.UIDesignKit';
 import { CommonConstants } from 'common';
 import { AppFonts } from 'common';
+import { MaterialSurface } from './MaterialSurface';
+import { MaterialTheme } from './MaterialTheme';
 
 let current_token_hide_map: Map<string, boolean> = new Map();
 let tkStore = TokenStore.getInstance();
@@ -287,43 +284,49 @@ export struct TokenItem {
 
   build() {
     if (this.sortMode) {
-      // 排序模式：禁用上下文菜单和长按手势，Suffix 显示排序图标
+      // 排序模式：禁用上下文菜单和长按手势，Suffix 显示排序图标；
+      // 排序页不做逐项材质（用户决策），保持实体卡片
       Column() {
-        HdsListItemCard({
-          prefixItem: new PrefixCustomBuilder((): void => { this.TokenIconBuilder() }),
-          textItem: {
-            customBuilder: (): void => { this.TextContentBuilder() }
-          },
-          suffixItem: new SuffixCustomBuilder((): void => { this.TokenSortIconBuilder() }),
-          cardHeight: this.token_preference.app_appearance_item_height,
-          cardPrefixMargin: this.token_preference.app_appearance_token_list_item_prefix_padding,
-          cardSuffixMargin: this.token_preference.app_appearance_token_list_item_suffix_padding,
-          cardBackgroundColor: $r('app.color.item_bg'),
-        })
+        this.TokenRowContent(true)
       }
+      .width('100%')
+      .borderRadius(MaterialTheme.RADIUS_GROUP)
+      .backgroundColor($r('app.color.item_bg'))
+      .margin({
+        left: this.token_preference.app_appearance_token_list_item_prefix_padding,
+        right: this.token_preference.app_appearance_token_list_item_suffix_padding
+      })
     } else {
       Column() {
-        HdsListItemCard({
-          prefixItem: new PrefixCustomBuilder((): void => { this.TokenIconBuilder() }),
-          textItem: {
-            customBuilder: (): void => { this.TextContentBuilder() }
-          },
-          suffixItem: new SuffixCustomBuilder((): void => { this.TokenCodeBuilder() }),
-          cardHeight: this.token_preference.app_appearance_item_height,
-          cardPrefixMargin: this.token_preference.app_appearance_token_list_item_prefix_padding,
-          cardSuffixMargin: this.token_preference.app_appearance_token_list_item_suffix_padding,
-          cardBackgroundColor: $r('app.color.item_bg'),
-          onClick: () => {
-            if (this.TokenHide && this.token_preference.app_safety_hide_token_enable) {
-              this.TokenHide = !this.TokenHide;
-              current_token_hide_map[this.Config.TokenUUID] = false;
-            } else if (this.token_preference.app_safety_hide_token_enable) {
-              this.TokenHide = !this.TokenHide;
-              current_token_hide_map[this.Config.TokenUUID] = true;
-            }
+        if (MaterialTheme.isTokenItemMaterialEffective()) {
+          // 列表项光感材质：用户在设置中显式开启（官方不建议滚动列表逐项
+          // 材质，开启前已经 Dialog 二次确认）；内容背景透明透出材质层
+          MaterialSurface() {
+            this.TokenRowContent(false)
           }
-        })
+        } else {
+          Column() {
+            this.TokenRowContent(false)
+          }
+          .width('100%')
+          .borderRadius(MaterialTheme.RADIUS_GROUP)
+          .backgroundColor($r('app.color.item_bg'))
+        }
       }
+      // 左右边距采用设置中的「左侧边距/右侧边距」值，实体与光感两种模式等宽
+      .margin({
+        left: this.token_preference.app_appearance_token_list_item_prefix_padding,
+        right: this.token_preference.app_appearance_token_list_item_suffix_padding
+      })
+      .onClick(() => {
+        if (this.TokenHide && this.token_preference.app_safety_hide_token_enable) {
+          this.TokenHide = !this.TokenHide;
+          current_token_hide_map[this.Config.TokenUUID] = false;
+        } else if (this.token_preference.app_safety_hide_token_enable) {
+          this.TokenHide = !this.TokenHide;
+          current_token_hide_map[this.Config.TokenUUID] = true;
+        }
+      })
       .gesture(
         LongPressGesture({ duration: this.token_preference.app_appearance_long_press_duration })
           .onAction(() => {
@@ -339,6 +342,36 @@ export struct TokenItem {
       })
       .bindContextMenu(this.TokenRightCtxMenu, ResponseType.RightClick, { enableArrow: true })
     }
+  }
+
+  /**
+   * 列表项内容行（自绘，替代原 HdsListItemCard）：图标 + 文本 + suffix。
+   * 实体与光感两种模式的可见背景边界统一由本行所在表面决定，
+   * 左右内边距与外层边距均采用设置中的「左侧边距/右侧边距」值
+   */
+  @Builder
+  TokenRowContent(sort: boolean) {
+    Row() {
+      this.TokenIconBuilder()
+      Column() {
+        this.TextContentBuilder()
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+
+      if (sort) {
+        this.TokenSortIconBuilder()
+      } else {
+        this.TokenCodeBuilder()
+      }
+    }
+    .width('100%')
+    .height(this.token_preference.app_appearance_item_height)
+    .alignItems(VerticalAlign.Center)
+    .padding({
+      left: this.token_preference.app_appearance_token_list_item_prefix_padding,
+      right: this.token_preference.app_appearance_token_list_item_suffix_padding
+    })
   }
 
   @Builder

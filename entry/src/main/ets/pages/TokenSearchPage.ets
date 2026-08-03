@@ -20,6 +20,7 @@ import { common } from "@kit.AbilityKit";
 import { hilog } from "@kit.PerformanceAnalysisKit";
 import {
   BottomBuilderShowType,
+  HdsListItem,
   HdsNavDestination,
   HdsNavDestinationTitleMode,
   ScrollEffectType,
@@ -180,39 +181,15 @@ export struct TokenSearchPage {
           }
 
           LazyForEach(this.dataSource, (vm: TokenConfigVM) => {
-            ListItem() {
-              TokenItem({
-                Config: vm.config,
-                Update: async (conf_new): Promise<boolean> => {
-                  return await this.updateSingleToken(conf_new, false);
-                }
-              })
-                .bindPopup(this.token_copy_guide_popup && vm.config.TokenUUID === this.dataSource.getData(0)?.config.TokenUUID, {
-                  placement: Placement.Left,
-                  message: this.getUIContext().getHostContext()?.resourceManager
-                    .getStringSync($r('app.string.token_copy_guide_popup').id),
-                  onStateChange: (e) => {
-                    if (!e.isVisible) {
-                      this.token_copy_guide_popup = false;
-                    }
+            // 与 TokenListPage 同构：HdsListItem 承载自绘内容与侧滑
+            HdsListItem({
+              customItemBuilder: (): void => { this.TokenItemContentBuilder(vm) },
+              swipeActionOptions: {
+                end: {
+                  builder: (): void => {
+                    this.TokenItemSwipeEnd(vm);
                   },
-                  primaryButton: {
-                    value: this.getUIContext().getHostContext()?.resourceManager
-                      .getStringSync($r('app.string.token_copy_guide_popup_Confirm').id),
-                    action: () => {
-                      if (AppPreference.getPreference(PREF_KEYS.SHOW_GUIDE_TIPS) as boolean) {
-                        AppPreference.setPreference(PREF_KEYS.SHOW_GUIDE_TIPS, false);
-                      }
-                      this.token_copy_guide_popup = false;
-                    }
-                  }
-                })
-            }
-            .swipeAction({
-              end: {
-                builder: () => {
-                  this.TokenItemSwipeEnd(vm);
-                },
+                }
               }
             })
           }, (vm: TokenConfigVM) => vm.objid)
@@ -275,6 +252,42 @@ export struct TokenSearchPage {
       })
     });
     this.dialog_qrcode.open();
+  }
+
+  /**
+   * 单个令牌项内容（供 HdsListItem.customItemBuilder 引用）。
+   * 注意：组件创建必须发生在 @Builder 方法内——直接在普通箭头闭包里写
+   * TokenItem({...}) 不会被编译器转换为组件创建，运行时按类构造器直接调用，
+   * 抛 "class constructor cannot called without 'new'"（已踩坑，faultlog 实证）
+   */
+  @Builder
+  TokenItemContentBuilder(vm: TokenConfigVM) {
+    TokenItem({
+      Config: vm.config,
+      Update: async (conf_new): Promise<boolean> => {
+        return await this.updateSingleToken(conf_new, false);
+      }
+    })
+      .bindPopup(this.token_copy_guide_popup && vm.config.TokenUUID === this.dataSource.getData(0)?.config.TokenUUID, {
+        placement: Placement.Left,
+        message: this.getUIContext().getHostContext()?.resourceManager
+          .getStringSync($r('app.string.token_copy_guide_popup').id),
+        onStateChange: (e) => {
+          if (!e.isVisible) {
+            this.token_copy_guide_popup = false;
+          }
+        },
+        primaryButton: {
+          value: this.getUIContext().getHostContext()?.resourceManager
+            .getStringSync($r('app.string.token_copy_guide_popup_Confirm').id),
+          action: () => {
+            if (AppPreference.getPreference(PREF_KEYS.SHOW_GUIDE_TIPS) as boolean) {
+              AppPreference.setPreference(PREF_KEYS.SHOW_GUIDE_TIPS, false);
+            }
+            this.token_copy_guide_popup = false;
+          }
+        }
+      })
   }
 
   @Builder

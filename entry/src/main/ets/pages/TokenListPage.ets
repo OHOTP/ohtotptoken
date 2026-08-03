@@ -15,6 +15,7 @@ import { GenericDataSource } from 'common';
 import { showSnackBar, SnackBarNotifyType } from 'common';
 import { common } from "@kit.AbilityKit";
 import { hilog } from "@kit.PerformanceAnalysisKit";
+import { HdsListItem } from '@kit.UIDesignKit';
 
 let tkStore = TokenStore.getInstance();
 
@@ -117,41 +118,17 @@ export struct TokenListPage {
       Column() {
         List({ space: this.token_preference.app_appearance_item_space, initialIndex: 0, scroller: this.listScroller }) {
           // key = vm.objid：变更 objid 后 LazyForEach 视为"新数据"，销毁旧组件并创建新实例
+          // HdsListItem 内部封装 ListItem：内容走 customItemBuilder 自绘（宽度/边距自控），
+          // 侧滑走 swipeActionOptions（spike 已验证自定义 builder 行为与 ListItem.swipeAction 一致）
           LazyForEach(this.dataSource, (vm: TokenConfigVM) => {
-            ListItem() {
-              TokenItem({
-                Config: vm.config,
-                Update: async (conf_new): Promise<boolean> => {
-                  return await this.updateSingleToken(conf_new, false);
-                }
-              })
-                .bindPopup(this.token_copy_guide_popup && vm.config.TokenUUID === this.dataSource.getData(0)?.config.TokenUUID, {
-                  placement: Placement.Left,
-                  message: this.getUIContext().getHostContext()?.resourceManager
-                    .getStringSync($r('app.string.token_copy_guide_popup').id),
-                  onStateChange: (e) => {
-                    if (!e.isVisible) {
-                      this.token_copy_guide_popup = false
-                    }
+            HdsListItem({
+              customItemBuilder: (): void => { this.TokenItemContentBuilder(vm) },
+              swipeActionOptions: {
+                end: {
+                  builder: (): void => {
+                    this.TokenItemSwipeEnd(vm)
                   },
-                  primaryButton: {
-                    value: this.getUIContext().getHostContext()?.resourceManager
-                      .getStringSync($r('app.string.token_copy_guide_popup_Confirm').id),
-                    action: () => {
-                      if (AppPreference.getPreference(PREF_KEYS.SHOW_GUIDE_TIPS) as boolean) {
-                        AppPreference.setPreference(PREF_KEYS.SHOW_GUIDE_TIPS, false)
-                      }
-                      this.token_copy_guide_popup = false;
-                    }
-                  }
-                })
-
-            }
-            .swipeAction({
-              end: {
-                builder: () => {
-                  this.TokenItemSwipeEnd(vm)
-                },
+                }
               }
             })
           }, (vm: TokenConfigVM) => vm.objid) // keyGenerator: objid 变化 = 组件重建
@@ -181,6 +158,42 @@ export struct TokenListPage {
       })
     });
     this.dialog_qrcode.open();
+  }
+
+  /**
+   * 单个令牌项内容（供 HdsListItem.customItemBuilder 引用）。
+   * 注意：组件创建必须发生在 @Builder 方法内——直接在普通箭头闭包里写
+   * TokenItem({...}) 不会被编译器转换为组件创建，运行时按类构造器直接调用，
+   * 抛 "class constructor cannot called without 'new'"（已踩坑，faultlog 实证）
+   */
+  @Builder
+  TokenItemContentBuilder(vm: TokenConfigVM) {
+    TokenItem({
+      Config: vm.config,
+      Update: async (conf_new): Promise<boolean> => {
+        return await this.updateSingleToken(conf_new, false);
+      }
+    })
+      .bindPopup(this.token_copy_guide_popup && vm.config.TokenUUID === this.dataSource.getData(0)?.config.TokenUUID, {
+        placement: Placement.Left,
+        message: this.getUIContext().getHostContext()?.resourceManager
+          .getStringSync($r('app.string.token_copy_guide_popup').id),
+        onStateChange: (e) => {
+          if (!e.isVisible) {
+            this.token_copy_guide_popup = false;
+          }
+        },
+        primaryButton: {
+          value: this.getUIContext().getHostContext()?.resourceManager
+            .getStringSync($r('app.string.token_copy_guide_popup_Confirm').id),
+          action: () => {
+            if (AppPreference.getPreference(PREF_KEYS.SHOW_GUIDE_TIPS) as boolean) {
+              AppPreference.setPreference(PREF_KEYS.SHOW_GUIDE_TIPS, false);
+            }
+            this.token_copy_guide_popup = false;
+          }
+        }
+      })
   }
 
   @Builder
