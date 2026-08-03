@@ -96,6 +96,8 @@ export struct AboutSheet {
         .height('100%')
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+        // 滚动末端抬高底部避让区(导航条/小横条)，避免最后一项被遮挡
+        .contentEndOffset(this.window.AvoidBottomHeight)
         // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
         .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
         .layoutWeight(1)

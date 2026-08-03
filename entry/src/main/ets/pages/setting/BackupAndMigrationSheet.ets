@@ -12,7 +12,7 @@ import { EncryptionPassWordDialog } from '../../dialogs/EncryptionPassWordDialog
 import { restoreFromBackup, saveBackupToFile, TokenBackup } from 'common';
 import { showSaveFilePicker, showSelectFilePicker, writeFileContent } from 'common';
 import { SubItemDivider } from '../../components/SubItemDivider';
-import { LengthMetrics } from '@kit.ArkUI';
+import { LengthMetrics, AppStorageV2 } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppPreference, SettingValue, PREF_KEYS, ROUTE_NAMES } from 'common';
 import { throttle } from 'common';
@@ -24,6 +24,7 @@ import { TokenImporterRegistry, TokenImporter } from 'common';
 import { URIConfigDialog } from '../../dialogs/URIConfigDialog';
 import { SETTING_PAGE_INSET } from '../../components/SettingStyle';
 import { MaterialTheme } from '../../components/MaterialTheme';
+import { AppWindowInfo } from 'common';
 
 @Preview
 @ComponentV2
@@ -37,6 +38,7 @@ export struct BackupAndMigrationSheet {
   @Local cloudBackupEnabled: boolean = false;
   @Local isHuaweiLoggedIn: boolean = false;
   @Local importers: TokenImporter[] = [];
+  @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   private sheetScroller: Scroller = new Scroller();
 
   //备份时是否为导出模式
@@ -372,6 +374,8 @@ export struct BackupAndMigrationSheet {
           .layoutWeight(1)
           .scrollBar(BarState.Off)
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+          // 滚动末端抬高底部避让区(导航条/小横条)，避免最后一项被遮挡
+          .contentEndOffset(this.window.AvoidBottomHeight)
           // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
           .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
         }

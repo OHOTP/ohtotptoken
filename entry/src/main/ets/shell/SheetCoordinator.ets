@@ -32,7 +32,6 @@ export struct SheetCoordinator {
   @Require @Param tokens: TokenConfig[] = [];
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Require @Param scroller: Scroller = new Scroller();
-  @Require @Param bottomAvoidHeight: number = 0;
   /** 备份恢复完成回调(由 Index 提供:批量更新 Token 并重新排序) */
   @Require @Param backupReload: (conf: TokenConfig[]) => Promise<void> = async (conf: TokenConfig[]) => {};
 

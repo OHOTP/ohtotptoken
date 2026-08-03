@@ -10,12 +10,15 @@ import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } 
 import { SubItemDivider } from '../../components/SubItemDivider';
 import { SETTING_PAGE_INSET } from '../../components/SettingStyle';
 import { MaterialTheme } from '../../components/MaterialTheme';
+import { AppWindowInfo } from 'common';
+import { AppStorageV2 } from '@kit.ArkUI';
 
 @Preview
 @ComponentV2
 export struct FeedbackSheet {
   pageInfos: NavPathStack = new NavPathStack();
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
+  @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   private sheetScroller: Scroller = new Scroller();
   private appCtx = AppStorage.get<common.UIAbilityContext>('appContext') as common.UIAbilityContext;
 
@@ -70,6 +73,8 @@ export struct FeedbackSheet {
           .height('100%')
           .scrollBar(BarState.Off)
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+          // 滚动末端抬高底部避让区(导航条/小横条)，避免最后一项被遮挡
+          .contentEndOffset(this.window.AvoidBottomHeight)
           // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
           .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
           .layoutWeight(1)
