@@ -346,7 +346,12 @@ export struct TokenItem {
           })
       )
       .bindContextMenu(this.isLongPressMenuShown, this.TokenRightCtxMenu, {
-        preview: MenuPreviewMode.IMAGE,
+        // 预览走 CustomBuilder 自绘实体卡片，而非 MenuPreviewMode.IMAGE 组件截图：
+        // 沉浸材质由 materialFilter 在合成时采样窗口背景实现，不属于组件自身像素，
+        // 截图对效果类属性官方明确"可能产生非用户预期的结果"（材质层丢失只剩透明
+        // 背景+图标文字）；实体模式下截图即为所见，仍用 IMAGE
+        preview: MaterialTheme.isTokenItemMaterialEffective() ? this.TokenMenuPreview : MenuPreviewMode.IMAGE,
+        previewBorderRadius: this.token_preference.app_appearance_item_radius,
         hapticFeedbackMode: HapticFeedbackMode.AUTO,
         onDisappear: () => {
           this.isLongPressMenuShown = false;
@@ -390,6 +395,26 @@ export struct TokenItem {
       .fontSize(24)
       .fontColor([$r('sys.color.icon_secondary')])
       .padding({ left: $r('sys.float.ohos_id_text_overlay_menu_button_padding_left'), right: $r('sys.float.ohos_id_text_overlay_menu_button_padding_right') })
+  }
+
+  /**
+   * 长按菜单的自定义预览（材质模式专用，替代 MenuPreviewMode.IMAGE 截图）。
+   * 自绘实体卡片：内容复用 TokenRowContent，背景用与 solid 档位一致的
+   * item_bg + 卡片圆角；材质列表项浮起后呈现实体卡是长按预览的标准观感。
+   * 预览可布局区域默认扣除左右各 16vp（layoutRegionMargin 默认值），
+   * width('100%') 与列表卡片视觉宽度基本一致。
+   * 必须 @LocalBuilder：preview 是 CustomBuilder 参数，普通 @Builder 以
+   * this.TokenMenuPreview 传入时 this 被重绑定，菜单弹出即崩
+   * （TypeError: observeComponentCreation2 of undefined，已真机踩坑）
+   */
+  @LocalBuilder
+  TokenMenuPreview() {
+    Column() {
+      this.TokenRowContent(false)
+    }
+    .width('100%')
+    .borderRadius(this.token_preference.app_appearance_item_radius)
+    .backgroundColor($r('app.color.item_bg'))
   }
 
   @Builder
