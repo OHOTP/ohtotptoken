@@ -45,7 +45,7 @@ import { HomeTabs } from '../shell/HomeTabs';
 import lazy { SheetCoordinator } from '../shell/SheetCoordinator';
 import { NFCReadDialog } from '../dialogs/NFCReadDialog';
 import { NfcSessionTokens } from '../oath/NfcSessionTokens';
-import { NfcOathReader } from '../oath/NfcOathReader';
+import { NfcOathReader, NfcSupportStatus } from '../oath/NfcOathReader';
 import { OathReadResult } from '../oath/OathApplet';
 
 const TAG = 'PrivacySubscribe';
@@ -686,9 +686,14 @@ struct Index {
   }
 
   openNfcReadDialog(): void {
-    // NFC 能力检查不通过：SnackBar 提示并返回，不打开弹窗
-    if (!NfcOathReader.getInstance().isNfcSupported()) {
-      showSnackBar($r('app.string.nfc_unsupported'), SnackBarNotifyType.WARNING);
+    // NFC 能力检查不通过：按失败原因分流提示文案并返回，不打开弹窗
+    const nfcStatus = NfcOathReader.getInstance().isNfcSupported();
+    if (nfcStatus !== NfcSupportStatus.OK) {
+      if (nfcStatus === NfcSupportStatus.SWITCH_OFF) {
+        showSnackBar($r('app.string.nfc_switch_off'), SnackBarNotifyType.WARNING);
+      } else {
+        showSnackBar($r('app.string.nfc_unsupported'), SnackBarNotifyType.WARNING);
+      }
       return;
     }
     this.dialog_nfc_read = new CustomDialogController({

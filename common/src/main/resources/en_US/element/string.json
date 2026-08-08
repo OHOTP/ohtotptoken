@@ -1365,6 +1365,10 @@
       "value": "No available tokens found"
     },
     {
+      "name": "nfc_switch_off",
+      "value": "NFC is off. Turn on NFC and try again"
+    },
+    {
       "name": "nfc_unsupported",
       "value": "NFC is not supported on this device"
     },

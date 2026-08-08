@@ -24,6 +24,20 @@ export interface NfcReadOptions {
 }
 
 /**
+ * NFC 能力检查结果。
+ */
+export enum NfcSupportStatus {
+  /** 能力可用 */
+  OK,
+  /** 系统能力不支持（真·不支持） */
+  UNSUPPORTED,
+  /** 硬件不可用 */
+  HARDWARE_MISSING,
+  /** NFC 开关未打开（可恢复） */
+  SWITCH_OFF
+}
+
+/**
  * NFC 前台读卡编排（单例）：
  * readerMode 注册/注销、tag 发现、IsoDep 连接、OathSession 全流程（SELECT → 按需 VALIDATE → CALCULATE ALL）。
  */
@@ -48,26 +62,27 @@ export class NfcOathReader {
 
   /**
    * NFC 能力检查：系统能力（SystemCapability.Communication.NFC.Tag）+ 硬件可用 + NFC 开关打开。
+   * 返回具体失败原因，便于调用方区分提示文案。
    */
-  public isNfcSupported(): boolean {
+  public isNfcSupported(): NfcSupportStatus {
     if (!canIUse('SystemCapability.Communication.NFC.Tag')) {
       logger.warn('NFC Tag syscap not supported');
-      return false;
+      return NfcSupportStatus.UNSUPPORTED;
     }
     try {
       if (!nfcController.isNfcAvailable()) {
         logger.warn('NFC not available');
-        return false;
+        return NfcSupportStatus.HARDWARE_MISSING;
       }
       if (!nfcController.isNfcOpen()) {
         logger.warn('NFC not open');
-        return false;
+        return NfcSupportStatus.SWITCH_OFF;
       }
     } catch (e) {
       logger.error(`nfc check error: ${(e as BusinessError).message}`);
-      return false;
+      return NfcSupportStatus.UNSUPPORTED;
     }
-    return true;
+    return NfcSupportStatus.OK;
   }
 
   /**
@@ -76,7 +91,7 @@ export class NfcOathReader {
    */
   public startRead(opts: NfcReadOptions): void {
     this.opts = opts;
-    if (!this.isNfcSupported()) {
+    if (this.isNfcSupported() !== NfcSupportStatus.OK) {
       opts.onReadFailed(new OathError('TRANSPORT', 'NFC is not supported or not open'));
       return;
     }

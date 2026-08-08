@@ -1365,6 +1365,10 @@
       "value": "未讀取到可用令牌"
     },
     {
+      "name": "nfc_switch_off",
+      "value": "NFC 未開啟，請開啟 NFC 後重試"
+    },
+    {
       "name": "nfc_unsupported",
       "value": "目前裝置不支援NFC"
     },
