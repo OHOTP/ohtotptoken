@@ -120,6 +120,7 @@ export struct ArcTokenIcon {
 
   build() {
     Stack() {
+      // 手表端恒为暗色模式, 无需亮暗判断
       if (this.token_preference.app_appearance_logo_background && !this.bypassLogoBackground) {
         Shape() {}
         .align(Alignment.Center)
