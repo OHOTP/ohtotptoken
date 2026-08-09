@@ -5,7 +5,9 @@ export enum otpType {
   TOTP,
   Forti,
   HOTP,
-  Steam
+  Steam,
+  /** 外部OATH设备（NFC读取）令牌：仅当前会话显示，静态验证码 */
+  NFC_external = 4
 }
 export class TokenConfig {
   TokenUUID: string;
@@ -22,6 +24,9 @@ export class TokenConfig {
   RankScore: number;
   SteamMaFile: maFile | undefined = undefined;
   TokenIconPath: string | undefined = undefined;
+  /** 外部OATH设备（NFC）令牌的静态验证码缓存：仅会话显示，不持久化 */
+  TokenExternalCode: string = '';
+
   constructor(
     secret: string = '',
     type: otpType = 0,

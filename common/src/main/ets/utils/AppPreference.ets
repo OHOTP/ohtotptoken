@@ -11,6 +11,8 @@ export enum EVENT_NAMES {
   TOP_EFFECT_TYPE_CHANGED = 'onTopEffectTypeChanged',
   /** Token变更事件 */
   TOKEN_CHANGED = 'onTokenChanged',
+  /** NFC外部令牌变更事件 */
+  NFC_EXTERNAL_TOKENS_CHANGED = 'onNfcExternalTokensChanged',
   /** 单条Token更新事件（精准刷新，携带 TokenConfig） */
   TOKEN_SINGLE_UPDATED = 'onTokenSingleUpdated',
   /** 时间戳变更事件 */

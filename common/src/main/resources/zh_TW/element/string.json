@@ -613,6 +613,10 @@
       "value": "搜尋..."
     },
     {
+      "name": "toast_no_exportable_tokens",
+      "value": "沒有可匯出的本地令牌"
+    },
+    {
       "name": "toast_backup_success",
       "value": "備份成功"
     },
@@ -1335,6 +1339,42 @@
     {
       "name": "setting_dlp_anti_peep_unsupported",
       "value": "您的设备不支持防窥保护功能"
+    },
+    {
+      "name": "menu_add_nfc_read",
+      "value": "讀取NFC"
+    },
+    {
+      "name": "nfc_read_prompt_default",
+      "value": "請將NFC裝置靠近讀卡區域"
+    },
+    {
+      "name": "nfc_read_prompt_password",
+      "value": "請輸入密碼後再次將NFC裝置靠近讀卡區域"
+    },
+    {
+      "name": "nfc_read_password_placeholder",
+      "value": "輸入NFC裝置密碼"
+    },
+    {
+      "name": "nfc_read_success",
+      "value": "已讀取 %d 個令牌"
+    },
+    {
+      "name": "nfc_read_failed",
+      "value": "讀取失敗，請重新靠近NFC裝置"
+    },
+    {
+      "name": "nfc_read_no_tokens",
+      "value": "未讀取到可用令牌"
+    },
+    {
+      "name": "nfc_switch_off",
+      "value": "NFC 未開啟，請開啟 NFC 後重試"
+    },
+    {
+      "name": "nfc_unsupported",
+      "value": "目前裝置不支援NFC"
     },
     {
       "name": "dialog_icon_search_placeholder",
