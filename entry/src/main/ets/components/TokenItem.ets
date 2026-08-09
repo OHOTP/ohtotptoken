@@ -149,7 +149,7 @@ export struct TokenItem {
    */
   @Monitor("Config")
   onConfigChanged(monitor: IMonitor): void {
-    hilog.info(0xFF00, 'TokenItem', `onConfigChanged triggered uuid=${this.Config.TokenUUID} code=${this.Config.TokenExternalCode}`);
+    hilog.info(0xFF00, 'TokenItem', `onConfigChanged triggered uuid=${this.Config.TokenUUID} issuer=${this.Config.TokenIssuer} name=${this.Config.TokenName}`);
     this.updateToken();
   }
 
@@ -167,7 +167,7 @@ export struct TokenItem {
       const newCode = latest.TokenExternalCode ?? '';
       if (newCode !== this.TokenNumber) {
         this.TokenNumber = newCode;
-        hilog.info(0xFF00, 'TokenItem', `event refresh uuid=${this.Config.TokenUUID} code=${newCode}`);
+        hilog.info(0xFF00, 'TokenItem', `event refresh uuid=${this.Config.TokenUUID}`);
       }
     }
   }
@@ -203,7 +203,7 @@ export struct TokenItem {
     if (this.Config.TokenType == otpType.NFC_external) {
       // 外部令牌静态展示：直接显示卡片读取的验证码，不参与计时计算
       this.TokenNumber = this.Config.TokenExternalCode ?? '';
-      hilog.info(0xFF00, 'TokenItem', `updateToken external uuid=${this.Config.TokenUUID} code=${this.Config.TokenExternalCode} display=${this.TokenNumber}`);
+      hilog.info(0xFF00, 'TokenItem', `updateToken external uuid=${this.Config.TokenUUID} issuer=${this.Config.TokenIssuer} name=${this.Config.TokenName}`);
       return;
     }
     if (this.Config.TokenType == otpType.HOTP) {

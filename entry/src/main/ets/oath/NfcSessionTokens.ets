@@ -64,14 +64,14 @@ export class NfcSessionTokens {
         updated.TokenUUID = existing.TokenUUID;
         updated.TokenExternalCode = cred.code;
         this.tokens[this.tokens.indexOf(existing)] = updated;
-        logger.info(`applyResult HIT name=${existing.TokenName} oldCode=${existing.TokenExternalCode} newCode=${cred.code} uuid=${updated.TokenUUID}`);
+        logger.info(`applyResult HIT name=${existing.TokenName} uuid=${updated.TokenUUID}`);
       } else {
         const conf = new TokenConfig('', otpType.NFC_external, cred.issuer, cred.name,
           'SHA1', cred.period, cred.digits, 0, 0);
         conf.TokenSecret = '';
         conf.TokenExternalCode = cred.code;
         this.tokens.push(conf);
-        logger.info(`applyResult NEW name=${cred.name} code=${cred.code} uuid=${conf.TokenUUID}`);
+        logger.info(`applyResult NEW name=${cred.name} uuid=${conf.TokenUUID}`);
       }
       count++;
     }
