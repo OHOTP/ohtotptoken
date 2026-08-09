@@ -86,12 +86,25 @@ export struct WatchSyncPage {
     BleTokenClient.getInstance().connect(device.deviceId);
   }
 
-  private toggleToken(uuid: string): void {
-    if (this.selectedUuids.includes(uuid)) {
-      this.selectedUuids = this.selectedUuids.filter((u: string) => u !== uuid);
-    } else {
+  /**
+   * 按目标选中态幂等设置(双重检查当前状态, 避免重复/反向设置).
+   *
+   * 幂等语义是打破"select 赋值 → onChange 反馈环"的关键: 即使 select 重新
+   * 绑定触发 onChange, 回调值不变 → 状态不变 → 渲染收敛; 翻转语义(toggle)
+   * 在反馈环中永不收敛会卡死(真机实测).
+   */
+  private setTokenSelected(uuid: string, selected: boolean): void {
+    const has = this.selectedUuids.includes(uuid);
+    if (selected && !has) {
       this.selectedUuids = [...this.selectedUuids, uuid];
+    } else if (!selected && has) {
+      this.selectedUuids = this.selectedUuids.filter((u: string) => u !== uuid);
     }
+  }
+
+  /** 行点击切换: 目标态 = 当前选中态的翻转 */
+  private toggleToken(uuid: string): void {
+    this.setTokenSelected(uuid, !this.selectedUuids.includes(uuid));
   }
 
   private transfer(): void {
@@ -294,13 +307,14 @@ export struct WatchSyncPage {
                       }
                       .layoutWeight(1)
                       .alignItems(HorizontalAlign.Start)
-                      // ArkUI 标准多选组件: select 绑定选中状态, 点击经 onChange 切换
-                      // (ArkUI onClick 默认不冒泡, Checkbox 点击不会触发行 onClick, 无需防重入)
+                      // 受控选中 + 幂等同步: select 绑定驱动选中态, onChange 按回调值
+                      // 幂等设置(双重检查当前状态)——即使 select 重绑触发 onChange 反馈,
+                      // 回调值不变则状态不变, 渲染收敛不卡死(翻转语义会无限循环)
                       Checkbox()
                         .select(this.selectedUuids.includes(token.TokenUUID))
                         .shape(CheckBoxShape.ROUNDED_SQUARE)
-                        .onChange(() => {
-                          this.toggleToken(token.TokenUUID);
+                        .onChange((checked: boolean) => {
+                          this.setTokenSelected(token.TokenUUID, checked);
                         })
                     }
                     .padding(10)
