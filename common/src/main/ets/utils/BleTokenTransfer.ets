@@ -65,6 +65,22 @@ export function getDeviceDisplayName(device: ble.ScanResult): string {
 const MAX_CHUNK = 480;
 /** 单次传输数据上限保护(512KB) */
 const MAX_RECEIVE = 512 * 1024;
+/**
+ * GATT 单次操作超时(ms): 连接断开/手表锁屏时写入 Promise 可能长期挂起,
+ * 无超时保护会让主线程 await 冻结导致 ANR(THREAD_BLOCK); 超时后立即失败,
+ * 由调用方提示用户重试.
+ */
+const GATT_OP_TIMEOUT_MS = 5000;
+
+/** 带超时的 Promise.race 封装: 超时以指定错误拒绝 */
+function withTimeout<T>(op: Promise<T>, timeoutMs: number, timeoutMsg: string): Promise<T> {
+  return Promise.race([
+    op,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(timeoutMsg)), timeoutMs);
+    })
+  ]);
+}
 
 /** 传输头部帧结构 */
 interface TransferHeader {
@@ -94,14 +110,21 @@ const MSG_TYPE_TOKENS = 'tokens';
 const MSG_TYPE_SETTINGS = 'settings';
 
 /**
- * 手表端消费的设置白名单(与 ArcTokenItem/ArcTokenListPage 实际引用的 TokenPreference
- * 字段一致): 同步设置时只传输这些键, 避免把手机专属设置(图标包/云备份等)写入表盘.
- * 新增手表端消费的设置字段时需同步补充本清单.
+ * 手表端消费的设置白名单(与 ArcTokenItem/ArcTokenListPage/ArcTokenIcon 实际引用的
+ * TokenPreference 字段一致): 同步设置时只传输这些键, 避免把手机专属设置
+ * (图标包/云备份等)写入表盘. 新增手表端消费的设置字段时需同步补充本清单.
  */
 export const WATCH_SYNC_PREF_KEYS: string[] = [
   PREF_KEYS.SAFETY_HIDE_TOKEN_ENABLE,
   PREF_KEYS.APPEARANCE_SHOW_NEXT_TOKEN_ENABLE,
   PREF_KEYS.APPEARANCE_ITEM_HEIGHT,
+  PREF_KEYS.APPEARANCE_LOGO_BACKGROUND,
+  PREF_KEYS.APPEARANCE_LOGO_BACKGROUND_SIZE,
+  PREF_KEYS.APPEARANCE_LOGO_BACKGROUND_RADIUS,
+  PREF_KEYS.APPEARANCE_LOGO_BACKGROUND_COLOR,
+  PREF_KEYS.APPEARANCE_LOGO_DARK_FILTER,
+  PREF_KEYS.APPEARANCE_LOGO_DARK_FILTER_COLOR,
+  PREF_KEYS.APPEARANCE_LOGO_SIZE,
   PREF_KEYS.APPEARANCE_TOKEN_COLOR,
   PREF_KEYS.APPEARANCE_TOKEN_COLOR_DARK,
   PREF_KEYS.APPEARANCE_TOKEN_NEXT_COLOR,
@@ -344,7 +367,9 @@ export class BleTokenServer {
       }
       // 刷新 TokenPreference(@Trace 字段), 手表端 ArcTokenItem 等 UI 立即按新设置重绘
       AppPreference.loadTokenAppearance();
-      hilog.info(DOMAIN, TAG, `settings applied: ${applied}/${pairs.length} keys`);
+      // 诊断: 输出应用后的 logo_background 实际值(布尔)
+      hilog.info(DOMAIN, TAG,
+        `settings applied: ${applied}/${pairs.length} keys, logo_background=${AppPreference.getPreference(PREF_KEYS.APPEARANCE_LOGO_BACKGROUND)}`);
       this.onSettingsApplied?.();
     } catch (err) {
       let e: BusinessError = err as BusinessError;
@@ -550,8 +575,9 @@ export class BleTokenClient {
     if (!this.bonded.get(this.currentDeviceId)) {
       throw new Error('BLE device not bonded, pair first');
     }
-    // 服务发现, 确认对端特征存在
-    const services: Array<ble.GattService> = await this.gattClient.getServices();
+    // 服务发现, 确认对端特征存在(超时保护: 连接断开时可能挂起)
+    const services: Array<ble.GattService> =
+      await withTimeout(this.gattClient.getServices(), GATT_OP_TIMEOUT_MS, 'BLE getServices timeout');
     hilog.info(DOMAIN, TAG, `services discovered: ${services.length}`);
 
     const encoder = new util.TextEncoder();
@@ -584,6 +610,11 @@ export class BleTokenClient {
       characteristicValue: buf,
       descriptors: [],
     };
-    await this.gattClient!.writeCharacteristicValue(characteristic, ble.GattWriteType.WRITE);
+    // 超时保护: 连接断开/手表锁屏时 GATT 写入 Promise 可能长期挂起,
+    // 无超时会让主线程 await 冻结(THREAD_BLOCK_6S ANR); 超时即失败中断整次传输
+    await withTimeout(
+      this.gattClient!.writeCharacteristicValue(characteristic, ble.GattWriteType.WRITE),
+      GATT_OP_TIMEOUT_MS,
+      'BLE write timeout');
   }
 }
