@@ -16,7 +16,7 @@ export class PermissionManager {
   }
 
   private static permissions: Array<Permissions> =
-    ['ohos.permission.DISTRIBUTED_DATASYNC', 'ohos.permission.STORE_PERSISTENT_DATA'];
+    ['ohos.permission.DISTRIBUTED_DATASYNC', 'ohos.permission.STORE_PERSISTENT_DATA', 'ohos.permission.ACCESS_BLUETOOTH'];
 
   public async verifyPermissionGrant(permission: Permissions): Promise<abilityAccessCtrl.GrantStatus> {
     let atManager: abilityAccessCtrl.AtManager = abilityAccessCtrl.createAtManager();
@@ -101,6 +101,17 @@ export class PermissionManager {
       // 拒绝授权
       return false;
     }
+  }
+
+  /**
+   * 按权限名检查是否已授权(布尔).
+   *
+   * 注意: checkPermissionsBool/verifyPermissionsBool 只检查 permissions[0],
+   * 新增的权限(如 ACCESS_BLUETOOTH)必须用本方法按名单逐个检查.
+   */
+  public async checkPermissionGrantBool(permission: Permissions): Promise<boolean> {
+    let grantStatus: abilityAccessCtrl.GrantStatus = await this.checkPermissionGrant(permission);
+    return grantStatus === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED;
   }
 
   public async verifyPermissionsBool(): Promise<boolean> {

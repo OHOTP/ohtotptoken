@@ -2,6 +2,7 @@ export * from './src/main/ets/utils/AppFonts';
 export * from './src/main/ets/utils/AppPreference';
 export * from './src/main/ets/utils/AssetSecretStore';
 export * from './src/main/ets/utils/BackupRestoreHelper';
+export * from './src/main/ets/utils/BleTokenTransfer';
 export * from './src/main/ets/utils/Base64Util';
 export * from './src/main/ets/utils/CloudBackupCrypto';
 export * from './src/main/ets/utils/CloudBackupManager';
