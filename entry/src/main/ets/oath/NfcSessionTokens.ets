@@ -71,7 +71,7 @@ export class NfcSessionTokens {
         conf.TokenSecret = '';
         conf.TokenExternalCode = cred.code;
         this.tokens.push(conf);
-        logger.info(`applyResult NEW name=${cred.name} uuid=${conf.TokenUUID}`);
+        logger.info(`applyResult NEW issuer=${cred.issuer} name=${cred.name} uuid=${conf.TokenUUID}`);
       }
       count++;
     }
