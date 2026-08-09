@@ -7,8 +7,9 @@ import { SubItemDivider } from '../components/SubItemDivider';
 import { TokenStore, TokenConfig, BleTokenClient, getDeviceDisplayName } from 'common';
 import { TokenIcon } from 'uikit';
 import { showSnackBar, SnackBarNotifyType } from 'common';
-import { CommonConstants, PermissionManager } from 'common';
+import { CommonConstants, PermissionManager, AppWindowInfo } from 'common';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { AppStorageV2 } from '@kit.ArkUI';
 import { SETTING_PAGE_INSET } from '../components/SettingStyle';
 
 const TAG = 'WatchSyncPage';
@@ -31,6 +32,7 @@ export struct WatchSyncPage {
   @Local tokens: TokenConfig[] = [];
   @Local selectedUuids: string[] = [];
   @Local transferring: boolean = false;
+  @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
 
   private scroller: Scroller = new Scroller();
 
@@ -308,6 +310,8 @@ export struct WatchSyncPage {
             .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
             .scrollBar(BarState.Off)
             .backgroundColor($r('app.color.window_background'))
+            // 沉浸式底部避让: 内容可滚动进入安全区, 滚动到底时最后一项抬升至导航条之上
+            .contentEndOffset(this.window.AvoidBottomHeight)
             .width('100%')
             .height('100%')
           }
