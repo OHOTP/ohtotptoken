@@ -28,7 +28,8 @@ export class NfcSessionTokens {
   }
 
   public getTokens(): TokenConfig[] {
-    return this.tokens;
+    // 返回浅拷贝，防止下游对数组本身的操作（push/sort/索引赋值）污染会话存储
+    return this.tokens.slice();
   }
 
   public remove(uuid: string): void {
