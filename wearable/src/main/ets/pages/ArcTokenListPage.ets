@@ -1,14 +1,8 @@
-import { QRCodeDialog } from 'uikit';
-import { TokenPreference, EVENT_NAMES, dialogSystemMaterial } from 'common';
+import { TokenPreference, EVENT_NAMES } from 'common';
 import { TokenConfig, TokenIconPacks } from 'common';
-import { TokenStore } from 'common';
-import { convertToken2URI } from 'common';
-import { AppStorageV2, ArcList, ArcListItem,
-  ArcButton,
-  ArcButtonOptions,
-  ArcButtonStyleMode,
-  LengthMetrics,
-  LengthUnit} from "@kit.ArkUI";
+import { TokenStore, BleTokenServer } from 'common';
+import { systemDateTime } from '@kit.BasicServicesKit';
+import { AppStorageV2, ArcList, ArcListItem, LengthMetrics } from "@kit.ArkUI";
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppWindowInfo } from 'common';
@@ -24,32 +18,69 @@ export struct ArcTokenListPage {
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   @Local appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
 
-  @Local bottomOptions: ArcButtonOptions = new ArcButtonOptions({});
-  @Local loading: boolean = false;
+  /** BLE 接收状态提示文案(空态/接收完成时显示, 手表小屏用文本不用 Toast) */
+  @Local bleStatus: Resource | undefined = undefined;
 
   private listScroller: Scroller = new Scroller();
-  private dialog_qrcode?: CustomDialogController;
+  /** 每秒时间戳广播定时器 ID(aboutToDisappear 清理) */
+  private timestampIntervalId: number = -1;
+  /** 页面可见性: 不可见时暂停广播以省电, 回前台时 force 刷新一次 */
+  private appIsShow: boolean = true;
 
   aboutToAppear(): void {
     // token 数据变更(增删改/同步完成)时全量刷新列表
     if (this.appCtx.eventHub != undefined) {
       this.appCtx.eventHub.on(EVENT_NAMES.TOKEN_CHANGED, () => this.onTokenChanged());
     }
+    // BLE 接收完成回调: 刷新列表 + 显示接收提示 3 秒后复位
+    BleTokenServer.getInstance().setOnTokensSaved(async (count: number) => {
+      await this.onTokenChanged();
+      this.bleStatus = $r('app.string.app_wearable_ble_received');
+      setTimeout(() => {
+        this.bleStatus = undefined;
+      }, 3000);
+    });
+    // 设置应用完成回调: 显示设置已同步提示 3 秒后复位
+    BleTokenServer.getInstance().setOnSettingsApplied(() => {
+      this.bleStatus = $r('app.string.app_wearable_ble_settings_done');
+      setTimeout(() => {
+        this.bleStatus = undefined;
+      }, 3000);
+    });
     this.onTokenChanged();
 
-    this.bottomOptions = new ArcButtonOptions({
-      label: 'Sync',
-      styleMode: ArcButtonStyleMode.EMPHASIZED_LIGHT,
-      fontSize: new LengthMetrics(15, LengthUnit.FP),
-      shadowEnabled: true,
-      onClick: () => {
-        this.loading = true;
-
-        TokenStore.getInstance().DataSync().then(() => {
-          this.loading = false;
-        });
+    // 每秒广播时间戳事件, 驱动各 TOTP 令牌按周期刷新(参考手机端 Index 实现:
+    // ArcTokenItem 订阅 TIMESTAMP_CHANGED, 周期边界或 force 时重算验证码)
+    this.timestampIntervalId = setInterval(() => {
+      if (this.appCtx.eventHub != undefined && this.appIsShow) {
+        this.updateTimestamp(false);
       }
-    })
+    }, 1000);
+  }
+
+  aboutToDisappear(): void {
+    if (this.timestampIntervalId !== -1) {
+      clearInterval(this.timestampIntervalId);
+      this.timestampIntervalId = -1;
+    }
+  }
+
+  onPageShow(): void {
+    this.appIsShow = true;
+    // 回到前台立即强制刷新一次(后台期间可能错过 TOTP 周期边界)
+    this.updateTimestamp(true);
+  }
+
+  onPageHide(): void {
+    this.appIsShow = false;
+  }
+
+  /** 广播当前时间戳(秒)到全局事件总线 */
+  updateTimestamp(force: boolean): void {
+    const timestamp = Math.floor(systemDateTime.getTime() / 1000);
+    if (this.appCtx.eventHub != undefined) {
+      this.appCtx.eventHub.emit(EVENT_NAMES.TIMESTAMP_CHANGED, timestamp, force);
+    }
   }
 
   async onTokenChanged(): Promise<void> {
@@ -84,18 +115,17 @@ export struct ArcTokenListPage {
             .textAlign(TextAlign.Center)
             .fontSize(20)
             .width('100%')
-          if (this.loading) {
-            LoadingProgress()
-              .color(Color.White)
-              .width(80).height(80)
-          }
+          // BLE 接收状态: 等待手机端同步 / 已接收令牌正在刷新
+          Text(this.bleStatus !== undefined ? this.bleStatus : $r('app.string.app_wearable_ble_waiting'))
+            .textAlign(TextAlign.Center)
+            .fontSize(14)
+            .width('100%')
+            .margin({ top: 8 })
         }
         .justifyContent(FlexAlign.Center)
         .width('100%')
         .height('100%')
         .alignItems(HorizontalAlign.Center)
-
-        ArcButton({ options: this.bottomOptions })
       }
       ArcList({ initialIndex: 0, scroller: this.listScroller }) {
         ForEach(this.CurrentTokens,
@@ -110,11 +140,7 @@ export struct ArcTokenListPage {
             }
             .padding({ left: 10, right: 10 })
             .swipeAction({
-              start: {
-                builder: () => {
-                  this.TokenItemStart(token, index)
-                }
-              },
+              // 仅保留左滑删除操作, 右滑二维码入口已移除(手表端令牌无本地二维码展示需求)
               end: {
                 builder: () => {
                   this.TokenItemEnd(token)
@@ -134,34 +160,6 @@ export struct ArcTokenListPage {
   }
 
   @Builder
-  TokenItemStart(conf: TokenConfig, index: number) {
-    Row({ space: 10 }) {
-      Button({ type: ButtonType.Circle }) {
-        Text() {
-          SymbolSpan($r('sys.symbol.qrcode'))
-            .fontSize(30)
-            .fontWeight(FontWeight.Medium)
-            .fontColor([Color.White])
-        }
-      }
-      .backgroundColor(Color.Orange)
-      .padding(10)
-      .onClick(() => {
-        this.dialog_qrcode = new CustomDialogController({
-          systemMaterial: dialogSystemMaterial(),
-          builder: QRCodeDialog({
-            content: convertToken2URI(conf),
-            winSize: this.window.Size
-          })
-        });
-        this.dialog_qrcode.open();
-      })
-    }
-    .margin({ right: 10 })
-    .width(50)
-  }
-
-  @Builder
   TokenItemEnd(conf: TokenConfig) {
     Row({ space: 10 }) {
       Button({ type: ButtonType.Circle }) {
@@ -174,6 +172,7 @@ export struct ArcTokenListPage {
       }
       .backgroundColor(Color.Red)
       .padding(10)
+      .margin({ left: 5 })
       .onClick(async () => {
         this.getUIContext().showAlertDialog({
           title: $r('app.string.alert_remove_title', conf.TokenIssuer),
