@@ -11,6 +11,7 @@ import { common } from '@kit.AbilityKit';
 import { PermissionManager } from 'common';
 import { throttle } from 'common';
 import { ShowDataSyncDetailsPage } from '../ShowDataSyncDetailsPage';
+import lazy { WatchSyncPage } from '../WatchSyncPage';
 import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import { SETTING_PAGE_INSET } from '../../components/SettingStyle';
 import { MaterialTheme } from '../../components/MaterialTheme';
@@ -45,6 +46,8 @@ export struct DataSyncSheet {
   navDestinationBuilder(name: string, param: Object) {
     if (name === ROUTE_NAMES.ShowDataSyncDetailsPage) {
       ShowDataSyncDetailsPage({ scrollEffectType: this.scrollEffectType })
+    } else if (name === ROUTE_NAMES.WatchSyncPage) {
+      WatchSyncPage({ scrollEffectType: this.scrollEffectType })
     }
   }
 
@@ -77,6 +80,17 @@ export struct DataSyncSheet {
                 })
                   .onClick(throttle((event) => {
                     this.pageInfos.pushPathByName(ROUTE_NAMES.ShowDataSyncDetailsPage, null);
+                  }, 1000))
+
+                SubItemDivider()
+
+                // 手表同步: BLE 下发令牌到手表(独立子页面, 经本 Sheet 内嵌导航栈 push)
+                SubItemButton({
+                  symbol: $r('sys.symbol.transfer'),
+                  text: $r('app.string.setting_watch_sync')
+                })
+                  .onClick(throttle((event) => {
+                    this.pageInfos.pushPathByName(ROUTE_NAMES.WatchSyncPage, null);
                   }, 1000))
               }
             }
