@@ -1471,6 +1471,46 @@
     {
       "name": "cloud_sync_icon_pack_state_checking",
       "value": "正在檢查..."
+    },
+    {
+      "name": "card_config_title",
+      "value": "配置卡片令牌"
+    },
+    {
+      "name": "card_config_preview",
+      "value": "預覽"
+    },
+    {
+      "name": "card_config_select_hint",
+      "value": "選擇令牌（最多%d個）"
+    },
+    {
+      "name": "card_config_selected",
+      "value": "已選 %d/%d"
+    },
+    {
+      "name": "card_config_confirm",
+      "value": "確認"
+    },
+    {
+      "name": "card_config_cancel",
+      "value": "取消"
+    },
+    {
+      "name": "card_config_success",
+      "value": "卡片更新成功"
+    },
+    {
+      "name": "card_config_fail",
+      "value": "卡片更新失敗：%s"
+    },
+    {
+      "name": "card_config_empty_slot",
+      "value": "添加令牌"
+    },
+    {
+      "name": "card_config_no_token",
+      "value": "暫無可用令牌"
     }
   ]
 }

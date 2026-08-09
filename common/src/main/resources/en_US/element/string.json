@@ -1471,6 +1471,46 @@
     {
       "name": "cloud_sync_icon_pack_state_checking",
       "value": "Checking..."
+    },
+    {
+      "name": "card_config_title",
+      "value": "Configure Card Token"
+    },
+    {
+      "name": "card_config_preview",
+      "value": "Preview"
+    },
+    {
+      "name": "card_config_select_hint",
+      "value": "Select tokens (max %d)"
+    },
+    {
+      "name": "card_config_selected",
+      "value": "Selected %d/%d"
+    },
+    {
+      "name": "card_config_confirm",
+      "value": "Confirm"
+    },
+    {
+      "name": "card_config_cancel",
+      "value": "Cancel"
+    },
+    {
+      "name": "card_config_success",
+      "value": "Card updated"
+    },
+    {
+      "name": "card_config_fail",
+      "value": "Card update failed: %s"
+    },
+    {
+      "name": "card_config_empty_slot",
+      "value": "Add token"
+    },
+    {
+      "name": "card_config_no_token",
+      "value": "No tokens available"
     }
   ]
 }
