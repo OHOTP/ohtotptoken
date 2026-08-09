@@ -1077,6 +1077,14 @@
       "value": "连接"
     },
     {
+      "name": "watch_sync_reconnect",
+      "value": "重连"
+    },
+    {
+      "name": "watch_sync_connecting",
+      "value": "连接中…"
+    },
+    {
       "name": "watch_sync_not_connected_warn",
       "value": "请先连接手表"
     },

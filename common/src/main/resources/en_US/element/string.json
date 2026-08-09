@@ -1077,6 +1077,14 @@
       "value": "Connect"
     },
     {
+      "name": "watch_sync_reconnect",
+      "value": "Reconnect"
+    },
+    {
+      "name": "watch_sync_connecting",
+      "value": "Connecting…"
+    },
+    {
       "name": "watch_sync_not_connected_warn",
       "value": "Connect a watch first"
     },

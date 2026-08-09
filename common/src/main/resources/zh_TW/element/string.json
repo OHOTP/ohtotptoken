@@ -1077,6 +1077,14 @@
       "value": "連接"
     },
     {
+      "name": "watch_sync_reconnect",
+      "value": "重新連接"
+    },
+    {
+      "name": "watch_sync_connecting",
+      "value": "連接中…"
+    },
+    {
       "name": "watch_sync_not_connected_warn",
       "value": "請先連接手錶"
     },

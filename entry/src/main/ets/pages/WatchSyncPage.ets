@@ -31,6 +31,10 @@ export struct WatchSyncPage {
   @Local connected: boolean = false;
   @Local connectedDeviceId: string = '';
   @Local bonded: boolean = false;
+  /** 连接进行中: 按钮禁用, 连接结果(成功/失败/断开)到达或超时后恢复 */
+  @Local connecting: boolean = false;
+  /** 本次连接是否为重连(重连成功延迟 2s 展示, 避免快速重复点击; 首次连接立即展示) */
+  private reconnecting: boolean = false;
   @Local tokens: TokenConfig[] = [];
   @Local selectedUuids: string[] = [];
   @Local transferring: boolean = false;
@@ -53,8 +57,39 @@ export struct WatchSyncPage {
       this.scanning = false;
     });
     BleTokenClient.getInstance().setOnConnectionChanged((deviceId: string, isConnected: boolean) => {
-      this.connected = isConnected;
-      this.connectedDeviceId = isConnected ? deviceId : '';
+      if (isConnected) {
+        if (this.reconnecting) {
+          // 重连成功延迟 2s 展示: 期间保持 connecting 禁用态, 避免快速重复点击重连
+          setTimeout(() => {
+            this.connected = true;
+            this.connectedDeviceId = deviceId;
+            this.connecting = false;
+          }, 2000);
+        } else {
+          // 首次连接立即展示
+          this.connected = true;
+          this.connectedDeviceId = deviceId;
+          this.connecting = false;
+        }
+      } else if (this.connecting && this.reconnecting) {
+        // 重连流程中旧连接先断开(connect 内部先 disconnect): 保持 connecting,
+        // 等待新连接结果; 若新连接结果未在短时间到达(重连失败无后续回调)则恢复
+        setTimeout(() => {
+          this.connecting = false;
+          this.reconnecting = false;
+        }, 1500);
+      } else if (!this.connecting) {
+        // 意外断开(非连接流程): 立即恢复
+        this.connected = false;
+        this.connectedDeviceId = '';
+        this.connecting = false;
+      } else {
+        // 首次连接失败: 立即恢复
+        this.connected = false;
+        this.connectedDeviceId = '';
+        this.connecting = false;
+        this.reconnecting = false;
+      }
     });
     // 配对状态: 连接后系统自动发起配对, bonded 后才能传输 secret 载荷
     BleTokenClient.getInstance().setOnPairChanged((deviceId: string, isBonded: boolean) => {
@@ -80,10 +115,22 @@ export struct WatchSyncPage {
   private scan(): void {
     this.scanning = true;
     BleTokenClient.getInstance().startScan();
+    // 兜底: 已连接设备可能不再广播, BLEDeviceFind 回调不触发时扫描状态卡死,
+    // 定时恢复按钮(回调早到则提前恢复)
+    setTimeout(() => {
+      this.scanning = false;
+    }, 5000);
   }
 
   private connectDevice(device: ble.ScanResult): void {
+    // 记录本次是否为重连(点击时已处于连接状态)
+    this.reconnecting = this.connected;
+    this.connecting = true;
     BleTokenClient.getInstance().connect(device.deviceId);
+    // 兜底: 连接结果回调未及时到达时恢复按钮(如连接静默失败)
+    setTimeout(() => {
+      this.connecting = false;
+    }, 15000);
   }
 
   /**
@@ -168,9 +215,12 @@ export struct WatchSyncPage {
               ListItem() {
                 SettingItem({ title: $r('app.string.watch_sync_connect_section') }) {
                   Row() {
-                    Text(this.connected
-                      ? $r('app.string.watch_sync_connected')
-                      : $r('app.string.watch_sync_not_connected'))
+                    // 连接中(含重连 2s 等待期)显示"连接中…"状态
+                    Text(this.connecting
+                      ? $r('app.string.watch_sync_connecting')
+                      : (this.connected
+                        ? $r('app.string.watch_sync_connected')
+                        : $r('app.string.watch_sync_not_connected')))
                       .fontSize($r('sys.float.ohos_id_text_size_body2'))
                       .fontColor($r('sys.color.font_primary'))
                       .layoutWeight(1)
@@ -235,9 +285,27 @@ export struct WatchSyncPage {
                         .maxLines(1)
                         .textOverflow({ overflow: TextOverflow.Ellipsis })
                       if (this.connected && this.connectedDeviceId === device.deviceId) {
-                        Text($r('app.string.watch_sync_connected'))
-                          .fontSize(14)
-                          .fontColor($r('sys.color.font_secondary'))
+                        // 已连接: 提供重连按钮(connectDevice 内部先断开旧连接再重连)
+                        MaterialSurface({
+                          thickness: MaterialThickness.THIN,
+                          lightEffect: true,
+                          interactive: true,
+                          materialColor: $r('app.color.button_light_gray'),
+                          radius: 8,
+                          solidColor: Color.Transparent,
+                          fillWidth: false
+                        }) {
+                          Button($r('app.string.watch_sync_reconnect'))
+                            .fontSize(14)
+                            .height(32)
+                            .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.button_light_gray')))
+                            .fontColor(this.is_dark_mode ? Color.White : Color.Black)
+                            .stateEffect(false)
+                            .enabled(!this.connecting)
+                            .onClick(() => {
+                              this.connectDevice(device);
+                            })
+                        }
                       } else {
                         // 连接按钮: MaterialSurface 光感材质(沉浸档透明透出材质, 其余档语义色)
                         MaterialSurface({
@@ -249,12 +317,15 @@ export struct WatchSyncPage {
                           solidColor: Color.Transparent,
                           fillWidth: false
                         }) {
-                          Button($r('app.string.watch_sync_connect'))
+                          Button(this.connecting && this.connectedDeviceId === device.deviceId
+                            ? $r('app.string.watch_sync_connecting')
+                            : $r('app.string.watch_sync_connect'))
                             .fontSize(14)
                             .height(32)
                             .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.button_light_gray')))
                             .fontColor(this.is_dark_mode ? Color.White : Color.Black)
-                        .stateEffect(false)
+                            .stateEffect(false)
+                            .enabled(!this.connecting)
                             .onClick(() => {
                               this.connectDevice(device);
                             })
@@ -317,7 +388,8 @@ export struct WatchSyncPage {
                           this.setTokenSelected(token.TokenUUID, checked);
                         })
                     }
-                    .padding(10)
+                    // 加大左右内边距: 图标背景与列表边缘保持间距(对齐手机端列表项 16vp 标准)
+                    .padding({ left: 16, right: 16, top: 10, bottom: 10 })
                     .onClick(() => {
                       this.toggleToken(token.TokenUUID);
                     })
