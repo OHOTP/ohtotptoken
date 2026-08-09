@@ -48,8 +48,28 @@ export struct TokenCardConfigPage {
     cardStore.getCardConfig(this.formId).then((config: CardConfig | null) => {
       if (config) {
         this.selectedUUIDs = [...config.tokenUUIDs];
+        // 进入配置页即刷新卡片: 系统重启后卡片可能仍显示初始空态
+        // (系统缓存 onAddForm 快照), 立即用最新配置纠正, 无需等待定时更新
+        this.refreshCardNow(config);
       }
     });
+  }
+
+  /** 用现有配置立即刷新桌面卡片(进入配置页时兜底纠正空态) */
+  private async refreshCardNow(config: CardConfig): Promise<void> {
+    if (!this.formId) {
+      return;
+    }
+    try {
+      const cardStore = TokenCardStore.getInstance();
+      const formData = await cardStore.generateCardData(this.formId, config);
+      const bindingData = formBindingData.createFormBindingData(formData);
+      await formProvider.updateForm(this.formId, bindingData);
+      hilog.info(0, 'TokenCardConfig', `refreshCardNow success, formId: ${this.formId}`);
+    } catch (err) {
+      const errMsg = (err as BusinessError).message;
+      hilog.error(0, 'TokenCardConfig', `refreshCardNow error: ${errMsg}`);
+    }
   }
 
   build() {
