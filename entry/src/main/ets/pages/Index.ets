@@ -702,9 +702,6 @@ struct Index {
           const count = NfcSessionTokens.getInstance().applyResult(result);
           showSnackBar($r('app.string.nfc_read_success', count), SnackBarNotifyType.SUCCESS);
           this.dialog_nfc_read?.close();
-        },
-        onClose: () => {
-          this.dialog_nfc_read?.close();
         }
       }),
       cancel: () => {},

@@ -17,7 +17,6 @@ let logger = Logger;
 export struct NFCReadDialog {
   controller?: CustomDialogController;
   onSuccess: (result: OathReadResult) => void = () => {};
-  onClose: () => void = () => {};
 
   @State password: string = '';
   @State promptText: Resource = $r('app.string.nfc_read_prompt_default');
