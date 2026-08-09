@@ -1,4 +1,4 @@
-import { TokenConfig, dialogSystemMaterial } from 'common';
+import { TokenConfig, otpType, dialogSystemMaterial } from 'common';
 import { MaterialPolicy } from '../../utils/MaterialPolicy';
 
 import { BusinessError } from '@kit.BasicServicesKit';
@@ -66,8 +66,14 @@ export struct BackupAndMigrationSheet {
       cancel: () => {},
       confirm: (password: string) => {
         if (this.backup_is_input) { // 如果是导出 就要调用导出加密函数
+          // NFC 外部令牌仅会话存在、不持久化，导出前统一过滤（不含空 secret 伪 TOTP）
+          const exportable = this.Tokens.filter(t => t.TokenType !== otpType.NFC_external);
+          if (exportable.length === 0) {
+            showSnackBar($r('app.string.toast_no_exportable_tokens'), SnackBarNotifyType.WARNING);
+            return;
+          }
           showSaveFilePicker([`totp_backup_${generateFileNameWithDate()}.bak`], ['BAK|.bak']).then((uris) => {
-            const backup: TokenBackup = new TokenBackup(this.versionCode ?? 0, this.Tokens);
+            const backup: TokenBackup = new TokenBackup(this.versionCode ?? 0, exportable);
             if (uris[0] !== undefined && uris[0] !== '') {
                   saveBackupToFile(uris[0], backup, true, password).then(() => {
                     showSnackBar($r('app.string.toast_backup_success'), SnackBarNotifyType.SUCCESS);
@@ -118,8 +124,14 @@ export struct BackupAndMigrationSheet {
             value: $r('app.string.setting_migration_confirm'),
             action: () => {
               showSaveFilePicker([`totp_migration_${generateFileNameWithDate()}.txt`], ['TEXT|.txt']).then((uris) => {
+                // NFC 外部令牌不持久化，迁移导出同样过滤
+                const exportable = this.Tokens.filter(t => t.TokenType !== otpType.NFC_external);
+                if (exportable.length === 0) {
+                  showSnackBar($r('app.string.toast_no_exportable_tokens'), SnackBarNotifyType.WARNING);
+                  return;
+                }
                 let migration_content: string = '';
-                this.Tokens.forEach((token) => {
+                exportable.forEach((token) => {
                   migration_content += convertToken2URI(token) + "\n";
                 })
                 if (uris[0] !== undefined && uris[0] !== '') {
@@ -168,8 +180,14 @@ export struct BackupAndMigrationSheet {
           {
             value: $r('app.string.setting_backup_type_default'),
             action: () => {
+              // NFC 外部令牌仅会话存在、不持久化，导出前统一过滤
+              const exportable = this.Tokens.filter(t => t.TokenType !== otpType.NFC_external);
+              if (exportable.length === 0) {
+                showSnackBar($r('app.string.toast_no_exportable_tokens'), SnackBarNotifyType.WARNING);
+                return;
+              }
               showSaveFilePicker([`totp_backup_${generateFileNameWithDate()}.json`], ['JSON|.json']).then((uris) => {
-                const backup: TokenBackup = new TokenBackup(this.versionCode, this.Tokens);
+                const backup: TokenBackup = new TokenBackup(this.versionCode, exportable);
                 if (uris[0] !== undefined && uris[0] !== '') {
                   saveBackupToFile(uris[0], backup).then(() => {
                     showSnackBar($r('app.string.toast_backup_success'), SnackBarNotifyType.SUCCESS);

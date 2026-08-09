@@ -605,6 +605,10 @@
       "value": "Search..."
     },
     {
+      "name": "toast_no_exportable_tokens",
+      "value": "No local tokens to export"
+    },
+    {
       "name": "toast_backup_success",
       "value": "Backup Succeeded"
     },

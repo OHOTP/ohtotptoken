@@ -613,6 +613,10 @@
       "value": "搜索..."
     },
     {
+      "name": "toast_no_exportable_tokens",
+      "value": "没有可导出的本地令牌"
+    },
+    {
       "name": "toast_backup_success",
       "value": "备份成功"
     },
