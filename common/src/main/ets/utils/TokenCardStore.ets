@@ -2,6 +2,7 @@ import { PreferenceManager } from "./PreferenceManager";
 import { TokenConfig, otpType } from "./TokenConfig";
 import { TokenStore } from "./TokenStore";
 import { generateOTP } from "./TokenUtils";
+import { AppPreference, PREF_KEYS } from "./AppPreference";
 import { systemDateTime } from "@kit.BasicServicesKit";
 
 export interface CardConfig {
@@ -117,6 +118,9 @@ export class TokenCardStore {
         formData[`token${i}_period`] = String(token.TokenPeriod);
         formData[`token${i}_type`] = String(token.TokenType ?? otpType.TOTP);
         formData[`token${i}_counter`] = String(token.TokenCounter ?? 0);
+        // 即将过期阈值(用户设置): 卡片进度条剩余时间低于该值变红
+        const nextMargin = AppPreference.getPreference(PREF_KEYS.APPEARANCE_TOKEN_COUNTER_NEXT_MARGIN);
+        formData[`token${i}_next_margin`] = String(typeof nextMargin === 'number' ? nextMargin : 5);
       }
     }
 

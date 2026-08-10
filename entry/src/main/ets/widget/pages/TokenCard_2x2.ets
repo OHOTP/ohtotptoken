@@ -26,6 +26,8 @@ struct TokenCard_2x2 {
   @LocalStorageProp('token1_type') token1Type: string = '0';
   @LocalStorageProp('token1_counter') token1Counter: string = '0';
   @LocalStorageProp('token1_uuid') token1UUID: string = '';
+  @LocalStorageProp('token0_next_margin') token0NextMargin: string = '5';
+  @LocalStorageProp('token1_next_margin') token1NextMargin: string = '5';
   @State flippedIndex: number = -1;
   @State currentCode0: string = '';
   @State currentCode1: string = '';
@@ -34,6 +36,12 @@ struct TokenCard_2x2 {
 
   private isHOTP(index: number): boolean {
     return index === 0 ? this.token0Type === '2' : this.token1Type === '2';
+  }
+
+  /** 当前 TOTP 周期剩余秒数(渲染/翻转/刷新时计算; 卡片无定时器能力, 随刷新时机校正) */
+  private remainingSeconds(index: number): number {
+    const period = parseInt(index === 0 ? this.token0Period : this.token1Period) || 30;
+    return period - (Math.floor(Date.now() / 1000) % period);
   }
 
   private computeOTP(index: number): string {
@@ -55,15 +63,15 @@ struct TokenCard_2x2 {
         Column() {
           SymbolGlyph($r('sys.symbol.key_fill'))
             .fontSize(32)
-            .fontColor(['#E6000000'])
+            .fontColor([$r('app.color.card_text_primary')])
           Text('OTP令牌')
             .fontSize(16)
-            .fontColor('#E6000000')
+            .fontColor($r('app.color.card_text_primary'))
             .fontWeight(FontWeight.Bold)
             .margin({ top: 8 })
           Text('点击配置令牌')
             .fontSize(12)
-            .fontColor('#99000000')
+            .fontColor($r('app.color.card_text_secondary'))
             .margin({ top: 4 })
         }
         .width('100%')
@@ -87,15 +95,15 @@ struct TokenCard_2x2 {
           if (this.token0Issuer !== '') {
             Column() {
               if (this.flippedIndex !== 0) {
-                this.TokenFrontView(this.token0Issuer, this.token0Name)
+                this.TokenFrontView(this.token0Issuer, this.token0Name, 0)
               } else {
-                this.TokenBackView(this.currentCode0, this.token0Issuer)
+                this.TokenBackView(this.currentCode0, this.token0Issuer, parseInt(this.token0Period) || 30, this.remainingSeconds(0), parseInt(this.token0NextMargin) || 5)
               }
             }
             .width('100%')
             .layoutWeight(1)
             .borderRadius(12)
-            .backgroundColor('#0F000000')
+            .backgroundColor($r('app.color.card_content_bg'))
             .padding({ left: 12, right: 12, top: 8, bottom: 8 })
             .onClick(() => {
               if (this.flippedIndex !== 0) {
@@ -123,15 +131,15 @@ struct TokenCard_2x2 {
           if (this.token1Issuer !== '') {
             Column() {
               if (this.flippedIndex !== 1) {
-                this.TokenFrontView(this.token1Issuer, this.token1Name)
+                this.TokenFrontView(this.token1Issuer, this.token1Name, 1)
               } else {
-                this.TokenBackView(this.currentCode1, this.token1Issuer)
+                this.TokenBackView(this.currentCode1, this.token1Issuer, parseInt(this.token1Period) || 30, this.remainingSeconds(1), parseInt(this.token1NextMargin) || 5)
               }
             }
             .width('100%')
             .layoutWeight(1)
             .borderRadius(12)
-            .backgroundColor('#0F000000')
+            .backgroundColor($r('app.color.card_content_bg'))
             .padding({ left: 12, right: 12, top: 8, bottom: 8 })
             .onClick(() => {
               if (this.flippedIndex !== 1) {
@@ -158,12 +166,12 @@ struct TokenCard_2x2 {
             Column() {
               Text('+')
                 .fontSize(20)
-                .fontColor('#99000000')
+                .fontColor($r('app.color.card_text_secondary'))
             }
             .width('100%')
             .layoutWeight(1)
             .borderRadius(12)
-            .backgroundColor('#0F000000')
+            .backgroundColor($r('app.color.card_content_bg'))
             .justifyContent(FlexAlign.Center)
             .alignItems(HorizontalAlign.Center)
             .onClick(() => {
@@ -187,26 +195,28 @@ struct TokenCard_2x2 {
     .width('100%')
     .height('100%')
     .borderRadius(16)
-    .backgroundColor('#FFFFFFFF')
+    .backgroundColor($r('app.color.card_bg'))
     .padding(12)
   }
 
   @Builder
-  TokenFrontView(issuer: string, name: string) {
+  TokenFrontView(issuer: string, name: string, index: number) {
     Row() {
+      // 注: 卡片环境对动态 $rawfile 路径支持受限, 运行时拼接可能致整卡渲染空白,
+      // 图标暂用系统符号, 静态 rawfile 图标待卡片侧验证后接入
       SymbolGlyph($r('sys.symbol.key_fill'))
         .fontSize(18)
-        .fontColor(['#E6000000'])
+        .fontColor([$r('app.color.card_text_primary')])
       Column() {
         Text(issuer)
           .fontSize(13)
-          .fontColor('#E6000000')
+          .fontColor($r('app.color.card_text_primary'))
           .fontWeight(FontWeight.Medium)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         Text(name)
           .fontSize(11)
-          .fontColor('#99000000')
+          .fontColor($r('app.color.card_text_secondary'))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
@@ -220,26 +230,39 @@ struct TokenCard_2x2 {
   }
 
   @Builder
-  TokenBackView(code: string, issuer: string) {
-    Row() {
-      Column() {
-        Text(code)
-          .fontSize(24)
-          .fontColor('#E6000000')
-          .fontWeight(FontWeight.Bold)
-          .letterSpacing(2)
-          .fontFamily('monospace')
-        Text(issuer)
-          .fontSize(10)
-          .fontColor('#99000000')
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+  TokenBackView(code: string, issuer: string, period: number, remaining: number, nextMargin: number) {
+    Column() {
+      Row() {
+        Column() {
+          Text(code)
+            .fontSize(24)
+            .fontColor($r('app.color.card_code'))
+            .fontWeight(FontWeight.Bold)
+            .letterSpacing(2)
+            .fontFamily('monospace')
+          Text(issuer)
+            .fontSize(10)
+            .fontColor($r('app.color.card_text_secondary'))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
       }
-      .alignItems(HorizontalAlign.Start)
+      .width('100%')
       .layoutWeight(1)
+      .alignItems(VerticalAlign.Center)
+
+      // TOTP 剩余时间进度条(底部): 剩余时间低于用户设置的即将过期阈值时变红
+      Progress({ value: remaining, total: period })
+        .width('100%')
+        .height(3)
+        .color(remaining <= nextMargin
+          ? $r('app.color.card_code_warning') : $r('app.color.card_code'))
+        .backgroundColor($r('app.color.card_text_secondary'))
+        .margin({ top: 2 })
     }
     .width('100%')
     .height('100%')
-    .alignItems(VerticalAlign.Center)
   }
 }

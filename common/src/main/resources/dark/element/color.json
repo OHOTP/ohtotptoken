@@ -99,6 +99,30 @@
     {
       "name": "card_selected_icon",
       "value": "#FF5291FF"
+    },
+    {
+      "name": "card_bg",
+      "value": "#FF1A1A1C"
+    },
+    {
+      "name": "card_content_bg",
+      "value": "#1AFFFFFF"
+    },
+    {
+      "name": "card_text_primary",
+      "value": "#E6FFFFFF"
+    },
+    {
+      "name": "card_text_secondary",
+      "value": "#99FFFFFF"
+    },
+    {
+      "name": "card_code",
+      "value": "#5291FF"
+    },
+    {
+      "name": "card_code_warning",
+      "value": "#FFD71616"
     }
   ]
 }

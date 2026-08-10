@@ -17,12 +17,19 @@ struct TokenCard_1x2 {
   @LocalStorageProp('token0_type') token0Type: string = '0';
   @LocalStorageProp('token0_counter') token0Counter: string = '0';
   @LocalStorageProp('token0_uuid') token0UUID: string = '';
+  @LocalStorageProp('token0_next_margin') token0NextMargin: string = '5';
   @State isFlipped: boolean = false;
   @State currentCode: string = '';
   @State localCounterOffset: number = 0;
 
   private isHOTP(): boolean {
     return this.token0Type === '2';
+  }
+
+  /** 当前 TOTP 周期剩余秒数(渲染/翻转/刷新时计算; 卡片无定时器能力, 随刷新时机校正) */
+  private remainingSeconds(): number {
+    const period = parseInt(this.token0Period) || 30;
+    return period - (Math.floor(Date.now() / 1000) % period);
   }
 
   private computeOTP(): string {
@@ -44,10 +51,10 @@ struct TokenCard_1x2 {
         Row() {
           SymbolGlyph($r('sys.symbol.key_fill'))
             .fontSize(16)
-            .fontColor(['#E6000000'])
+            .fontColor([$r('app.color.card_text_primary')])
           Text('OTP令牌')
             .fontSize(12)
-            .fontColor('#E6000000')
+            .fontColor($r('app.color.card_text_primary'))
             .fontWeight(FontWeight.Bold)
             .margin({ left: 6 })
         }
@@ -78,7 +85,7 @@ struct TokenCard_1x2 {
         .width('100%')
         .height('100%')
         .borderRadius(8)
-        .backgroundColor('#0F000000')
+        .backgroundColor($r('app.color.card_content_bg'))
         .padding({ left: 8, right: 8, top: 4, bottom: 4 })
         .onClick(() => {
           if (!this.isFlipped) {
@@ -104,26 +111,28 @@ struct TokenCard_1x2 {
     .width('100%')
     .height('100%')
     .borderRadius(12)
-    .backgroundColor('#FFFFFFFF')
+    .backgroundColor($r('app.color.card_bg'))
     .padding(8)
   }
 
   @Builder
   TokenFrontView() {
     Row() {
+      // 注: 卡片环境对动态 $rawfile 路径支持受限, 运行时拼接可能致整卡渲染空白,
+      // 图标暂用系统符号, 静态 rawfile 图标待卡片侧验证后接入
       SymbolGlyph($r('sys.symbol.key_fill'))
         .fontSize(14)
-        .fontColor(['#E6000000'])
+        .fontColor([$r('app.color.card_text_primary')])
       Column() {
         Text(this.token0Issuer)
           .fontSize(11)
-          .fontColor('#E6000000')
+          .fontColor($r('app.color.card_text_primary'))
           .fontWeight(FontWeight.Medium)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         Text(this.token0Name)
           .fontSize(9)
-          .fontColor('#99000000')
+          .fontColor($r('app.color.card_text_secondary'))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
@@ -138,25 +147,38 @@ struct TokenCard_1x2 {
 
   @Builder
   TokenBackView() {
-    Row() {
-      Column() {
-        Text(this.currentCode)
-          .fontSize(18)
-          .fontColor('#E6000000')
-          .fontWeight(FontWeight.Bold)
-          .letterSpacing(1)
-          .fontFamily('monospace')
-        Text(this.token0Issuer)
-          .fontSize(8)
-          .fontColor('#99000000')
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+    Column() {
+      Row() {
+        Column() {
+          Text(this.currentCode)
+            .fontSize(18)
+            .fontColor($r('app.color.card_code'))
+            .fontWeight(FontWeight.Bold)
+            .letterSpacing(1)
+            .fontFamily('monospace')
+          Text(this.token0Issuer)
+            .fontSize(8)
+            .fontColor($r('app.color.card_text_secondary'))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
       }
-      .alignItems(HorizontalAlign.Start)
+      .width('100%')
       .layoutWeight(1)
+      .alignItems(VerticalAlign.Center)
+
+      // TOTP 剩余时间进度条(底部): 剩余时间低于用户设置的即将过期阈值时变红
+      Progress({ value: this.remainingSeconds(), total: parseInt(this.token0Period) || 30 })
+        .width('100%')
+        .height(3)
+        .color(this.remainingSeconds() <= (parseInt(this.token0NextMargin) || 5)
+          ? $r('app.color.card_code_warning') : $r('app.color.card_code'))
+        .backgroundColor($r('app.color.card_text_secondary'))
+        .margin({ top: 2 })
     }
     .width('100%')
     .height('100%')
-    .alignItems(VerticalAlign.Center)
   }
 }
