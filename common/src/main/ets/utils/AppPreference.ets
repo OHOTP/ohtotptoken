@@ -439,6 +439,12 @@ export enum ROUTE_NAMES {
   TokenSortPage = 'TokenSortPage',
   /** Token搜索页面 */
   TokenSearchPage = 'TokenSearchPage',
+  /** 添加通用 TOTP/HOTP 令牌页面 */
+  AddTotpTokenPage = 'AddTotpTokenPage',
+  /** 添加 FortiToken 页面 */
+  AddFortiTokenPage = 'AddFortiTokenPage',
+  /** 添加 Steam 令牌页面 */
+  AddSteamTokenPage = 'AddSteamTokenPage',
   /** App首页 */
   IndexPage = 'pages/Index',
 }

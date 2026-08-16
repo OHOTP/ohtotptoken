@@ -31,10 +31,6 @@ import { AppStorageV2, ComponentContent, window } from '@kit.ArkUI';
 import { ScrollEffectType } from '@kit.UIDesignKit';
 // [冷启动优化] Google Auth 解码仅在扫描迁移链接时使用
 import lazy { decodeProtobuf } from '../utils/GoogleAuthUtils';
-// [冷启动优化] 各添加 Token 弹框仅在用户点击添加时触发评估
-import lazy { TOTPConfigDialog } from 'uikit';
-import lazy { FortiConfigDialog } from 'uikit';
-import lazy { SteamConfigDialog } from 'uikit';
 // [冷启动优化] 华为账号管理器仅在 deferredInit 中初始化
 import lazy { HuaweiAccountManager } from 'common';
 import lazy { IconPackCloudBackup } from 'common';
@@ -49,6 +45,14 @@ import { NfcOathReader, NfcSupportStatus } from '../oath/NfcOathReader';
 import { OathReadResult } from '../oath/OathApplet';
 
 const TAG = 'PrivacySubscribe';
+
+class AddTotpRouteParams {
+  initialUri: string;
+
+  constructor(initialUri: string) {
+    this.initialUri = initialUri;
+  }
+}
 
 
 /** 将SettingTopEffectType映射到ScrollEffectType(自 common/AppPreference 迁入,
@@ -72,17 +76,17 @@ function TokenAddMenuBuilder(host: Index) {
       .accessibilityText($r('app.string.app_scan_code'))
     MenuItem({ content: $r('app.string.tab_token_add_key') })
       .onClick(() => {
-        host.openTotpAddDialog();
+        host.openTotpAddPage();
       })
       .accessibilityText($r('app.string.tab_token_add_key'))
     MenuItem({ content: $r('app.string.tab_token_add_forti_key') })
       .onClick(() => {
-        host.openFortiAddDialog();
+        host.openFortiAddPage();
       })
       .accessibilityText($r('app.string.tab_token_add_forti_key'))
     MenuItem({ content: $r('app.string.tab_token_add_stream_key') })
       .onClick(() => {
-        host.openSteamAddDialog();
+        host.openSteamAddPage();
       })
       .accessibilityText($r('app.string.tab_token_add_stream_key'))
     MenuItem({ content: $r('app.string.menu_add_nfc_read') })
@@ -173,9 +177,6 @@ struct Index {
 
   private backup_select_uri: string = '';
   private readonly addTokenMenuTargetId: string = 'app_ua_add_token';
-  private dialog_totp_config?: CustomDialogController;
-  private dialog_forti_config?: CustomDialogController;
-  private dialog_steam_config?: CustomDialogController;
   private dialog_nfc_read?: CustomDialogController;
 
   // [性能打点] hiTraceMeter 用于 DevEco Profiler 冷启动分析，搜索 "H:" 前缀查看各阶段耗时
@@ -628,16 +629,7 @@ struct Index {
           this.updateTokenConfigs(confs);
         });
       } else if (code.startsWith('otpauth://')) {
-        this.dialog_totp_config = new CustomDialogController({
-          systemMaterial: dialogSystemMaterial(),
-          builder: TOTPConfigDialog({
-            scan_code_original_Value: code,
-            confirm: async (new_conf): Promise<boolean> => {
-              return await this.updateTokenConfig(JSON.parse(new_conf), true)
-            }
-          })
-        })
-        this.dialog_totp_config.open()
+        this.pageInfos.pushPathByName(ROUTE_NAMES.AddTotpTokenPage, new AddTotpRouteParams(code));
       }
     }).catch((err: BusinessError) => {
       // 1000500002: 用户取消扫码, 静默处理
@@ -649,40 +641,16 @@ struct Index {
     });
   }
 
-  openTotpAddDialog(): void {
-    this.dialog_totp_config = new CustomDialogController({
-      systemMaterial: dialogSystemMaterial(),
-      builder: TOTPConfigDialog({
-        confirm: async (new_conf): Promise<boolean> => {
-          return await this.updateTokenConfig(JSON.parse(new_conf), true)
-        }
-      })
-    })
-    this.dialog_totp_config.open()
+  openTotpAddPage(): void {
+    this.pageInfos.pushPathByName(ROUTE_NAMES.AddTotpTokenPage, new AddTotpRouteParams(''));
   }
 
-  openFortiAddDialog(): void {
-    this.dialog_forti_config = new CustomDialogController({
-      systemMaterial: dialogSystemMaterial(),
-      builder: FortiConfigDialog({
-        confirm: async (new_conf): Promise<boolean> => {
-          return await this.updateTokenConfig(JSON.parse(new_conf), true)
-        }
-      })
-    })
-    this.dialog_forti_config.open()
+  openFortiAddPage(): void {
+    this.pageInfos.pushPathByName(ROUTE_NAMES.AddFortiTokenPage, null);
   }
 
-  openSteamAddDialog(): void {
-    this.dialog_steam_config = new CustomDialogController({
-      systemMaterial: dialogSystemMaterial(),
-      builder: SteamConfigDialog({
-        confirm: async (new_conf): Promise<boolean> => {
-          return await this.updateTokenConfig(JSON.parse(new_conf), true)
-        }
-      })
-    })
-    this.dialog_steam_config.open()
+  openSteamAddPage(): void {
+    this.pageInfos.pushPathByName(ROUTE_NAMES.AddSteamTokenPage, null);
   }
 
   openNfcReadDialog(): void {
@@ -837,6 +805,7 @@ struct Index {
           this.DropFilesDialogIsOpen = false;
           this.DropFilesDialogController?.close();
         },
+        saveToken: (conf: TokenConfig) => this.updateTokenConfig(conf, true),
         appLockContent: this.AppLockOverlayBuilder,
         homeContent: this.HomeContentBuilder,
       })

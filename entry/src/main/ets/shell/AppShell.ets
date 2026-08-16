@@ -11,6 +11,10 @@ import lazy { ShowCloudBackupHistoryPage } from '../pages/ShowCloudBackupHistory
 import lazy { ShowCodePage } from '../pages/ShowCodePage';
 // [冷启动优化] WebPage 导入 @kit.ArkWeb (libwebview_napi.z.so ~10ms)，延迟到用户实际访问网页时
 import lazy { WebPage, WebPageParams } from '../pages/WebPage';
+import lazy { AddTotpTokenPage, AddTotpPageParams } from '../pages/AddTotpTokenPage';
+import lazy { AddFortiTokenPage } from '../pages/AddFortiTokenPage';
+import lazy { AddSteamTokenPage } from '../pages/AddSteamTokenPage';
+import { TokenConfig } from 'common';
 
 @Builder
 function EmptyBuilder() {
@@ -38,11 +42,13 @@ export struct AppShell {
   @Require @Param onDropFile: () => void = () => {};
   @Require @Param onDragEnterFile: () => void = () => {};
   @Require @Param onDragLeaveFile: () => void = () => {};
+  /** 独立添加令牌页面共用的持久化入口，由 Index 注入 */
+  @Require @Param saveToken: (conf: TokenConfig) => Promise<boolean> = async () => false;
 
   @BuilderParam appLockContent?: CustomBuilder = EmptyBuilder;
   @BuilderParam homeContent?: CustomBuilder = EmptyBuilder;
 
-  @Builder
+  @LocalBuilder
   navDestinationBuilder(name: string, param: Object) {
     if (name === ROUTE_NAMES.ShowDataSyncDetailsPage) {
       ShowDataSyncDetailsPage({ scrollEffectType: this.scrollEffectType })
@@ -60,6 +66,22 @@ export struct AppShell {
       TokenSortPage({ scrollEffectType: this.scrollEffectType })
     } else if (name === ROUTE_NAMES.TokenSearchPage) {
       TokenSearchPage({ scrollEffectType: this.scrollEffectType })
+    } else if (name === ROUTE_NAMES.AddTotpTokenPage) {
+      AddTotpTokenPage({
+        scrollEffectType: this.scrollEffectType,
+        pageParams: param as AddTotpPageParams,
+        saveToken: (conf: TokenConfig) => this.saveToken(conf)
+      })
+    } else if (name === ROUTE_NAMES.AddFortiTokenPage) {
+      AddFortiTokenPage({
+        scrollEffectType: this.scrollEffectType,
+        saveToken: (conf: TokenConfig) => this.saveToken(conf)
+      })
+    } else if (name === ROUTE_NAMES.AddSteamTokenPage) {
+      AddSteamTokenPage({
+        scrollEffectType: this.scrollEffectType,
+        saveToken: (conf: TokenConfig) => this.saveToken(conf)
+      })
     }
   }
 

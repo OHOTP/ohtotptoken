@@ -65,6 +65,62 @@
       "value": "取消"
     },
     {
+      "name": "add_token_scan",
+      "value": "掃描二維碼"
+    },
+    {
+      "name": "add_token_choose_icon",
+      "value": "選擇令牌圖示"
+    },
+    {
+      "name": "add_token_account_section",
+      "value": "令牌資訊"
+    },
+    {
+      "name": "add_token_advanced_section",
+      "value": "進階設定"
+    },
+    {
+      "name": "add_token_activation_section",
+      "value": "啟用資訊"
+    },
+    {
+      "name": "add_token_type",
+      "value": "令牌類型"
+    },
+    {
+      "name": "add_token_required_hint",
+      "value": "請填寫全部必填項後儲存。"
+    },
+    {
+      "name": "add_token_save",
+      "value": "儲存令牌"
+    },
+    {
+      "name": "add_token_saving",
+      "value": "正在儲存…"
+    },
+    {
+      "name": "add_totp_intro",
+      "value": "手動新增 TOTP 或 HOTP 帳戶，也可以掃描 otpauth 二維碼。"
+    },
+    {
+      "name": "add_forti_intro",
+      "value": "啟用 FortiToken，並為目前裝置安全取得密鑰。"
+    },
+    {
+      "name": "add_steam_intro",
+      "value": "透過二維碼、maFile 或手動輸入匯入 Steam Guard 帳戶。"
+    },
+    {
+      "name": "add_forti_regenerate_device_id",
+      "value": "產生新的裝置 ID"
+    },
+    {
+      "name": "add_steam_import_failed",
+      "value": "無法匯入 maFile 檔案。"
+    },
+    {
       "name": "dialog_btn_delete",
       "value": "刪除"
     },

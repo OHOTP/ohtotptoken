@@ -65,6 +65,62 @@
       "value": "Cancel"
     },
     {
+      "name": "add_token_scan",
+      "value": "Scan code"
+    },
+    {
+      "name": "add_token_choose_icon",
+      "value": "Choose token icon"
+    },
+    {
+      "name": "add_token_account_section",
+      "value": "Token details"
+    },
+    {
+      "name": "add_token_advanced_section",
+      "value": "Advanced settings"
+    },
+    {
+      "name": "add_token_activation_section",
+      "value": "Activation"
+    },
+    {
+      "name": "add_token_type",
+      "value": "Token type"
+    },
+    {
+      "name": "add_token_required_hint",
+      "value": "Complete all required fields to save."
+    },
+    {
+      "name": "add_token_save",
+      "value": "Save token"
+    },
+    {
+      "name": "add_token_saving",
+      "value": "Saving…"
+    },
+    {
+      "name": "add_totp_intro",
+      "value": "Add a TOTP or HOTP account manually, or scan an otpauth QR code."
+    },
+    {
+      "name": "add_forti_intro",
+      "value": "Activate a FortiToken and securely request its secret for this device."
+    },
+    {
+      "name": "add_steam_intro",
+      "value": "Import a Steam Guard account by QR code, maFile, or manual entry."
+    },
+    {
+      "name": "add_forti_regenerate_device_id",
+      "value": "Generate a new device ID"
+    },
+    {
+      "name": "add_steam_import_failed",
+      "value": "Could not import the maFile."
+    },
+    {
       "name": "dialog_btn_delete",
       "value": "Delete"
     },

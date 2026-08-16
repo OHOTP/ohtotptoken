@@ -65,6 +65,62 @@
       "value": "取消"
     },
     {
+      "name": "add_token_scan",
+      "value": "扫描二维码"
+    },
+    {
+      "name": "add_token_choose_icon",
+      "value": "选择令牌图标"
+    },
+    {
+      "name": "add_token_account_section",
+      "value": "令牌信息"
+    },
+    {
+      "name": "add_token_advanced_section",
+      "value": "高级设置"
+    },
+    {
+      "name": "add_token_activation_section",
+      "value": "激活信息"
+    },
+    {
+      "name": "add_token_type",
+      "value": "令牌类型"
+    },
+    {
+      "name": "add_token_required_hint",
+      "value": "请填写全部必填项后保存。"
+    },
+    {
+      "name": "add_token_save",
+      "value": "保存令牌"
+    },
+    {
+      "name": "add_token_saving",
+      "value": "正在保存…"
+    },
+    {
+      "name": "add_totp_intro",
+      "value": "手动添加 TOTP 或 HOTP 账户，也可以扫描 otpauth 二维码。"
+    },
+    {
+      "name": "add_forti_intro",
+      "value": "激活 FortiToken，并为当前设备安全获取密钥。"
+    },
+    {
+      "name": "add_steam_intro",
+      "value": "通过二维码、maFile 或手动输入导入 Steam Guard 账户。"
+    },
+    {
+      "name": "add_forti_regenerate_device_id",
+      "value": "生成新的设备 ID"
+    },
+    {
+      "name": "add_steam_import_failed",
+      "value": "无法导入 maFile 文件。"
+    },
+    {
       "name": "dialog_btn_delete",
       "value": "删除"
     },
