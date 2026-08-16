@@ -23,7 +23,6 @@ import {
   ScrollEffectType,
   hdsMaterial
 } from "@kit.UIDesignKit";
-import { CommonConstants } from 'common';
 import { AddTokenPageParams } from '../components/AddTokenForm';
 
 let tkStore = TokenStore.getInstance();
@@ -196,13 +195,14 @@ export struct TokenSearchPage {
         .height('100%')
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-        .contentStartOffset(this.window.AvoidTopHeight + CommonConstants.AVOID_TOP_WITH_SEARCHBAR_HEIGHT)
         .contentEndOffset(this.window.AvoidBottomHeight)
       }
     }
+    .backgroundColor($r('app.color.window_background'))
     .titleMode(HdsNavDestinationTitleMode.MINI)
     .titleBar({
       avoidLayoutSafeArea: true,
+      enableComponentSafeArea: true,
       style: {
         originalStyle: {
           contentStyle: {
