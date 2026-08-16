@@ -1018,7 +1018,7 @@
     },
     {
       "name": "setting_material_mode_desc",
-      "value": "为卡片与表面启用沉浸光感材质（需要设备支持）"
+      "value": "为卡片与表面启用沉浸光感材质，需要设备支持。"
     },
     {
       "name": "setting_material_mode_auto",
@@ -1038,7 +1038,7 @@
     },
     {
       "name": "setting_immersive_style_desc",
-      "value": "沉浸材质的厚度档位"
+      "value": "沉浸材质的厚度档位。"
     },
     {
       "name": "setting_immersive_style_ultra_thin",
@@ -1078,7 +1078,7 @@
     },
     {
       "name": "setting_token_item_material_desc",
-      "value": "为令牌列表项启用光感材质（逐项生效，可能增加滚动开销）"
+      "value": "为令牌列表项逐项启用光感材质。"
     },
     {
       "name": "setting_light_effect_mode",
@@ -1086,7 +1086,7 @@
     },
     {
       "name": "setting_light_effect_mode_desc",
-      "value": "触摸时材质表面的光斑反馈；跟随组件保留各表面自身设置，全部开启为所有光感表面启用"
+      "value": "触摸时在材质表面显示光斑反馈。"
     },
     {
       "name": "setting_light_effect_mode_default",

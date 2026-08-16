@@ -1030,7 +1030,7 @@
     },
     {
       "name": "setting_material_mode_desc",
-      "value": "Immersive light-sense material for cards and surfaces (requires device support)"
+      "value": "Immersive light-sense material for cards and surfaces, requires device support."
     },
     {
       "name": "setting_material_mode_auto",
@@ -1050,7 +1050,7 @@
     },
     {
       "name": "setting_immersive_style_desc",
-      "value": "Thickness of the immersive material"
+      "value": "Thickness of the immersive material."
     },
     {
       "name": "setting_immersive_style_ultra_thin",
@@ -1090,7 +1090,7 @@
     },
     {
       "name": "setting_token_item_material_desc",
-      "value": "Enable immersive material for each token list item (per-item, may increase scrolling overhead)"
+      "value": "Enable immersive material for each token list item."
     },
     {
       "name": "setting_light_effect_mode",
@@ -1098,7 +1098,7 @@
     },
     {
       "name": "setting_light_effect_mode_desc",
-      "value": "Light spot feedback on material surfaces when touched. Follow components keeps each surface's own setting; Always on enables it for all immersive surfaces"
+      "value": "Show light spot feedback on material surfaces when touched."
     },
     {
       "name": "setting_light_effect_mode_default",
