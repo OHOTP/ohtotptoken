@@ -1,5 +1,6 @@
 import {
   BottomBuilderShowType,
+  HideMode,
   HdsNavDestination,
   HdsNavDestinationTitleMode,
   ScrollEffectType,
@@ -7,6 +8,7 @@ import {
 } from '@kit.UIDesignKit';
 import { uiMaterial } from '@kit.ArkUI';
 import { IconPicker } from 'uikit';
+import { TokenIconPacks } from 'common';
 import { MaterialTheme } from '../components/MaterialTheme';
 import { PageScaffold } from '../components/PageScaffold';
 import { MaterialPolicy } from '../utils/MaterialPolicy';
@@ -24,6 +26,12 @@ export class IconPickerPageParams {
   }
 }
 
+function createIconScrollers(): Scroller[] {
+  const scrollers: Scroller[] = [new Scroller()];
+  TokenIconPacks.aegis_icon_packs.forEach(() => scrollers.push(new Scroller()));
+  return scrollers;
+}
+
 @Entry
 @Preview
 @ComponentV2
@@ -33,13 +41,14 @@ export struct IconPickerPage {
   @Local iconSearchText: string = '';
 
   private pageInfos: NavPathStack | null = null;
+  private iconScrollers: Scroller[] = createIconScrollers();
 
   private completeSelection(path: string): void {
     this.pageParams.onSelected(path);
     this.pageInfos?.pop();
   }
 
-  @Builder
+  @LocalBuilder
   SearchBottomBuilder() {
     Column() {
       if (MaterialTheme.isImmersiveEffective()) {
@@ -85,6 +94,7 @@ export struct IconPickerPage {
           currentIconPath: this.pageParams.currentIconPath,
           showCancelButton: false,
           showSearch: false,
+          iconScrollers: this.iconScrollers,
           searchText: this.iconSearchText,
           confirm: (path: string) => this.completeSelection(path)
         })
@@ -122,9 +132,16 @@ export struct IconPickerPage {
         bottomBuilder: {
           builder: (): void => this.SearchBottomBuilder(),
           height: 56,
-          showType: BottomBuilderShowType.DIRECTLY_SHOW
+          showType: BottomBuilderShowType.OVERDRAG_SHOW
         }
       }
+    })
+    .bindToScrollable(this.iconScrollers)
+    .dynamicHideTitleBar({
+      hideTitleArea: false,
+      hideBottomBuilder: true,
+      hideStatusBar: false,
+      mode: HideMode.SCROLL_UP_TO
     })
     .onReady((context: NavDestinationContext) => this.pageInfos = context.pathStack)
   }

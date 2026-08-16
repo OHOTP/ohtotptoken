@@ -26,6 +26,7 @@ export struct IconPicker {
   @Prop currentIconPath: string = '';
   @Prop showCancelButton: boolean = true;
   @Prop showSearch: boolean = true;
+  iconScrollers: Scroller[] = [];
   @Prop @Watch('onSearchTextChanged') searchText: string = '';
   cancel: () => void = () => {};
   confirm: (new_conf: string) => void = () => {};
@@ -36,7 +37,6 @@ export struct IconPicker {
   @State cropModel: CropModel = new CropModel();
   @State pendingCropUri: string = '';
 
-  private icon_matched_with_issuer: string[] = [''];
   private default_icon_data: MyDataSource = new MyDataSource();
   private user_icon_data: MyDataSource = new MyDataSource();
   private aegis_icon_data: MyDataSource[] = [];
@@ -45,18 +45,6 @@ export struct IconPicker {
 
   aboutToAppear(): void {
     this.selected_icon_path = this.currentIconPath;
-    this.icon_matched_with_issuer = [''];
-    const default_icon = TokenIconPacks.default_icon_pack.getIconPathByIssuer(this.issuer);
-    if (default_icon !== '') {
-      this.icon_matched_with_issuer.push(default_icon);
-    }
-    TokenIconPacks.aegis_icon_packs.forEach((aegis_icon_pack) => {
-      const aegis_icon = aegis_icon_pack.getIconPathByIssuer(this.issuer);
-      if (aegis_icon !== '') {
-        this.icon_matched_with_issuer.push(aegis_icon);
-      }
-    });
-
     const defaultIconPaths: string[] = [];
     TokenIconPacks.default_icon_pack.default_icon_pack_path.forEach((path: string) => {
       defaultIconPaths.push(path);
@@ -256,61 +244,6 @@ export struct IconPicker {
   }
 
   @Builder
-  RecommendRow() {
-    Column({ space: LengthMetrics.vp(8).value }) {
-      Text($r('app.string.dialog_icon_recommend'))
-        .fontSize(LengthMetrics.vp(14).value)
-        .fontWeight(FontWeight.Medium)
-        .fontColor($r('sys.color.font_secondary'))
-        .width('100%')
-      Scroll() {
-        Row({ space: LengthMetrics.vp(8).value }) {
-          ForEach(this.icon_matched_with_issuer, (path: string) => {
-            this.IconChoice(path, false)
-          }, (path: string) => path)
-        }
-      }
-      .scrollable(ScrollDirection.Horizontal)
-      .scrollBar(BarState.Off)
-      .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-      .clip(false)
-      .width('100%')
-    }
-    .width('100%')
-    .padding({ top: LengthMetrics.vp(12).value, left: LengthMetrics.vp(12).value,
-      right: LengthMetrics.vp(12).value })
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  CustomRow() {
-    Column({ space: LengthMetrics.vp(8).value }) {
-      Text($r('app.string.dialog_icon_select_custom'))
-        .fontSize(LengthMetrics.vp(14).value)
-        .fontWeight(FontWeight.Medium)
-        .fontColor($r('sys.color.font_secondary'))
-        .width('100%')
-      Scroll() {
-        Row({ space: LengthMetrics.vp(8).value }) {
-          this.ItemIconAddButton()
-          LazyForEach(this.user_icon_data, (path: string) => {
-            this.IconChoice(path, true)
-          }, (path: string) => path)
-        }
-      }
-      .scrollable(ScrollDirection.Horizontal)
-      .scrollBar(BarState.Off)
-      .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-      .clip(false)
-      .width('100%')
-    }
-    .width('100%')
-    .padding({ top: LengthMetrics.vp(12).value, bottom: LengthMetrics.vp(8).value,
-      left: LengthMetrics.vp(12).value, right: LengthMetrics.vp(12).value })
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
   CropCoverBuilder() {
     Column() {
       CropView({ model: this.cropModel })
@@ -350,8 +283,8 @@ export struct IconPicker {
   }
 
   @Builder
-  LazyIconGrid(dataSource: MyDataSource) {
-    if (dataSource.totalCount() === 0) {
+  LazyIconGrid(dataSource: MyDataSource, scroller?: Scroller) {
+    if (dataSource.totalCount() === 0 && this.searchText !== '') {
       Column() {
         Text($r('app.string.dialog_icon_empty'))
           .fontSize(LengthMetrics.vp(14).value)
@@ -362,7 +295,20 @@ export struct IconPicker {
       .padding({ top: LengthMetrics.vp(48).value })
       .alignItems(HorizontalAlign.Center)
     } else {
-      Grid() {
+      Grid(scroller) {
+        if (this.searchText === '') {
+          GridItem() {
+            this.IconChoice('', false)
+          }
+          GridItem() {
+            this.ItemIconAddButton()
+          }
+          LazyForEach(this.user_icon_data, (path: string) => {
+            GridItem() {
+              this.IconChoice(path, true)
+            }
+          }, (path: string) => path)
+        }
         LazyForEach(dataSource, (path: string) => {
           GridItem() {
             this.IconChoice(path, false)
@@ -409,24 +355,19 @@ export struct IconPicker {
           })
       }
 
-      if (this.searchText === '') {
-        this.RecommendRow()
-        this.CustomRow()
-      }
-
       if (TokenIconPacks.aegis_icon_packs.length === 0) {
         if (this.searchText === '') {
-          this.LazyIconGrid(this.default_icon_data)
+          this.LazyIconGrid(this.default_icon_data, this.iconScrollers[0])
         } else {
-          this.LazyIconGrid(this.filtered_default_icon_data)
+          this.LazyIconGrid(this.filtered_default_icon_data, this.iconScrollers[0])
         }
       } else {
         Tabs({ barPosition: BarPosition.Start }) {
           TabContent() {
             if (this.searchText === '') {
-              this.LazyIconGrid(this.default_icon_data)
+              this.LazyIconGrid(this.default_icon_data, this.iconScrollers[0])
             } else {
-              this.LazyIconGrid(this.filtered_default_icon_data)
+              this.LazyIconGrid(this.filtered_default_icon_data, this.iconScrollers[0])
             }
           }
           .tabBar(this.TabBuilder(TokenIconPacks.default_icon_pack.name, 0))
@@ -434,9 +375,9 @@ export struct IconPicker {
           ForEach(TokenIconPacks.aegis_icon_packs, (aegis_icon_pack: AegisIconPack, index: number) => {
             TabContent() {
               if (this.searchText === '' && index < this.aegis_icon_data.length) {
-                this.LazyIconGrid(this.aegis_icon_data[index])
+                this.LazyIconGrid(this.aegis_icon_data[index], this.iconScrollers[index + 1])
               } else {
-                this.LazyIconGrid(this.filtered_aegis_icon_data[index])
+                this.LazyIconGrid(this.filtered_aegis_icon_data[index], this.iconScrollers[index + 1])
               }
             }
             .tabBar(this.TabBuilder(aegis_icon_pack.name, 1 + index))
@@ -474,6 +415,7 @@ export struct IconPicker {
     }
     .padding(LengthMetrics.vp(10).value)
     .width('100%')
+    .height('100%')
     .bindContentCover(this.showCropCover, this.CropCoverBuilder(), {
       modalTransition: ModalTransition.DEFAULT,
       onDisappear: () => {
