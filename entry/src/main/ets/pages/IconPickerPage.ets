@@ -6,9 +6,14 @@ import {
   ScrollEffectType,
   hdsMaterial
 } from '@kit.UIDesignKit';
-import { uiMaterial } from '@kit.ArkUI';
+import {
+  SegmentButtonV2ItemOptions,
+  SegmentButtonV2Items,
+  TabSegmentButtonV2,
+  uiMaterial
+} from '@kit.ArkUI';
 import { IconPicker } from 'uikit';
-import { TokenIconPacks } from 'common';
+import { AegisIconPack, TokenIconPacks } from 'common';
 import { MaterialTheme } from '../components/MaterialTheme';
 import { PageScaffold } from '../components/PageScaffold';
 import { MaterialPolicy } from '../utils/MaterialPolicy';
@@ -32,6 +37,14 @@ function createIconScrollers(): Scroller[] {
   return scrollers;
 }
 
+function createIconPackSegmentItems(): SegmentButtonV2Items {
+  const items: SegmentButtonV2ItemOptions[] = [{ text: TokenIconPacks.default_icon_pack.name }];
+  TokenIconPacks.aegis_icon_packs.forEach((iconPack: AegisIconPack) => {
+    items.push({ text: iconPack.name });
+  });
+  return new SegmentButtonV2Items(items);
+}
+
 @Entry
 @Preview
 @ComponentV2
@@ -39,9 +52,11 @@ export struct IconPickerPage {
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Param pageParams: IconPickerPageParams = new IconPickerPageParams();
   @Local iconSearchText: string = '';
+  @Local currentPackIndex: number = 0;
 
   private pageInfos: NavPathStack | null = null;
   private iconScrollers: Scroller[] = createIconScrollers();
+  private packSegmentItems: SegmentButtonV2Items = createIconPackSegmentItems();
 
   private completeSelection(path: string): void {
     this.pageParams.onSelected(path);
@@ -86,20 +101,42 @@ export struct IconPickerPage {
     .padding({ left: 16, right: 16 })
   }
 
+  @LocalBuilder
+  PackSegmentBuilder() {
+    Column() {
+      TabSegmentButtonV2({
+        items: this.packSegmentItems,
+        selectedIndex: this.currentPackIndex,
+        $selectedIndex: (index: number) => {
+          this.currentPackIndex = index;
+          this.iconScrollers[index]?.scrollTo({ xOffset: 0, yOffset: 0 });
+        }
+      })
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16 })
+  }
+
   build() {
     HdsNavDestination() {
       PageScaffold({ avoidBottom: true }) {
+        if (TokenIconPacks.aegis_icon_packs.length > 0) {
+          this.PackSegmentBuilder()
+        }
+
         IconPicker({
           issuer: this.pageParams.issuer,
           currentIconPath: this.pageParams.currentIconPath,
           showCancelButton: false,
           showSearch: false,
+          showPackTabs: false,
+          currentPackIndex: this.currentPackIndex,
           iconScrollers: this.iconScrollers,
           searchText: this.iconSearchText,
           confirm: (path: string) => this.completeSelection(path)
         })
           .width('100%')
-          .height('100%')
+          .layoutWeight(1)
       }
     }
     .backgroundColor($r('app.color.window_background'))
@@ -132,7 +169,7 @@ export struct IconPickerPage {
         bottomBuilder: {
           builder: (): void => this.SearchBottomBuilder(),
           height: 56,
-          showType: BottomBuilderShowType.OVERDRAG_SHOW
+          showType: BottomBuilderShowType.DIRECTLY_SHOW
         }
       }
     })
