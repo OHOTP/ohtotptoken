@@ -106,51 +106,55 @@ export struct IconPicker {
   ItemIconOverlay(path: string, removable: boolean) {
     Stack({ alignContent: Alignment.Bottom }) {
       Row() {
-        Button({ type: ButtonType.Circle }) {
-          SymbolGlyph($r('sys.symbol.plus'))
-            .fontSize(LengthMetrics.vp(12).value)
-            .fontColor([Color.White])
-            .fontWeight(FontWeight.Medium)
-            .rotate({ angle: 45 })
-        }
-        .backgroundColor(Color.Red)
-        .width(LengthMetrics.vp(16).value)
-        .height(LengthMetrics.vp(16).value)
-        .visibility(removable ? Visibility.Visible : Visibility.Hidden)
-        .onClick(() => {
-          this.getUIContext().showAlertDialog({
-            message: $r('app.string.icon_alert_remove_confirm_msg'),
-            autoCancel: true,
-            alignment: DialogAlignment.Center,
-            primaryButton: {
-              defaultFocus: false,
-              value: $r('app.string.dialog_btn_cancel'),
-              action: () => {
-                return
+        if (removable) {
+          Button({ type: ButtonType.Circle }) {
+            SymbolGlyph($r('sys.symbol.plus'))
+              .fontSize(LengthMetrics.vp(12).value)
+              .fontColor([Color.White])
+              .fontWeight(FontWeight.Medium)
+              .rotate({ angle: 45 })
+          }
+          .backgroundColor(Color.Red)
+          .width(LengthMetrics.vp(18).value)
+          .height(LengthMetrics.vp(18).value)
+          .onClick(() => {
+            this.getUIContext().showAlertDialog({
+              message: $r('app.string.icon_alert_remove_confirm_msg'),
+              autoCancel: true,
+              alignment: DialogAlignment.Center,
+              primaryButton: {
+                defaultFocus: false,
+                value: $r('app.string.dialog_btn_cancel'),
+                action: () => {
+                  return
+                }
+              },
+              secondaryButton: {
+                value: $r('app.string.dialog_btn_confirm'),
+                fontColor: Color.Red,
+                action: () => {
+                  TokenIconPacks.user_added_icon_packs.removeIcon(path);
+                  this.user_icon_data.removeData(path);
+                }
               }
-            },
-            secondaryButton: {
-              value: $r('app.string.dialog_btn_confirm'),
-              fontColor: Color.Red,
-              action: () => {
-                TokenIconPacks.user_added_icon_packs.removeIcon(path);
-                this.user_icon_data.removeData(path);
-              }
-            }
+            })
           })
-        })
+        }
 
         Blank()
 
-        Radio({ value: path, group: 'icon' })
-          .checked(this.selected_icon_path === path)
-          .width(LengthMetrics.vp(16).value)
-          .height(LengthMetrics.vp(16).value)
-          .onChange((checked) => {
-            if (checked) {
-              this.selected_icon_path = path;
-            }
-          })
+        if (this.selected_icon_path === path) {
+          Stack() {
+            SymbolGlyph($r('sys.symbol.checkmark'))
+              .fontSize(LengthMetrics.vp(12).value)
+              .fontWeight(FontWeight.Bold)
+              .fontColor([Color.White])
+          }
+          .width(LengthMetrics.vp(18).value)
+          .height(LengthMetrics.vp(18).value)
+          .borderRadius(LengthMetrics.vp(9).value)
+          .backgroundColor($r('app.color.button_blue'))
+        }
       }
       .width('100%')
     }
@@ -180,6 +184,25 @@ export struct IconPicker {
     .overlay(this.ItemIconOverlay(path, removable), { align: Alignment.Bottom })
   }
 
+  @Builder
+  IconChoice(path: string, removable: boolean) {
+    Stack() {
+      this.ItemIcon(path, removable)
+    }
+    .width(LengthMetrics.vp(56).value)
+    .height(LengthMetrics.vp(56).value)
+    .alignContent(Alignment.Center)
+    .borderRadius(LengthMetrics.vp(12).value)
+    .backgroundColor(this.selected_icon_path === path ? $r('app.color.item_bg') : Color.Transparent)
+    .border({
+      width: this.selected_icon_path === path ? LengthMetrics.vp(2).value : 0,
+      color: $r('app.color.button_blue')
+    })
+    .onClick(() => {
+      this.selected_icon_path = path;
+    })
+  }
+
   private async addIconToUserPack(uri: string): Promise<void> {
     const destPath = await copyFileToDir(uri, TokenIconPacks.user_added_icon_packs.user_icon_path);
     TokenIconPacks.user_added_icon_packs.addIconByPath(destPath);
@@ -188,16 +211,16 @@ export struct IconPicker {
 
   @Builder
   ItemIconAddButton() {
-    Button({ type: ButtonType.Circle }) {
+    Button({ type: ButtonType.Normal }) {
       SymbolGlyph($r('sys.symbol.plus'))
-        .fontSize(LengthMetrics.vp(30).value)
-        .fontWeight(FontWeight.Bold)
-        .fontColor([Color.Gray])
+        .fontSize(LengthMetrics.vp(24).value)
+        .fontWeight(FontWeight.Medium)
+        .fontColor([$r('sys.color.icon_secondary')])
     }
-    .backgroundColor(Color.Transparent)
-    .shadow({ radius: LengthMetrics.vp(10).value, color: Color.Gray })
-    .width(LengthMetrics.vp(40).value)
-    .height(LengthMetrics.vp(40).value)
+    .backgroundColor($r('app.color.item_bg'))
+    .borderRadius(LengthMetrics.vp(12).value)
+    .width(LengthMetrics.vp(56).value)
+    .height(LengthMetrics.vp(56).value)
     .onClick(async () => {
       try {
         const uris = await showSelectFilePicker(1, ['png', 'jpg', 'jpeg', 'svg', 'webp']);
@@ -234,15 +257,16 @@ export struct IconPicker {
 
   @Builder
   RecommendRow() {
-    Row() {
+    Column({ space: LengthMetrics.vp(8).value }) {
       Text($r('app.string.dialog_icon_recommend'))
         .fontSize(LengthMetrics.vp(14).value)
+        .fontWeight(FontWeight.Medium)
         .fontColor($r('sys.color.font_secondary'))
-        .constraintSize({ maxWidth: LengthMetrics.vp(50).value })
+        .width('100%')
       Scroll() {
         Row({ space: LengthMetrics.vp(8).value }) {
           ForEach(this.icon_matched_with_issuer, (path: string) => {
-            this.ItemIcon(path, false)
+            this.IconChoice(path, false)
           }, (path: string) => path)
         }
       }
@@ -250,25 +274,27 @@ export struct IconPicker {
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       .clip(false)
-      .layoutWeight(1)
+      .width('100%')
     }
     .width('100%')
-    .padding({ top: LengthMetrics.vp(12).value, bottom: LengthMetrics.vp(12).value, left: LengthMetrics.vp(8).value, right: LengthMetrics.vp(8).value })
-    .alignItems(VerticalAlign.Center)
+    .padding({ top: LengthMetrics.vp(12).value, left: LengthMetrics.vp(12).value,
+      right: LengthMetrics.vp(12).value })
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   CustomRow() {
-    Row() {
+    Column({ space: LengthMetrics.vp(8).value }) {
       Text($r('app.string.dialog_icon_select_custom'))
         .fontSize(LengthMetrics.vp(14).value)
+        .fontWeight(FontWeight.Medium)
         .fontColor($r('sys.color.font_secondary'))
-        .constraintSize({ maxWidth: LengthMetrics.vp(50).value })
+        .width('100%')
       Scroll() {
         Row({ space: LengthMetrics.vp(8).value }) {
           this.ItemIconAddButton()
           LazyForEach(this.user_icon_data, (path: string) => {
-            this.ItemIcon(path, true)
+            this.IconChoice(path, true)
           }, (path: string) => path)
         }
       }
@@ -276,11 +302,12 @@ export struct IconPicker {
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       .clip(false)
-      .layoutWeight(1)
+      .width('100%')
     }
     .width('100%')
-    .padding({ top: LengthMetrics.vp(12).value, bottom: LengthMetrics.vp(12).value, left: LengthMetrics.vp(8).value, right: LengthMetrics.vp(8).value })
-    .alignItems(VerticalAlign.Center)
+    .padding({ top: LengthMetrics.vp(12).value, bottom: LengthMetrics.vp(8).value,
+      left: LengthMetrics.vp(12).value, right: LengthMetrics.vp(12).value })
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
@@ -336,19 +363,11 @@ export struct IconPicker {
       .alignItems(HorizontalAlign.Center)
     } else {
       Grid() {
-      LazyForEach(dataSource, (path: string) => {
+        LazyForEach(dataSource, (path: string) => {
           GridItem() {
-            Stack() {
-              this.ItemIcon(path, false)
-            }
-            .width('100%')
-            .height(LengthMetrics.vp(56).value)
-            .alignContent(Alignment.Center)
-            .onClick(() => {
-              this.selected_icon_path = path;
-            })
-        }
-      }, (path: string) => path)
+            this.IconChoice(path, false)
+          }
+        }, (path: string) => path)
       }
       .columnsTemplate('repeat(auto-fit, 56vp)')
       .columnsGap(LengthMetrics.vp(12).value)
@@ -395,37 +414,45 @@ export struct IconPicker {
         this.CustomRow()
       }
 
-      Tabs({ barPosition: BarPosition.Start }) {
-        TabContent() {
-          if (this.searchText === '') {
-            this.LazyIconGrid(this.default_icon_data)
-          } else {
-            this.LazyIconGrid(this.filtered_default_icon_data)
-          }
+      if (TokenIconPacks.aegis_icon_packs.length === 0) {
+        if (this.searchText === '') {
+          this.LazyIconGrid(this.default_icon_data)
+        } else {
+          this.LazyIconGrid(this.filtered_default_icon_data)
         }
-        .tabBar(this.TabBuilder(TokenIconPacks.default_icon_pack.name, 0))
-
-        ForEach(TokenIconPacks.aegis_icon_packs, (aegis_icon_pack: AegisIconPack, index: number) => {
+      } else {
+        Tabs({ barPosition: BarPosition.Start }) {
           TabContent() {
-            if (this.searchText === '' && index < this.aegis_icon_data.length) {
-              this.LazyIconGrid(this.aegis_icon_data[index])
+            if (this.searchText === '') {
+              this.LazyIconGrid(this.default_icon_data)
             } else {
-              this.LazyIconGrid(this.filtered_aegis_icon_data[index])
+              this.LazyIconGrid(this.filtered_default_icon_data)
             }
           }
-          .tabBar(this.TabBuilder(aegis_icon_pack.name, 1 + index))
-        }, (aegis_icon_pack: AegisIconPack) => {
-          return aegis_icon_pack.on_device_path;
+          .tabBar(this.TabBuilder(TokenIconPacks.default_icon_pack.name, 0))
+
+          ForEach(TokenIconPacks.aegis_icon_packs, (aegis_icon_pack: AegisIconPack, index: number) => {
+            TabContent() {
+              if (this.searchText === '' && index < this.aegis_icon_data.length) {
+                this.LazyIconGrid(this.aegis_icon_data[index])
+              } else {
+                this.LazyIconGrid(this.filtered_aegis_icon_data[index])
+              }
+            }
+            .tabBar(this.TabBuilder(aegis_icon_pack.name, 1 + index))
+          }, (aegis_icon_pack: AegisIconPack) => {
+            return aegis_icon_pack.on_device_path;
+          })
+        }
+        .scrollable(true)
+        .barMode(BarMode.Scrollable)
+        .barHeight(LengthMetrics.vp(48).value)
+        .layoutWeight(1)
+        .animationDuration(200)
+        .onChange((index: number) => {
+          this.currentTabIndex = index;
         })
       }
-      .scrollable(true)
-      .barMode(BarMode.Scrollable)
-      .barHeight(LengthMetrics.vp(48).value)
-      .layoutWeight(1)
-      .animationDuration(200)
-      .onChange((index: number) => {
-        this.currentTabIndex = index;
-      })
 
       Flex({ justifyContent: FlexAlign.SpaceAround }) {
         if (this.showCancelButton) {
