@@ -4,11 +4,8 @@ import { MaterialPolicy } from '../utils/MaterialPolicy';
 import { PageScaffold } from "../components/PageScaffold";
 import { MaterialSurface } from "../components/MaterialSurface";
 import { MaterialTheme, MaterialThickness } from "../components/MaterialTheme";
-import { FortiConfigDialog } from 'uikit';
-import { TOTPConfigDialog } from 'uikit';
 import { QRCodeDialog } from 'uikit';
-import { SteamConfigDialog } from 'uikit';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, dialogSystemMaterial } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES, dialogSystemMaterial } from 'common';
 import { otpType, TokenConfig, TokenConfigVM } from 'common';
 import { TokenStore } from 'common';
 import { convertToken2URI } from 'common';
@@ -27,6 +24,7 @@ import {
   hdsMaterial
 } from "@kit.UIDesignKit";
 import { CommonConstants } from 'common';
+import { AddTokenPageParams } from '../components/AddTokenForm';
 
 let tkStore = TokenStore.getInstance();
 
@@ -46,10 +44,8 @@ export struct TokenSearchPage {
   @Local token_copy_guide_popup: boolean = false;
 
   private searchListScroller: Scroller = new Scroller();
-  private dialog_totp_config?: CustomDialogController;
-  private dialog_forti_config?: CustomDialogController;
-  private dialog_steam_config?: CustomDialogController;
   private dialog_qrcode?: CustomDialogController;
+  private pageInfos: NavPathStack | null = null;
   private appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
   private onTokenChangedHandler: () => void = () => {};
   private onSingleTokenUpdatedHandler: (token: TokenConfig) => void = () => {};
@@ -241,6 +237,7 @@ export struct TokenSearchPage {
       }
     })
     .bindToScrollable([this.searchListScroller])
+    .onReady((context: NavDestinationContext) => this.pageInfos = context.pathStack)
   }
 
   showQRCodeDialog(conf: TokenConfig): void {
@@ -254,6 +251,16 @@ export struct TokenSearchPage {
     this.dialog_qrcode.open();
   }
 
+  private openEditPage(conf: TokenConfig): void {
+    if (conf.TokenType === otpType.TOTP || conf.TokenType === otpType.HOTP || conf.TokenType === undefined) {
+      this.pageInfos?.pushPathByName(ROUTE_NAMES.AddTotpTokenPage, new AddTokenPageParams('', conf));
+    } else if (conf.TokenType === otpType.Forti) {
+      this.pageInfos?.pushPathByName(ROUTE_NAMES.AddFortiTokenPage, new AddTokenPageParams('', conf));
+    } else if (conf.TokenType === otpType.Steam) {
+      this.pageInfos?.pushPathByName(ROUTE_NAMES.AddSteamTokenPage, new AddTokenPageParams('', conf));
+    }
+  }
+
   /**
    * 单个令牌项内容（供 HdsListItem.customItemBuilder 引用）。
    * 注意：组件创建必须发生在 @Builder 方法内——直接在普通箭头闭包里写
@@ -264,6 +271,7 @@ export struct TokenSearchPage {
   TokenItemContentBuilder(vm: TokenConfigVM) {
     TokenItem({
       Config: vm.config,
+      Edit: (conf: TokenConfig) => this.openEditPage(conf),
       Update: async (conf_new): Promise<boolean> => {
         return await this.updateSingleToken(conf_new, false);
       }
@@ -339,44 +347,7 @@ export struct TokenSearchPage {
         .backgroundColor(MaterialTheme.surfaceBackground(Color.Gray))
         .padding(10)
         .onClick(() => {
-        if (vm.config.TokenType === otpType.TOTP || vm.config.TokenType === otpType.HOTP ||
-          vm.config.TokenType === undefined) {
-          this.dialog_totp_config = new CustomDialogController({
-            systemMaterial: dialogSystemMaterial(),
-            builder: TOTPConfigDialog({
-              conf_json: JSON.stringify(vm.config),
-              confirm: async (new_conf): Promise<boolean> => {
-                const md: TokenConfig = JSON.parse(new_conf);
-                return await this.updateSingleToken(md, true);
-              }
-            })
-          })
-          this.dialog_totp_config.open()
-        } else if (vm.config.TokenType === otpType.Forti) {
-          this.dialog_forti_config = new CustomDialogController({
-            systemMaterial: dialogSystemMaterial(),
-            builder: FortiConfigDialog({
-              conf_json: JSON.stringify(vm.config),
-              confirm: async (new_conf): Promise<boolean> => {
-                const md: TokenConfig = JSON.parse(new_conf);
-                return await this.updateSingleToken(md, true);
-              }
-            })
-          })
-          this.dialog_forti_config.open()
-        } else if (vm.config.TokenType === otpType.Steam) {
-          this.dialog_steam_config = new CustomDialogController({
-            systemMaterial: dialogSystemMaterial(),
-            builder: SteamConfigDialog({
-              conf_json: JSON.stringify(vm.config),
-              confirm: async (new_conf): Promise<boolean> => {
-                const md: TokenConfig = JSON.parse(new_conf);
-                return await this.updateSingleToken(md, true);
-              }
-            })
-          })
-          this.dialog_steam_config.open()
-        }
+          this.openEditPage(vm.config);
         })
       }
 

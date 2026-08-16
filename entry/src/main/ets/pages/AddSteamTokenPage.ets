@@ -6,7 +6,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { hdsMaterial, HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import { SelectIconDialog } from 'uikit';
-import { AddTokenActionButton, AddTokenHeader, ADD_TOKEN_BOTTOM_ACTION_INSET, ADD_TOKEN_PAGE_INSET,
+import { AddTokenActionButton, AddTokenHeader, AddTokenPageParams, ADD_TOKEN_BOTTOM_ACTION_INSET, ADD_TOKEN_PAGE_INSET,
   ADD_TOKEN_SECTION_PADDING, ADD_TOKEN_SECTION_RADIUS,
   AddTokenSectionTitle, AddTokenTextField } from '../components/AddTokenForm';
 import { MaterialSurface } from '../components/MaterialSurface';
@@ -19,6 +19,7 @@ import { MaterialPolicy } from '../utils/MaterialPolicy';
 export struct AddSteamTokenPage {
   @Require @Param saveToken: (conf: TokenConfig) => Promise<boolean> = async () => false;
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
+  @Param pageParams: AddTokenPageParams = new AddTokenPageParams();
 
   @Local secret: string = '';
   @Local issuer: string = 'Steam';
@@ -31,6 +32,17 @@ export struct AddSteamTokenPage {
   private scroller: Scroller = new Scroller();
   private iconDialog?: CustomDialogController;
   private steamMaFile: maFile | undefined = undefined;
+
+  aboutToAppear(): void {
+    const editConfig = this.pageParams.editConfig;
+    if (editConfig !== undefined) {
+      this.secret = editConfig.TokenSecret;
+      this.issuer = editConfig.TokenIssuer;
+      this.accountName = editConfig.TokenName;
+      this.iconPath = editConfig.TokenIconPath ?? '';
+      this.steamMaFile = editConfig.SteamMaFile;
+    }
+  }
 
   private openIconPicker(): void {
     this.iconDialog = new CustomDialogController({
@@ -99,7 +111,10 @@ export struct AddSteamTokenPage {
     if (!this.canSave()) return;
     this.isSaving = true;
     const conf = new TokenConfig(this.secret.trim(), otpType.Steam, this.issuer.trim(), this.accountName.trim(),
-      'SHA1', 30, 10);
+      'SHA1', 30, 10, 0, this.pageParams.editConfig?.RankScore ?? 0);
+    if (this.pageParams.editConfig !== undefined) {
+      conf.TokenUUID = this.pageParams.editConfig.TokenUUID;
+    }
     conf.TokenIconPath = this.iconPath;
     conf.SteamMaFile = this.steamMaFile;
     const ok = await this.saveToken(conf);
@@ -205,7 +220,8 @@ export struct AddSteamTokenPage {
         }
       },
       content: {
-        title: { mainTitle: $r('app.string.tab_token_add_stream_key') },
+        title: { mainTitle: this.pageParams.editConfig === undefined ?
+          $r('app.string.tab_token_add_stream_key') : $r('app.string.edit_token_title') },
         menu: {
           value: [{
             content: {

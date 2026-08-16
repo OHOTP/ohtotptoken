@@ -873,6 +873,10 @@
       "value": "Edit"
     },
     {
+      "name": "edit_token_title",
+      "value": "Edit Token"
+    },
+    {
       "name": "token_right_menu_delete",
       "value": "Delete"
     },

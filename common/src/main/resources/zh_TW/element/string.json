@@ -881,6 +881,10 @@
       "value": "編輯"
     },
     {
+      "name": "edit_token_title",
+      "value": "編輯權杖"
+    },
+    {
       "name": "token_right_menu_delete",
       "value": "刪除"
     },

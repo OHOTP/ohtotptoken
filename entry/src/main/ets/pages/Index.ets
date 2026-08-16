@@ -646,11 +646,11 @@ struct Index {
   }
 
   openFortiAddPage(): void {
-    this.pageInfos.pushPathByName(ROUTE_NAMES.AddFortiTokenPage, null);
+    this.pageInfos.pushPathByName(ROUTE_NAMES.AddFortiTokenPage, new AddTotpRouteParams(''));
   }
 
   openSteamAddPage(): void {
-    this.pageInfos.pushPathByName(ROUTE_NAMES.AddSteamTokenPage, null);
+    this.pageInfos.pushPathByName(ROUTE_NAMES.AddSteamTokenPage, new AddTotpRouteParams(''));
   }
 
   openNfcReadDialog(): void {

@@ -881,6 +881,10 @@
       "value": "编辑"
     },
     {
+      "name": "edit_token_title",
+      "value": "编辑令牌"
+    },
+    {
       "name": "token_right_menu_delete",
       "value": "删除"
     },

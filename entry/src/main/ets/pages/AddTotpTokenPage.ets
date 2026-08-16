@@ -5,23 +5,19 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { hdsMaterial, HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import { SelectIconDialog } from 'uikit';
-import { AddTokenActionButton, AddTokenHeader, ADD_TOKEN_BOTTOM_ACTION_INSET, ADD_TOKEN_PAGE_INSET,
+import { AddTokenActionButton, AddTokenHeader, AddTokenPageParams, ADD_TOKEN_BOTTOM_ACTION_INSET, ADD_TOKEN_PAGE_INSET,
   ADD_TOKEN_SECTION_PADDING, ADD_TOKEN_SECTION_RADIUS,
   AddTokenSectionTitle, AddTokenTextField } from '../components/AddTokenForm';
 import { MaterialSurface } from '../components/MaterialSurface';
 import { PageScaffold } from '../components/PageScaffold';
 import { MaterialPolicy } from '../utils/MaterialPolicy';
 
-export class AddTotpPageParams {
-  initialUri: string = '';
-}
-
 @Entry
 @Preview
 @ComponentV2
 export struct AddTotpTokenPage {
   @Require @Param saveToken: (conf: TokenConfig) => Promise<boolean> = async () => false;
-  @Param pageParams: AddTotpPageParams = new AddTotpPageParams();
+  @Param pageParams: AddTokenPageParams = new AddTokenPageParams();
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
 
   @Local secret: string = '';
@@ -42,7 +38,18 @@ export struct AddTotpTokenPage {
   private readonly algorithms: HMACAlgorithm[] = ['SHA1', 'SHA224', 'SHA256', 'SHA384', 'SHA512', 'SM3', 'MD5'];
 
   aboutToAppear(): void {
-    if (this.pageParams.initialUri !== '') {
+    const editConfig = this.pageParams.editConfig;
+    if (editConfig !== undefined) {
+      this.secret = editConfig.TokenSecret;
+      this.issuer = editConfig.TokenIssuer;
+      this.accountName = editConfig.TokenName;
+      this.algorithm = editConfig.TokenAlgorithm;
+      this.digits = editConfig.TokenDigits;
+      this.tokenType = editConfig.TokenType ?? otpType.TOTP;
+      this.period = editConfig.TokenPeriod;
+      this.counter = editConfig.TokenCounter;
+      this.iconPath = editConfig.TokenIconPath ?? '';
+    } else if (this.pageParams.initialUri !== '') {
       this.applyOtpAuthUri(this.pageParams.initialUri);
     }
   }
@@ -135,7 +142,10 @@ export struct AddTotpTokenPage {
     }
     this.isSaving = true;
     const conf = new TokenConfig(this.secret.trim(), this.tokenType, this.issuer.trim(), this.accountName.trim(),
-      this.algorithm, this.period, this.digits, this.counter);
+      this.algorithm, this.period, this.digits, this.counter, this.pageParams.editConfig?.RankScore ?? 0);
+    if (this.pageParams.editConfig !== undefined) {
+      conf.TokenUUID = this.pageParams.editConfig.TokenUUID;
+    }
     conf.TokenIconPath = this.iconPath;
     const ok = await this.saveToken(conf);
     this.isSaving = false;
@@ -324,7 +334,8 @@ export struct AddTotpTokenPage {
         }
       },
       content: {
-        title: { mainTitle: $r('app.string.tab_token_add_key') },
+        title: { mainTitle: this.pageParams.editConfig === undefined ?
+          $r('app.string.tab_token_add_key') : $r('app.string.edit_token_title') },
         menu: {
           value: [{
             content: {

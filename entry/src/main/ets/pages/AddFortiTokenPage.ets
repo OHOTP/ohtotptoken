@@ -9,7 +9,7 @@ import { http } from '@kit.NetworkKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { hdsMaterial, HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import { SelectIconDialog } from 'uikit';
-import { AddTokenActionButton, AddTokenHeader, ADD_TOKEN_BOTTOM_ACTION_INSET, ADD_TOKEN_PAGE_INSET,
+import { AddTokenActionButton, AddTokenHeader, AddTokenPageParams, ADD_TOKEN_BOTTOM_ACTION_INSET, ADD_TOKEN_PAGE_INSET,
   ADD_TOKEN_SECTION_PADDING, ADD_TOKEN_SECTION_RADIUS,
   AddTokenSectionTitle, AddTokenTextField } from '../components/AddTokenForm';
 import { MaterialSurface } from '../components/MaterialSurface';
@@ -35,6 +35,7 @@ class FortiServerResponse {
 export struct AddFortiTokenPage {
   @Require @Param saveToken: (conf: TokenConfig) => Promise<boolean> = async () => false;
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
+  @Param pageParams: AddTokenPageParams = new AddTokenPageParams();
 
   @Local activationCode: string = '';
   @Local deviceId: string = '';
@@ -51,7 +52,14 @@ export struct AddFortiTokenPage {
   private filesDir: string = (AppStorage.get('appContext') as common.UIAbilityContext).filesDir;
 
   aboutToAppear(): void {
-    if (this.deviceId === '') {
+    const editConfig = this.pageParams.editConfig;
+    if (editConfig !== undefined) {
+      this.activationCode = editConfig.FortiToken;
+      this.deviceId = editConfig.FortiDevID;
+      this.secret = editConfig.TokenSecret;
+      this.accountName = editConfig.TokenName;
+      this.iconPath = editConfig.TokenIconPath ?? '';
+    } else if (this.deviceId === '') {
       this.generateDeviceId();
     }
   }
@@ -179,7 +187,11 @@ export struct AddFortiTokenPage {
   private async submit(): Promise<void> {
     if (!this.canSave()) return;
     this.isSaving = true;
-    const conf = new TokenConfig(this.secret.trim(), otpType.Forti, 'Forti', this.accountName.trim(), 'SHA1', 60, 6);
+    const conf = new TokenConfig(this.secret.trim(), otpType.Forti, 'Forti', this.accountName.trim(), 'SHA1', 60, 6,
+      0, this.pageParams.editConfig?.RankScore ?? 0);
+    if (this.pageParams.editConfig !== undefined) {
+      conf.TokenUUID = this.pageParams.editConfig.TokenUUID;
+    }
     conf.FortiToken = this.activationCode.trim();
     conf.FortiDevID = this.deviceId.trim();
     conf.TokenIconPath = this.iconPath;
@@ -308,7 +320,8 @@ export struct AddFortiTokenPage {
         }
       },
       content: {
-        title: { mainTitle: $r('app.string.tab_token_add_forti_key') },
+        title: { mainTitle: this.pageParams.editConfig === undefined ?
+          $r('app.string.tab_token_add_forti_key') : $r('app.string.edit_token_title') },
         menu: {
           value: [{
             content: {

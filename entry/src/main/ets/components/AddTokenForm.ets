@@ -1,4 +1,4 @@
-import { AppPreference, PREF_KEYS } from 'common';
+import { AppPreference, PREF_KEYS, TokenConfig } from 'common';
 import { TokenIcon } from 'uikit';
 import { MaterialSurface } from './MaterialSurface';
 import { MaterialTheme, MaterialThickness } from './MaterialTheme';
@@ -9,6 +9,17 @@ export const ADD_TOKEN_SECTION_RADIUS: number = 16;
 export const ADD_TOKEN_SECTION_PADDING: number = 16;
 export const ADD_TOKEN_FIELD_GAP: number = 8;
 export const ADD_TOKEN_BOTTOM_ACTION_INSET: number = 16;
+
+/** 添加/编辑令牌页面的统一路由参数。 */
+export class AddTokenPageParams {
+  initialUri: string = '';
+  editConfig?: TokenConfig = undefined;
+
+  constructor(initialUri: string = '', editConfig?: TokenConfig) {
+    this.initialUri = initialUri;
+    this.editConfig = editConfig;
+  }
+}
 
 /**
  * 添加令牌页统一操作按钮。
