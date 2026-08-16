@@ -12,6 +12,8 @@ export struct TokenIcon {
   @Param icon_path: string = '';
   @Param bypassColorFilter: boolean = false;
   @Param bypassLogoBackground: boolean = false;
+  /** 可选的固定展示尺寸；未设置时继续跟随令牌列表的外观偏好。 */
+  @Param displaySize: number = 0;
   @Local icon: ResourceStr | undefined =
     (this.icon_path !== '' && this.icon_path !== undefined)
       ? this.validateUri(this.icon_path)
@@ -33,6 +35,17 @@ export struct TokenIcon {
   @Computed
   get iconRadius(): number {
     return TokenIconPacks.user_added_icon_packs.raster_icons.has(this.icon_path) ? 20 : 0;
+  }
+
+  @Computed
+  get effectiveIconSize(): number {
+    return this.displaySize > 0 ? this.displaySize : this.token_preference.app_appearance_logo_size;
+  }
+
+  @Computed
+  get effectiveBackgroundSize(): number {
+    return this.displaySize > 0 ? this.displaySize + 5 :
+      this.token_preference.app_appearance_logo_background_size;
   }
 
   @Monitor("issuer")
@@ -124,23 +137,23 @@ export struct TokenIcon {
         Shape() {}
         .align(Alignment.Center)
         .backgroundColor(this.token_preference.app_appearance_logo_background_color)
-        .height(this.token_preference.app_appearance_logo_background_size)
-        .width(this.token_preference.app_appearance_logo_background_size)
+        .height(this.effectiveBackgroundSize)
+        .width(this.effectiveBackgroundSize)
         .borderRadius(this.token_preference.app_appearance_logo_background_radius)
       }
       if (this.icon === undefined) {
         Shape() {
           Text(this.issuer.charAt(0).toUpperCase() )
             .fontWeight(FontWeight.Bold)
-            .fontSize(26)
+            .fontSize(this.displaySize > 0 ? 44 : 26)
             .fontColor(0xFFFFFF)
             .textAlign(TextAlign.Center)
-            .height(this.token_preference.app_appearance_logo_size)
-            .width(this.token_preference.app_appearance_logo_size)
+            .height(this.effectiveIconSize)
+            .width(this.effectiveIconSize)
         }
         .backgroundColor(this.stringToColor(this.issuer))
-        .height(this.token_preference.app_appearance_logo_size)
-        .width(this.token_preference.app_appearance_logo_size)
+        .height(this.effectiveIconSize)
+        .width(this.effectiveIconSize)
         .borderRadius(20)
       } else {
         if (
@@ -148,16 +161,16 @@ export struct TokenIcon {
           this.applyColorFilter && this.is_dark_mode
         ) {
           Image(this.icon)
-            .height(this.token_preference.app_appearance_logo_size)
-            .width(this.token_preference.app_appearance_logo_size)
+            .height(this.effectiveIconSize)
+            .width(this.effectiveIconSize)
             .fillColor(this.token_preference.app_appearance_logo_dark_filter_color)
             .objectFit(ImageFit.Contain)
             .borderRadius(this.iconRadius)
             .supportSvg2(true)
         } else {
           Image(this.icon)
-            .height(this.token_preference.app_appearance_logo_size)
-            .width(this.token_preference.app_appearance_logo_size)
+            .height(this.effectiveIconSize)
+            .width(this.effectiveIconSize)
             .objectFit(ImageFit.Contain)
             .borderRadius(this.iconRadius)
             .supportSvg2(true)

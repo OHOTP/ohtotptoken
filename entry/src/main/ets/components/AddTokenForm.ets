@@ -7,6 +7,7 @@ export const ADD_TOKEN_PAGE_INSET: number = 16;
 export const ADD_TOKEN_SECTION_RADIUS: number = 16;
 export const ADD_TOKEN_SECTION_PADDING: number = 16;
 export const ADD_TOKEN_FIELD_GAP: number = 8;
+export const ADD_TOKEN_BOTTOM_ACTION_INSET: number = 16;
 
 /**
  * 添加令牌页统一操作按钮。
@@ -58,41 +59,27 @@ export struct AddTokenActionButton {
 @Preview
 @ComponentV2
 export struct AddTokenHeader {
-  @Require @Param title: ResourceStr = '';
-  @Require @Param description: ResourceStr = '';
   @Require @Param issuer: string = '';
   @Param iconPath: string = '';
   @Event onIconClick: () => void = () => {};
 
   build() {
-    Row({ space: 16 }) {
+    Row() {
       Button({ type: ButtonType.Normal, stateEffect: true }) {
-        TokenIcon({ issuer: this.issuer, icon_path: this.iconPath })
+        TokenIcon({ issuer: this.issuer, icon_path: this.iconPath, displaySize: 80 })
       }
-      .width(64)
-      .height(64)
+      .width(96)
+      .height(96)
       .padding(0)
-      .borderRadius(16)
+      .borderRadius(24)
       .backgroundColor(Color.Transparent)
       .onClick(() => this.onIconClick())
       .accessibilityText($r('app.string.add_token_choose_icon'))
-
-      Column({ space: 6 }) {
-        Text(this.title)
-          .fontSize(22)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.font_primary'))
-        Text(this.description)
-          .fontSize(14)
-          .fontColor($r('sys.color.font_secondary'))
-          .lineHeight(20)
-          .maxLines(3)
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
+    .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center)
+    .padding({ top: 8, bottom: 8 })
   }
 }
 

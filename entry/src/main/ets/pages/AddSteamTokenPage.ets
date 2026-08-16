@@ -6,7 +6,8 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { hdsMaterial, HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import { SelectIconDialog } from 'uikit';
-import { AddTokenActionButton, AddTokenHeader, ADD_TOKEN_PAGE_INSET, ADD_TOKEN_SECTION_PADDING, ADD_TOKEN_SECTION_RADIUS,
+import { AddTokenActionButton, AddTokenHeader, ADD_TOKEN_BOTTOM_ACTION_INSET, ADD_TOKEN_PAGE_INSET,
+  ADD_TOKEN_SECTION_PADDING, ADD_TOKEN_SECTION_RADIUS,
   AddTokenSectionTitle, AddTokenTextField } from '../components/AddTokenForm';
 import { MaterialSurface } from '../components/MaterialSurface';
 import { PageScaffold } from '../components/PageScaffold';
@@ -113,8 +114,6 @@ export struct AddSteamTokenPage {
           List({ space: 12, scroller: this.scroller }) {
             ListItem() {
               AddTokenHeader({
-                title: $r('app.string.tab_token_add_stream_key'),
-                description: $r('app.string.add_steam_intro'),
                 issuer: this.issuer,
                 iconPath: this.iconPath,
                 onIconClick: () => this.openIconPicker()
@@ -123,13 +122,7 @@ export struct AddSteamTokenPage {
             .padding({ left: ADD_TOKEN_PAGE_INSET, right: ADD_TOKEN_PAGE_INSET, top: 12 })
 
             ListItem() {
-              Row({ space: 10 }) {
-                AddTokenActionButton({
-                  text: $r('app.string.add_token_scan'),
-                  action: () => this.scanCode()
-                })
-                .layoutWeight(1)
-
+              Row() {
                 AddTokenActionButton({
                   text: $r('app.string.dialog_cfg_steam_from_mafile'),
                   action: () => this.importMaFile()
@@ -182,7 +175,12 @@ export struct AddSteamTokenPage {
             action: () => this.submit()
           })
           .width('100%')
-          .padding({ left: ADD_TOKEN_PAGE_INSET, right: ADD_TOKEN_PAGE_INSET, top: 10, bottom: 12 })
+          .padding({
+            left: ADD_TOKEN_PAGE_INSET,
+            right: ADD_TOKEN_PAGE_INSET,
+            top: 10,
+            bottom: ADD_TOKEN_BOTTOM_ACTION_INSET
+          })
         }
         .width('100%').height('100%')
       }
@@ -196,7 +194,8 @@ export struct AddSteamTokenPage {
         originalStyle: {
           contentStyle: {
             titleStyle: { mainTitleColor: $r('sys.color.font_primary'), subTitleColor: $r('sys.color.font_secondary') },
-            backIconStyle: { iconColor: $r('sys.color.icon_primary') }
+            backIconStyle: { iconColor: $r('sys.color.icon_primary') },
+            menuStyle: { iconColor: $r('sys.color.icon_primary') }
           }
         },
         scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: this.scrollEffectType },
@@ -205,7 +204,19 @@ export struct AddSteamTokenPage {
           materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
         }
       },
-      content: { title: { mainTitle: $r('app.string.tab_token_add_stream_key') } }
+      content: {
+        title: { mainTitle: $r('app.string.tab_token_add_stream_key') },
+        menu: {
+          value: [{
+            content: {
+              label: $r('app.string.add_token_scan'),
+              icon: $r('sys.symbol.qrcode'),
+              isEnabled: true,
+              action: () => this.scanCode()
+            }
+          }]
+        }
+      }
     })
     .bindToScrollable([this.scroller])
     .onReady((context: NavDestinationContext) => this.pageInfos = context.pathStack)
