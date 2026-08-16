@@ -133,6 +133,8 @@ export struct IconPickerPage {
       }
     }
     .width('100%')
+    .height(56)
+    .justifyContent(FlexAlign.Center)
     .padding({ left: 16, right: 16 })
   }
 
@@ -150,16 +152,25 @@ export struct IconPickerPage {
       })
     }
     .width('100%')
+    .height(56)
+    .justifyContent(FlexAlign.Center)
     .padding({ left: 16, right: 16 })
+  }
+
+  @LocalBuilder
+  TitleBottomBuilder() {
+    Column() {
+      this.SearchBottomBuilder()
+      if (TokenIconPacks.aegis_icon_packs.length > 0) {
+        this.PackSegmentBuilder()
+      }
+    }
+    .width('100%')
   }
 
   build() {
     HdsNavDestination() {
       PageScaffold({ avoidBottom: true }) {
-        if (TokenIconPacks.aegis_icon_packs.length > 0) {
-          this.PackSegmentBuilder()
-        }
-
         IconPicker({
           issuer: this.pageParams.issuer,
           currentIconPath: this.pageParams.currentIconPath,
@@ -203,8 +214,8 @@ export struct IconPickerPage {
       content: {
         title: { mainTitle: $r('app.string.add_token_choose_icon') },
         bottomBuilder: {
-          builder: (): void => this.SearchBottomBuilder(),
-          height: 56,
+          builder: (): void => this.TitleBottomBuilder(),
+          height: TokenIconPacks.aegis_icon_packs.length > 0 ? 112 : 56,
           showType: BottomBuilderShowType.DIRECTLY_SHOW
         }
       }
