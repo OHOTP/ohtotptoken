@@ -91,6 +91,8 @@ export enum PREF_KEYS {
   APPEARANCE_HOLDING_HAND_ENABLE = 'app_appearance_holding_hand_enable',
   /** 显示引导提示开关 */
   SHOW_GUIDE_TIPS = 'app_show_guide_tips',
+  /** 添加令牌页自定义图标引导提示 */
+  SHOW_ADD_TOKEN_ICON_GUIDE = 'app_show_add_token_icon_guide',
   /** Token项目高度 */
   APPEARANCE_ITEM_HEIGHT = 'app_appearance_item_height',
   /** Token项目间距 */
@@ -495,6 +497,7 @@ export class AppPreference {
     // kv数据库同步时间
     [PREF_KEYS.DB_KV_SYNC_TIME, ''],
     [PREF_KEYS.SHOW_GUIDE_TIPS, true],
+    [PREF_KEYS.SHOW_ADD_TOKEN_ICON_GUIDE, true],
     // 主密码弃用告知已确认
     [PREF_KEYS.MASTER_KEY_DEPRECATION_ACKNOWLEDGED, false],
     // ASSET Secret 迁移已完成

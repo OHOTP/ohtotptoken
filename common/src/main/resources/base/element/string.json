@@ -73,6 +73,14 @@
       "value": "Choose token icon"
     },
     {
+      "name": "add_token_icon_guide",
+      "value": "Tap the icon to choose a custom icon"
+    },
+    {
+      "name": "add_token_icon_guide_confirm",
+      "value": "Got it"
+    },
+    {
       "name": "add_token_account_section",
       "value": "Token details"
     },

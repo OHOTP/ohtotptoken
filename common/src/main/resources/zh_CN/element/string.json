@@ -73,6 +73,14 @@
       "value": "选择令牌图标"
     },
     {
+      "name": "add_token_icon_guide",
+      "value": "点击图标可选择自定义图标"
+    },
+    {
+      "name": "add_token_icon_guide_confirm",
+      "value": "我知道了"
+    },
+    {
       "name": "add_token_account_section",
       "value": "令牌信息"
     },

@@ -1,3 +1,4 @@
+import { AppPreference, PREF_KEYS } from 'common';
 import { TokenIcon } from 'uikit';
 import { MaterialSurface } from './MaterialSurface';
 import { MaterialTheme, MaterialThickness } from './MaterialTheme';
@@ -63,6 +64,25 @@ export struct AddTokenHeader {
   @Param iconPath: string = '';
   @Event onIconClick: () => void = () => {};
 
+  @Local iconGuidePopup: boolean = false;
+  private iconGuideInitialized: boolean = false;
+
+  onDidBuild(): void {
+    if (this.iconGuideInitialized) {
+      return;
+    }
+    this.iconGuideInitialized = true;
+    if (AppPreference.getPreference(PREF_KEYS.SHOW_ADD_TOKEN_ICON_GUIDE) as boolean) {
+      // 官方建议页面构建完成后再显示 Popup，避免定位或形状异常。
+      this.iconGuidePopup = true;
+    }
+  }
+
+  private dismissIconGuide(): void {
+    AppPreference.setPreference(PREF_KEYS.SHOW_ADD_TOKEN_ICON_GUIDE, false);
+    this.iconGuidePopup = false;
+  }
+
   build() {
     Row() {
       Button({ type: ButtonType.Normal, stateEffect: true }) {
@@ -73,8 +93,26 @@ export struct AddTokenHeader {
       .padding(0)
       .borderRadius(24)
       .backgroundColor(Color.Transparent)
-      .onClick(() => this.onIconClick())
+      .onClick(() => {
+        this.dismissIconGuide();
+        this.onIconClick();
+      })
       .accessibilityText($r('app.string.add_token_choose_icon'))
+      .bindPopup(this.iconGuidePopup, {
+        placement: Placement.Bottom,
+        message: this.getUIContext().getHostContext()?.resourceManager
+          .getStringSync($r('app.string.add_token_icon_guide').id),
+        onStateChange: (event) => {
+          if (!event.isVisible) {
+            this.iconGuidePopup = false;
+          }
+        },
+        primaryButton: {
+          value: this.getUIContext().getHostContext()?.resourceManager
+            .getStringSync($r('app.string.add_token_icon_guide_confirm').id),
+          action: () => this.dismissIconGuide()
+        }
+      })
     }
     .width('100%')
     .justifyContent(FlexAlign.Center)
