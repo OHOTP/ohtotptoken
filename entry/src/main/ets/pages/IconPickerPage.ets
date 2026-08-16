@@ -1,5 +1,13 @@
-import { HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType, hdsMaterial } from '@kit.UIDesignKit';
+import {
+  BottomBuilderShowType,
+  HdsNavDestination,
+  HdsNavDestinationTitleMode,
+  ScrollEffectType,
+  hdsMaterial
+} from '@kit.UIDesignKit';
+import { uiMaterial } from '@kit.ArkUI';
 import { IconPicker } from 'uikit';
+import { MaterialTheme } from '../components/MaterialTheme';
 import { PageScaffold } from '../components/PageScaffold';
 import { MaterialPolicy } from '../utils/MaterialPolicy';
 
@@ -22,12 +30,51 @@ export class IconPickerPageParams {
 export struct IconPickerPage {
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Param pageParams: IconPickerPageParams = new IconPickerPageParams();
+  @Local iconSearchText: string = '';
 
   private pageInfos: NavPathStack | null = null;
 
   private completeSelection(path: string): void {
     this.pageParams.onSelected(path);
     this.pageInfos?.pop();
+  }
+
+  @Builder
+  SearchBottomBuilder() {
+    Column() {
+      if (MaterialTheme.isImmersiveEffective()) {
+        Search({
+          placeholder: $r('app.string.dialog_icon_search_placeholder'),
+          value: this.iconSearchText
+        })
+          .width('100%')
+          .backgroundColor(Color.Transparent)
+          .systemMaterial(new uiMaterial.ImmersiveMaterial({
+            style: uiMaterial.ImmersiveStyle.THIN,
+            lightEffect: { color: Color.White }
+          }))
+          .onChange((value: string) => {
+            this.iconSearchText = value;
+          })
+          .onSubmit((value: string) => {
+            this.iconSearchText = value;
+          })
+      } else {
+        Search({
+          placeholder: $r('app.string.dialog_icon_search_placeholder'),
+          value: this.iconSearchText
+        })
+          .width('100%')
+          .onChange((value: string) => {
+            this.iconSearchText = value;
+          })
+          .onSubmit((value: string) => {
+            this.iconSearchText = value;
+          })
+      }
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16 })
   }
 
   build() {
@@ -37,6 +84,8 @@ export struct IconPickerPage {
           issuer: this.pageParams.issuer,
           currentIconPath: this.pageParams.currentIconPath,
           showCancelButton: false,
+          showSearch: false,
+          searchText: this.iconSearchText,
           confirm: (path: string) => this.completeSelection(path)
         })
           .width('100%')
@@ -69,7 +118,12 @@ export struct IconPickerPage {
         }
       },
       content: {
-        title: { mainTitle: $r('app.string.add_token_choose_icon') }
+        title: { mainTitle: $r('app.string.add_token_choose_icon') },
+        bottomBuilder: {
+          builder: (): void => this.SearchBottomBuilder(),
+          height: 56,
+          showType: BottomBuilderShowType.DIRECTLY_SHOW
+        }
       }
     })
     .onReady((context: NavDestinationContext) => this.pageInfos = context.pathStack)

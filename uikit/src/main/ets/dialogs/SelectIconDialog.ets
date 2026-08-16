@@ -25,11 +25,12 @@ export struct IconPicker {
   @Prop @Require issuer: string = '';
   @Prop currentIconPath: string = '';
   @Prop showCancelButton: boolean = true;
+  @Prop showSearch: boolean = true;
+  @Prop searchText: string = '';
   cancel: () => void = () => {};
   confirm: (new_conf: string) => void = () => {};
 
   @State selected_icon_path: string = '';
-  @State searchText: string = '';
   @State currentTabIndex: number = 0;
   @State showCropCover: boolean = false;
   @State cropModel: CropModel = new CropModel();
@@ -376,17 +377,16 @@ export struct IconPicker {
 
   build() {
     Column() {
-      Search({ placeholder: $r('app.string.dialog_icon_search_placeholder') })
-        .width('100%')
-        .height(LengthMetrics.vp(40).value)
-        .margin({ bottom: LengthMetrics.vp(4).value })
-        .searchButton($r('app.string.dialog_icon_search_placeholder'))
-        .onChange((value: string) => {
-          this.searchText = value;
-        })
-        .onSubmit((value: string) => {
-          this.searchText = value;
-        })
+      if (this.showSearch) {
+        Search({ placeholder: $r('app.string.dialog_icon_search_placeholder'), value: this.searchText })
+          .width('100%')
+          .onChange((value: string) => {
+            this.searchText = value;
+          })
+          .onSubmit((value: string) => {
+            this.searchText = value;
+          })
+      }
 
       this.RecommendRow()
       this.CustomRow()
