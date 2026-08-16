@@ -122,6 +122,7 @@ export struct TokenSearchPage {
           value: this.tokenSearchText
         })
           .width('100%')
+          .defaultFocus(true)
           .backgroundColor(Color.Transparent)
           .systemMaterial(new uiMaterial.ImmersiveMaterial({
             style: uiMaterial.ImmersiveStyle.THIN,
@@ -142,6 +143,7 @@ export struct TokenSearchPage {
           value: this.tokenSearchText
         })
           .width('100%')
+          .defaultFocus(true)
           .onChange((value: string) => {
             this.tokenSearchText = value;
             this.filterCurrentTokens(value);
