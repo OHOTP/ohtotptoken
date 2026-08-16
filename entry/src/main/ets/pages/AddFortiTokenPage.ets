@@ -42,8 +42,6 @@ export struct AddFortiTokenPage {
   @Local iconPath: string = '';
   @Local isRequesting: boolean = false;
   @Local isSaving: boolean = false;
-  @Local scanEffect: number = 0;
-  @Local refreshEffect: number = 0;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
 
   private pageInfos: NavPathStack | null = null;
@@ -58,7 +56,6 @@ export struct AddFortiTokenPage {
   }
 
   private generateDeviceId(): void {
-    this.refreshEffect++;
     this.deviceId = buffer.from(util.generateRandomBinaryUUID()).toString('hex').slice(0, 16);
   }
 
@@ -74,7 +71,6 @@ export struct AddFortiTokenPage {
   }
 
   private scanCode(): void {
-    this.scanEffect++;
     ScanBarCode().then((code: string) => this.activationCode = code.trim()).catch((err: BusinessError) => {
       if (err.code !== 1000500002) {
         showSnackBar($r('app.string.toast_scan_failed'), SnackBarNotifyType.ERROR);
@@ -210,8 +206,6 @@ export struct AddFortiTokenPage {
             ListItem() {
               AddTokenActionButton({
                 text: $r('app.string.add_token_scan'),
-                symbol: $r('sys.symbol.camera'),
-                effectTrigger: this.scanEffect,
                 action: () => this.scanCode()
               })
             }
@@ -240,15 +234,12 @@ export struct AddFortiTokenPage {
                     })
                     AddTokenActionButton({
                       text: $r('app.string.add_forti_regenerate_device_id'),
-                      symbol: $r('sys.symbol.arrow_counterclockwise'),
-                      effectTrigger: this.refreshEffect,
                       action: () => this.generateDeviceId()
                     })
                   }
                   Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
                   AddTokenActionButton({
                     text: $r('app.string.dialog_cfg_forti_btn_gen_key'),
-                    symbol: $r('sys.symbol.key_fill'),
                     loading: this.isRequesting,
                     buttonEnabled: !this.isRequesting,
                     action: () => this.requestKey()
@@ -288,16 +279,12 @@ export struct AddFortiTokenPage {
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
           .clip(false)
 
-          Column({ space: 6 }) {
-            Text($r('app.string.add_token_required_hint')).fontSize(12).fontColor($r('sys.color.font_tertiary'))
-            AddTokenActionButton({
-              text: this.isSaving ? $r('app.string.add_token_saving') : $r('app.string.add_token_save'),
-              symbol: $r('sys.symbol.checkmark'),
-              loading: this.isSaving,
-              buttonEnabled: this.canSave(),
-              action: () => this.submit()
-            })
-          }
+          AddTokenActionButton({
+            text: this.isSaving ? $r('app.string.add_token_saving') : $r('app.string.add_token_save'),
+            loading: this.isSaving,
+            buttonEnabled: this.canSave(),
+            action: () => this.submit()
+          })
           .width('100%')
           .padding({ left: ADD_TOKEN_PAGE_INSET, right: ADD_TOKEN_PAGE_INSET, top: 10, bottom: 12 })
         }

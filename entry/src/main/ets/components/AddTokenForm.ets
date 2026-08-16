@@ -19,10 +19,8 @@ export const ADD_TOKEN_FIELD_GAP: number = 8;
 @ComponentV2
 export struct AddTokenActionButton {
   @Require @Param text: ResourceStr = '';
-  @Require @Param symbol: Resource = $r('sys.symbol.camera');
   @Param buttonEnabled: boolean = true;
   @Param loading: boolean = false;
-  @Param effectTrigger: number = 0;
   @Event action: () => void = () => {};
 
   build() {
@@ -38,11 +36,6 @@ export struct AddTokenActionButton {
         Row({ space: 8 }) {
           if (this.loading) {
             LoadingProgress().width(20).height(20).color(Color.White)
-          } else {
-            SymbolGlyph(this.symbol)
-              .fontSize(20)
-              .fontColor([Color.White])
-              .symbolEffect(new BounceSymbolEffect(EffectScope.WHOLE, EffectDirection.UP), this.effectTrigger)
           }
           Text(this.text)
             .fontWeight(FontWeight.Medium)

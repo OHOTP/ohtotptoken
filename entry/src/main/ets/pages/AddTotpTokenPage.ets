@@ -33,7 +33,6 @@ export struct AddTotpTokenPage {
   @Local counter: number = 0;
   @Local iconPath: string = '';
   @Local isSaving: boolean = false;
-  @Local scanEffect: number = 0;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
 
   private pageInfos: NavPathStack | null = null;
@@ -61,7 +60,6 @@ export struct AddTotpTokenPage {
   }
 
   private scanCode(): void {
-    this.scanEffect++;
     ScanBarCode().then((code: string) => {
       this.applyOtpAuthUri(code);
     }).catch((err: BusinessError) => {
@@ -164,8 +162,6 @@ export struct AddTotpTokenPage {
             ListItem() {
               AddTokenActionButton({
                 text: $r('app.string.add_token_scan'),
-                symbol: $r('sys.symbol.camera'),
-                effectTrigger: this.scanEffect,
                 action: () => this.scanCode()
               })
             }
@@ -298,18 +294,12 @@ export struct AddTotpTokenPage {
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
           .clip(false)
 
-          Column({ space: 6 }) {
-            Text($r('app.string.add_token_required_hint'))
-              .fontSize(12)
-              .fontColor($r('sys.color.font_tertiary'))
-            AddTokenActionButton({
-              text: this.isSaving ? $r('app.string.add_token_saving') : $r('app.string.add_token_save'),
-              symbol: $r('sys.symbol.checkmark'),
-              loading: this.isSaving,
-              buttonEnabled: this.canSave(),
-              action: () => this.submit()
-            })
-          }
+          AddTokenActionButton({
+            text: this.isSaving ? $r('app.string.add_token_saving') : $r('app.string.add_token_save'),
+            loading: this.isSaving,
+            buttonEnabled: this.canSave(),
+            action: () => this.submit()
+          })
           .width('100%')
           .padding({ left: ADD_TOKEN_PAGE_INSET, right: ADD_TOKEN_PAGE_INSET, top: 10, bottom: 12 })
         }

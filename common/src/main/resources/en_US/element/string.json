@@ -89,10 +89,6 @@
       "value": "Token type"
     },
     {
-      "name": "add_token_required_hint",
-      "value": "Complete all required fields to save."
-    },
-    {
       "name": "add_token_save",
       "value": "Save token"
     },

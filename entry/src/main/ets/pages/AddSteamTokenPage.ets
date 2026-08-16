@@ -24,8 +24,6 @@ export struct AddSteamTokenPage {
   @Local accountName: string = '';
   @Local iconPath: string = '';
   @Local isSaving: boolean = false;
-  @Local scanEffect: number = 0;
-  @Local importEffect: number = 0;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
 
   private pageInfos: NavPathStack | null = null;
@@ -45,7 +43,6 @@ export struct AddSteamTokenPage {
   }
 
   private scanCode(): void {
-    this.scanEffect++;
     ScanBarCode().then((code: string) => this.applyOtpAuthUri(code)).catch((err: BusinessError) => {
       if (err.code !== 1000500002) {
         showSnackBar($r('app.string.toast_scan_failed'), SnackBarNotifyType.ERROR);
@@ -54,7 +51,6 @@ export struct AddSteamTokenPage {
   }
 
   private importMaFile(): void {
-    this.importEffect++;
     showSelectFilePicker(1, ['maFile|.mafile']).then((uris: string[]) => {
       if (uris.length === 0) return;
       return readFileContent(uris[0]).then((content: string) => {
@@ -130,16 +126,12 @@ export struct AddSteamTokenPage {
               Row({ space: 10 }) {
                 AddTokenActionButton({
                   text: $r('app.string.add_token_scan'),
-                  symbol: $r('sys.symbol.camera'),
-                  effectTrigger: this.scanEffect,
                   action: () => this.scanCode()
                 })
                 .layoutWeight(1)
 
                 AddTokenActionButton({
                   text: $r('app.string.dialog_cfg_steam_from_mafile'),
-                  symbol: $r('sys.symbol.folder'),
-                  effectTrigger: this.importEffect,
                   action: () => this.importMaFile()
                 })
                 .layoutWeight(1)
@@ -183,16 +175,12 @@ export struct AddSteamTokenPage {
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
           .clip(false)
 
-          Column({ space: 6 }) {
-            Text($r('app.string.add_token_required_hint')).fontSize(12).fontColor($r('sys.color.font_tertiary'))
-            AddTokenActionButton({
-              text: this.isSaving ? $r('app.string.add_token_saving') : $r('app.string.add_token_save'),
-              symbol: $r('sys.symbol.checkmark'),
-              loading: this.isSaving,
-              buttonEnabled: this.canSave(),
-              action: () => this.submit()
-            })
-          }
+          AddTokenActionButton({
+            text: this.isSaving ? $r('app.string.add_token_saving') : $r('app.string.add_token_save'),
+            loading: this.isSaving,
+            buttonEnabled: this.canSave(),
+            action: () => this.submit()
+          })
           .width('100%')
           .padding({ left: ADD_TOKEN_PAGE_INSET, right: ADD_TOKEN_PAGE_INSET, top: 10, bottom: 12 })
         }

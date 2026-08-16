@@ -89,10 +89,6 @@
       "value": "令牌类型"
     },
     {
-      "name": "add_token_required_hint",
-      "value": "请填写全部必填项后保存。"
-    },
-    {
       "name": "add_token_save",
       "value": "保存令牌"
     },
