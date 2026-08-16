@@ -26,7 +26,7 @@ export struct IconPicker {
   @Prop currentIconPath: string = '';
   @Prop showCancelButton: boolean = true;
   @Prop showSearch: boolean = true;
-  @Prop searchText: string = '';
+  @Prop @Watch('onSearchTextChanged') searchText: string = '';
   cancel: () => void = () => {};
   confirm: (new_conf: string) => void = () => {};
 
@@ -40,9 +40,12 @@ export struct IconPicker {
   private default_icon_data: MyDataSource = new MyDataSource();
   private user_icon_data: MyDataSource = new MyDataSource();
   private aegis_icon_data: MyDataSource[] = [];
+  private filtered_default_icon_data: MyDataSource = new MyDataSource();
+  private filtered_aegis_icon_data: MyDataSource[] = [];
 
   aboutToAppear(): void {
     this.selected_icon_path = this.currentIconPath;
+    this.icon_matched_with_issuer = [''];
     const default_icon = TokenIconPacks.default_icon_pack.getIconPathByIssuer(this.issuer);
     if (default_icon !== '') {
       this.icon_matched_with_issuer.push(default_icon);
@@ -54,23 +57,23 @@ export struct IconPicker {
       }
     });
 
-    TokenIconPacks.default_icon_pack.default_icon_pack_path.forEach((path) => {
-      this.default_icon_data.pushData(path!);
+    const defaultIconPaths: string[] = [];
+    TokenIconPacks.default_icon_pack.default_icon_pack_path.forEach((path: string) => {
+      defaultIconPaths.push(path);
     });
-
-    TokenIconPacks.user_added_icon_packs.icon_path.forEach((path) => {
-      this.user_icon_data.pushData(path!);
-    });
-
-    TokenIconPacks.aegis_icon_packs.forEach((aegis_icon_pack) => {
-      let data_source = new MyDataSource();
+    this.default_icon_data.replaceData(defaultIconPaths);
+    this.user_icon_data.replaceData(TokenIconPacks.user_added_icon_packs.icon_path);
+    this.aegis_icon_data = TokenIconPacks.aegis_icon_packs.map((aegis_icon_pack) => {
+      const data_source = new MyDataSource();
       for (let icon of aegis_icon_pack.icons) {
         for (let path of icon.icon_pack_path) {
           data_source.pushData(path);
         }
       }
-      this.aegis_icon_data.push(data_source);
+      return data_source;
     });
+    this.filtered_aegis_icon_data = this.aegis_icon_data.map(() => new MyDataSource());
+    this.refreshFilteredData();
   }
 
   private filterPaths(paths: string[], query: string): string[] {
@@ -81,24 +84,22 @@ export struct IconPicker {
     return paths.filter(p => extractIconName(p).includes(q));
   }
 
-  private getFilteredDefaultPaths(): string[] {
-    const all: string[] = [];
-    for (let i = 0; i < this.default_icon_data.totalCount(); i++) {
-      all.push(this.default_icon_data.getData(i));
-    }
-    return this.filterPaths(all, this.searchText);
+  private onSearchTextChanged(): void {
+    this.refreshFilteredData();
   }
 
-  private getFilteredAegisPaths(index: number): string[] {
-    if (index >= this.aegis_icon_data.length) {
-      return [];
+  private refreshFilteredData(): void {
+    this.filtered_default_icon_data.replaceData(
+      this.filterPaths(this.default_icon_data.toArray(), this.searchText)
+    );
+    for (let i = 0; i < this.aegis_icon_data.length; i++) {
+      if (i >= this.filtered_aegis_icon_data.length) {
+        this.filtered_aegis_icon_data.push(new MyDataSource());
+      }
+      this.filtered_aegis_icon_data[i].replaceData(
+        this.filterPaths(this.aegis_icon_data[i].toArray(), this.searchText)
+      );
     }
-    const ds = this.aegis_icon_data[index];
-    const all: string[] = [];
-    for (let i = 0; i < ds.totalCount(); i++) {
-      all.push(ds.getData(i));
-    }
-    return this.filterPaths(all, this.searchText);
   }
 
   @Builder
@@ -322,42 +323,43 @@ export struct IconPicker {
   }
 
   @Builder
-  LazyIconList(dataSource: MyDataSource) {
-    List({ space: LengthMetrics.vp(8).value }) {
-      LazyForEach(dataSource, (path: string) => {
-        ListItem() {
-          this.ItemIcon(path, false)
-        }
-      }, (path: string) => path)
-    }
-    .lanes({ minLength: LengthMetrics.vp(40).value, maxLength: LengthMetrics.vp(40).value })
-    .width('100%')
-    .layoutWeight(1)
-    .scrollBar(BarState.Auto)
-    .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-  }
-
-  @Builder
-  IconGrid(paths: string[], removable: boolean, showAddButton: boolean) {
-    if (paths.length === 0 && !showAddButton) {
+  LazyIconGrid(dataSource: MyDataSource) {
+    if (dataSource.totalCount() === 0) {
       Column() {
         Text($r('app.string.dialog_icon_empty'))
           .fontSize(LengthMetrics.vp(14).value)
           .fontColor($r('sys.color.font_secondary'))
-          .margin({ top: LengthMetrics.vp(30).value })
       }
       .width('100%')
+      .layoutWeight(1)
+      .padding({ top: LengthMetrics.vp(48).value })
       .alignItems(HorizontalAlign.Center)
     } else {
-      Flex({ wrap: FlexWrap.Wrap }) {
-        if (showAddButton) {
-          this.ItemIconAddButton()
+      Grid() {
+      LazyForEach(dataSource, (path: string) => {
+          GridItem() {
+            Stack() {
+              this.ItemIcon(path, false)
+            }
+            .width('100%')
+            .height(LengthMetrics.vp(56).value)
+            .alignContent(Alignment.Center)
+            .onClick(() => {
+              this.selected_icon_path = path;
+            })
         }
-        ForEach(paths, (path: string) => {
-          this.ItemIcon(path, removable)
-        }, (path: string) => path)
+      }, (path: string) => path)
       }
-      .padding({ left: LengthMetrics.vp(8).value, right: LengthMetrics.vp(8).value, top: LengthMetrics.vp(8).value })
+      .columnsTemplate('repeat(auto-fit, 56vp)')
+      .columnsGap(LengthMetrics.vp(12).value)
+      .rowsGap(LengthMetrics.vp(8).value)
+      .width('100%')
+      .layoutWeight(1)
+      .padding({ left: LengthMetrics.vp(12).value, right: LengthMetrics.vp(12).value,
+        top: LengthMetrics.vp(8).value, bottom: LengthMetrics.vp(8).value })
+      .scrollBar(BarState.Auto)
+      .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+      .cachedCount(2)
     }
   }
 
@@ -388,21 +390,17 @@ export struct IconPicker {
           })
       }
 
-      this.RecommendRow()
-      this.CustomRow()
+      if (this.searchText === '') {
+        this.RecommendRow()
+        this.CustomRow()
+      }
 
       Tabs({ barPosition: BarPosition.Start }) {
         TabContent() {
           if (this.searchText === '') {
-            this.LazyIconList(this.default_icon_data)
+            this.LazyIconGrid(this.default_icon_data)
           } else {
-            Scroll() {
-              this.IconGrid(this.getFilteredDefaultPaths(), false, false)
-            }
-            .scrollBar(BarState.Auto)
-            .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-            .width('100%')
-            .layoutWeight(1)
+            this.LazyIconGrid(this.filtered_default_icon_data)
           }
         }
         .tabBar(this.TabBuilder(TokenIconPacks.default_icon_pack.name, 0))
@@ -410,15 +408,9 @@ export struct IconPicker {
         ForEach(TokenIconPacks.aegis_icon_packs, (aegis_icon_pack: AegisIconPack, index: number) => {
           TabContent() {
             if (this.searchText === '' && index < this.aegis_icon_data.length) {
-              this.LazyIconList(this.aegis_icon_data[index])
+              this.LazyIconGrid(this.aegis_icon_data[index])
             } else {
-              Scroll() {
-                this.IconGrid(this.getFilteredAegisPaths(index), false, false)
-              }
-              .scrollBar(BarState.Auto)
-              .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-              .width('100%')
-              .layoutWeight(1)
+              this.LazyIconGrid(this.filtered_aegis_icon_data[index])
             }
           }
           .tabBar(this.TabBuilder(aegis_icon_pack.name, 1 + index))
@@ -567,6 +559,16 @@ class MyDataSource extends BasicDataSource {
 
   public getData(index: number): string {
     return this.dataArray[index];
+  }
+
+  public toArray(): string[] {
+    return this.dataArray.slice();
+  }
+
+  public replaceData(data: string[]): void {
+    this.dataArray = data.filter((path: string, index: number, paths: string[]) =>
+      path !== undefined && paths.indexOf(path) === index);
+    this.notifyDataReload();
   }
 
   public pushData(data: string): void {
