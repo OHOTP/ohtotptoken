@@ -1,6 +1,5 @@
 import {
   BottomBuilderShowType,
-  HideMode,
   HdsNavDestination,
   HdsNavDestinationTitleMode,
   ScrollEffectType,
@@ -14,7 +13,7 @@ import {
 } from '@kit.ArkUI';
 import { IconPicker } from 'uikit';
 import { AegisIconPack, TokenIconPacks } from 'common';
-import { MaterialTheme } from '../components/MaterialTheme';
+import { MaterialTheme, MaterialThickness } from '../components/MaterialTheme';
 import { PageScaffold } from '../components/PageScaffold';
 import { MaterialPolicy } from '../utils/MaterialPolicy';
 
@@ -57,6 +56,42 @@ export struct IconPickerPage {
   private pageInfos: NavPathStack | null = null;
   private iconScrollers: Scroller[] = createIconScrollers();
   private packSegmentItems: SegmentButtonV2Items = createIconPackSegmentItems();
+
+  /**
+   * SegmentButtonV2 背景板材质跟随全局材质偏好。
+   * API 26 应用级 ENABLE 会让 SegmentButtonV2 默认启用材质，因此实体模式下
+   * 必须显式传 Material.empty；低 API/无能力设备不求值 uiMaterial 符号。
+   */
+  private segmentBackgroundMaterial(): uiMaterial.Material | undefined {
+    if (MaterialPolicy.getInstance().getTier() !== 'immersive') {
+      return undefined;
+    }
+    if (!MaterialTheme.isImmersiveEffective()) {
+      return uiMaterial.Material.empty;
+    }
+    return new uiMaterial.ImmersiveMaterial({
+      style: this.mapMaterialThickness(MaterialTheme.preferredThickness()),
+      colorInvert: true,
+      interactive: true
+    });
+  }
+
+  /** MaterialThickness → uiMaterial.ImmersiveStyle（仅 API 26 材质分支调用）。 */
+  private mapMaterialThickness(thickness: MaterialThickness): uiMaterial.ImmersiveStyle {
+    switch (thickness) {
+      case MaterialThickness.ULTRA_THIN:
+        return uiMaterial.ImmersiveStyle.ULTRA_THIN;
+      case MaterialThickness.THIN:
+        return uiMaterial.ImmersiveStyle.THIN;
+      case MaterialThickness.THICK:
+        return uiMaterial.ImmersiveStyle.THICK;
+      case MaterialThickness.ULTRA_THICK:
+        return uiMaterial.ImmersiveStyle.ULTRA_THICK;
+      case MaterialThickness.REGULAR:
+      default:
+        return uiMaterial.ImmersiveStyle.REGULAR;
+    }
+  }
 
   private completeSelection(path: string): void {
     this.pageParams.onSelected(path);
@@ -107,6 +142,7 @@ export struct IconPickerPage {
       TabSegmentButtonV2({
         items: this.packSegmentItems,
         selectedIndex: this.currentPackIndex,
+        backgroundSystemMaterial: this.segmentBackgroundMaterial(),
         $selectedIndex: (index: number) => {
           this.currentPackIndex = index;
           this.iconScrollers[index]?.scrollTo({ xOffset: 0, yOffset: 0 });
@@ -174,12 +210,6 @@ export struct IconPickerPage {
       }
     })
     .bindToScrollable(this.iconScrollers)
-    .dynamicHideTitleBar({
-      hideTitleArea: false,
-      hideBottomBuilder: true,
-      hideStatusBar: false,
-      mode: HideMode.SCROLL_UP_TO
-    })
     .onReady((context: NavDestinationContext) => this.pageInfos = context.pathStack)
   }
 }

@@ -326,7 +326,8 @@ export struct IconPicker {
         top: LengthMetrics.vp(8).value, bottom: LengthMetrics.vp(8).value })
       .scrollBar(BarState.Auto)
       .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-      .cachedCount(2)
+      // 显示顶部两行预加载节点；配合 clip(false)，图标越过屏幕顶部后才离开显示区。
+      .cachedCount(2, true)
       .clip(false)
     }
   }
