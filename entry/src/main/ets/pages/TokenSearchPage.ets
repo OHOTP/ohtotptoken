@@ -9,7 +9,7 @@ import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES, di
 import { otpType, TokenConfig, TokenConfigVM } from 'common';
 import { TokenStore } from 'common';
 import { convertToken2URI } from 'common';
-import { AppStorageV2 } from "@kit.ArkUI";
+import { AppStorageV2, uiMaterial } from "@kit.ArkUI";
 import { AppWindowInfo } from 'common';
 import { GenericDataSource } from 'common';
 import { showSnackBar, SnackBarNotifyType } from 'common';
@@ -115,29 +115,26 @@ export struct TokenSearchPage {
   SearchBottomBuilder() {
     Column() {
       if (MaterialTheme.isImmersiveEffective()) {
-        // 沉浸材质档：搜索框套 MaterialSurface，THIN 厚度（官方搜索框推荐档位）
-        // + 光感反馈；Search 背景置透明透出材质层（材质化契约第 1 条）
-        MaterialSurface({
-          thickness: MaterialThickness.THIN,
-          lightEffect: true,
-          radius: $r('sys.float.ohos_id_search_text_field_border_radius')
-        }) {
-          Search({
-            placeholder: $r('app.string.token_search_placeholder'),
-            value: this.tokenSearchText
+        // 材质直接挂到 Search，避免 MaterialSurface 的根节点被 bottomBuilder
+        // 拉伸到 56vp；Search 本身不设高度，保持系统默认尺寸。
+        Search({
+          placeholder: $r('app.string.token_search_placeholder'),
+          value: this.tokenSearchText
+        })
+          .width('100%')
+          .backgroundColor(Color.Transparent)
+          .systemMaterial(new uiMaterial.ImmersiveMaterial({
+            style: uiMaterial.ImmersiveStyle.THIN,
+            lightEffect: { color: Color.White }
+          }))
+          .onChange((value: string) => {
+            this.tokenSearchText = value;
+            this.filterCurrentTokens(value);
           })
-            .width('100%')
-            .height(40)
-            .backgroundColor(Color.Transparent)
-            .onChange((value: string) => {
-              this.tokenSearchText = value;
-              this.filterCurrentTokens(value);
-            })
-            .onSubmit((value: string) => {
-              this.tokenSearchText = value;
-              this.filterCurrentTokens(value);
-            })
-        }
+          .onSubmit((value: string) => {
+            this.tokenSearchText = value;
+            this.filterCurrentTokens(value);
+          })
       } else {
         // hds/solid 档：保持现有系统默认样式，不套材质表面
         Search({
@@ -145,7 +142,6 @@ export struct TokenSearchPage {
           value: this.tokenSearchText
         })
           .width('100%')
-          .height(40)
           .onChange((value: string) => {
             this.tokenSearchText = value;
             this.filterCurrentTokens(value);
