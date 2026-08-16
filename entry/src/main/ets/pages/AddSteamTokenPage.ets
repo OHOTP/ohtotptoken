@@ -199,6 +199,7 @@ export struct AddSteamTokenPage {
         .width('100%').height('100%')
       }
     }
+    .backgroundColor($r('app.color.window_background'))
     .titleMode(HdsNavDestinationTitleMode.MODAL)
     .titleBar({
       avoidLayoutSafeArea: true,

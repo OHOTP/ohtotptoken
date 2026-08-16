@@ -317,6 +317,7 @@ export struct AddTotpTokenPage {
         .height('100%')
       }
     }
+    .backgroundColor($r('app.color.window_background'))
     .titleMode(HdsNavDestinationTitleMode.MODAL)
     .titleBar({
       avoidLayoutSafeArea: true,
