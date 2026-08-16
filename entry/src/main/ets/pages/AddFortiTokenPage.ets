@@ -1,4 +1,4 @@
-import { AppWindowInfo, base32Decode, base32Encode, otpType, ScanBarCode, showSnackBar, SnackBarNotifyType,
+import { AppWindowInfo, base32Decode, base32Encode, otpType, ROUTE_NAMES, ScanBarCode, showSnackBar, SnackBarNotifyType,
   stringToIntArray, TokenConfig } from 'common';
 import { common } from '@kit.AbilityKit';
 import { AppStorageV2 } from '@kit.ArkUI';
@@ -8,13 +8,14 @@ import { cryptoFramework } from '@kit.CryptoArchitectureKit';
 import { http } from '@kit.NetworkKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { hdsMaterial, HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
-import { SelectIconDialog } from 'uikit';
+
 import { AddTokenActionButton, AddTokenHeader, AddTokenPageParams, ADD_TOKEN_BOTTOM_ACTION_INSET, ADD_TOKEN_PAGE_INSET,
   ADD_TOKEN_SECTION_PADDING, ADD_TOKEN_SECTION_RADIUS,
   AddTokenSectionTitle, AddTokenTextField } from '../components/AddTokenForm';
 import { MaterialSurface } from '../components/MaterialSurface';
 import { PageScaffold } from '../components/PageScaffold';
 import { MaterialPolicy } from '../utils/MaterialPolicy';
+import { IconPickerPageParams } from './IconPickerPage';
 
 class FortiServerError {
   error_code?: string;
@@ -48,7 +49,7 @@ export struct AddFortiTokenPage {
 
   private pageInfos: NavPathStack | null = null;
   private scroller: Scroller = new Scroller();
-  private iconDialog?: CustomDialogController;
+
   private filesDir: string = (AppStorage.get('appContext') as common.UIAbilityContext).filesDir;
 
   aboutToAppear(): void {
@@ -69,14 +70,8 @@ export struct AddFortiTokenPage {
   }
 
   private openIconPicker(): void {
-    this.iconDialog = new CustomDialogController({
-      builder: SelectIconDialog({
-        issuer: 'Forti',
-        currentIconPath: this.iconPath,
-        confirm: (path: string) => this.iconPath = path
-      })
-    });
-    this.iconDialog.open();
+    this.pageInfos?.pushPathByName(ROUTE_NAMES.IconPickerPage,
+      new IconPickerPageParams('Forti', this.iconPath, (path: string) => this.iconPath = path));
   }
 
   private scanCode(): void {

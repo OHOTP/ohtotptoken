@@ -447,6 +447,8 @@ export enum ROUTE_NAMES {
   AddFortiTokenPage = 'AddFortiTokenPage',
   /** 添加 Steam 令牌页面 */
   AddSteamTokenPage = 'AddSteamTokenPage',
+  /** 添加/编辑令牌时使用的独立图标选择页面 */
+  IconPickerPage = 'IconPickerPage',
   /** App首页 */
   IndexPage = 'pages/Index',
 }

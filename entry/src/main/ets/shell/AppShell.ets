@@ -14,6 +14,7 @@ import lazy { WebPage, WebPageParams } from '../pages/WebPage';
 import lazy { AddTotpTokenPage } from '../pages/AddTotpTokenPage';
 import lazy { AddFortiTokenPage } from '../pages/AddFortiTokenPage';
 import lazy { AddSteamTokenPage } from '../pages/AddSteamTokenPage';
+import lazy { IconPickerPage, IconPickerPageParams } from '../pages/IconPickerPage';
 import { AddTokenPageParams } from '../components/AddTokenForm';
 import { TokenConfig } from 'common';
 
@@ -84,6 +85,11 @@ export struct AppShell {
         scrollEffectType: this.scrollEffectType,
         pageParams: param as AddTokenPageParams,
         saveToken: (conf: TokenConfig) => this.saveToken(conf)
+      })
+    } else if (name === ROUTE_NAMES.IconPickerPage) {
+      IconPickerPage({
+        scrollEffectType: this.scrollEffectType,
+        pageParams: param as IconPickerPageParams
       })
     }
   }

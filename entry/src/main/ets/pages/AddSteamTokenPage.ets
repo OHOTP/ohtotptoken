@@ -1,17 +1,18 @@
-import { AppWindowInfo, maFile, otpType, readFileContent, ScanBarCode, showSelectFilePicker, showSnackBar,
+import { AppWindowInfo, maFile, otpType, readFileContent, ROUTE_NAMES, ScanBarCode, showSelectFilePicker, showSnackBar,
   SnackBarNotifyType, TokenConfig } from 'common';
 import { AppStorageV2 } from '@kit.ArkUI';
 import { JSON, url } from '@kit.ArkTS';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { hdsMaterial, HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
-import { SelectIconDialog } from 'uikit';
+
 import { AddTokenActionButton, AddTokenHeader, AddTokenPageParams, ADD_TOKEN_BOTTOM_ACTION_INSET, ADD_TOKEN_PAGE_INSET,
   ADD_TOKEN_SECTION_PADDING, ADD_TOKEN_SECTION_RADIUS,
   AddTokenSectionTitle, AddTokenTextField } from '../components/AddTokenForm';
 import { MaterialSurface } from '../components/MaterialSurface';
 import { PageScaffold } from '../components/PageScaffold';
 import { MaterialPolicy } from '../utils/MaterialPolicy';
+import { IconPickerPageParams } from './IconPickerPage';
 
 @Entry
 @Preview
@@ -30,7 +31,7 @@ export struct AddSteamTokenPage {
 
   private pageInfos: NavPathStack | null = null;
   private scroller: Scroller = new Scroller();
-  private iconDialog?: CustomDialogController;
+
   private steamMaFile: maFile | undefined = undefined;
 
   aboutToAppear(): void {
@@ -45,14 +46,8 @@ export struct AddSteamTokenPage {
   }
 
   private openIconPicker(): void {
-    this.iconDialog = new CustomDialogController({
-      builder: SelectIconDialog({
-        issuer: this.issuer,
-        currentIconPath: this.iconPath,
-        confirm: (path: string) => this.iconPath = path
-      })
-    });
-    this.iconDialog.open();
+    this.pageInfos?.pushPathByName(ROUTE_NAMES.IconPickerPage,
+      new IconPickerPageParams(this.issuer, this.iconPath, (path: string) => this.iconPath = path));
   }
 
   private scanCode(): void {

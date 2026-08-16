@@ -1,16 +1,18 @@
-import { AppWindowInfo, HMACAlgorithm, otpType, ScanBarCode, showSnackBar, SnackBarNotifyType, TokenConfig } from 'common';
+import { AppWindowInfo, HMACAlgorithm, otpType, ROUTE_NAMES, ScanBarCode, showSnackBar, SnackBarNotifyType,
+  TokenConfig } from 'common';
 import { AppStorageV2 } from '@kit.ArkUI';
 import { url } from '@kit.ArkTS';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { hdsMaterial, HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
-import { SelectIconDialog } from 'uikit';
+
 import { AddTokenActionButton, AddTokenHeader, AddTokenPageParams, ADD_TOKEN_BOTTOM_ACTION_INSET, ADD_TOKEN_PAGE_INSET,
   ADD_TOKEN_SECTION_PADDING, ADD_TOKEN_SECTION_RADIUS,
   AddTokenSectionTitle, AddTokenTextField } from '../components/AddTokenForm';
 import { MaterialSurface } from '../components/MaterialSurface';
 import { PageScaffold } from '../components/PageScaffold';
 import { MaterialPolicy } from '../utils/MaterialPolicy';
+import { IconPickerPageParams } from './IconPickerPage';
 
 @Entry
 @Preview
@@ -34,7 +36,7 @@ export struct AddTotpTokenPage {
 
   private pageInfos: NavPathStack | null = null;
   private scroller: Scroller = new Scroller();
-  private iconDialog?: CustomDialogController;
+
   private readonly algorithms: HMACAlgorithm[] = ['SHA1', 'SHA224', 'SHA256', 'SHA384', 'SHA512', 'SM3', 'MD5'];
 
   aboutToAppear(): void {
@@ -55,16 +57,8 @@ export struct AddTotpTokenPage {
   }
 
   private openIconPicker(): void {
-    this.iconDialog = new CustomDialogController({
-      builder: SelectIconDialog({
-        issuer: this.issuer,
-        currentIconPath: this.iconPath,
-        confirm: (path: string) => {
-          this.iconPath = path;
-        }
-      })
-    });
-    this.iconDialog.open();
+    this.pageInfos?.pushPathByName(ROUTE_NAMES.IconPickerPage,
+      new IconPickerPageParams(this.issuer, this.iconPath, (path: string) => this.iconPath = path));
   }
 
   private scanCode(): void {

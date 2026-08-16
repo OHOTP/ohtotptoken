@@ -20,12 +20,12 @@ function extractIconName(path: string): string {
 }
 
 @Preview
-@CustomDialog
-export struct SelectIconDialog {
+@Component
+export struct IconPicker {
   @Prop @Require issuer: string = '';
   @Prop currentIconPath: string = '';
-  controller?: CustomDialogController;
-  cancel?: () => void;
+  @Prop showCancelButton: boolean = true;
+  cancel: () => void = () => {};
   confirm: (new_conf: string) => void = () => {};
 
   @State selected_icon_path: string = '';
@@ -436,26 +436,22 @@ export struct SelectIconDialog {
       })
 
       Flex({ justifyContent: FlexAlign.SpaceAround }) {
-        Button($r('app.string.dialog_btn_cancel'))
-          .fontColor($r('app.color.item_fg'))
-          .backgroundColor(Color.Transparent)
-          .onClick(() => {
-            if (this.controller != undefined) {
-              this.controller.close();
-            }
-          })
-          .width('100%')
+        if (this.showCancelButton) {
+          Button($r('app.string.dialog_btn_cancel'))
+            .fontColor($r('app.color.item_fg'))
+            .backgroundColor(Color.Transparent)
+            .onClick(() => this.cancel())
+            .layoutWeight(1)
+        }
         Button($r('app.string.dialog_btn_confirm'))
-          .fontColor(Color.Red)
-          .backgroundColor(Color.Transparent)
-          .onClick(() => {
-            if (this.controller != undefined) {
-              this.confirm(this.selected_icon_path);
-              this.controller.close();
-            }
-          })
-          .width('100%')
+          .fontColor(Color.White)
+          .backgroundColor($r('app.color.button_blue'))
+          .borderRadius(20)
+          .onClick(() => this.confirm(this.selected_icon_path))
+          .layoutWeight(1)
       }
+      .width('100%')
+      .padding({ top: LengthMetrics.vp(8).value })
     }
     .padding(LengthMetrics.vp(10).value)
     .width('100%')
@@ -463,6 +459,36 @@ export struct SelectIconDialog {
       modalTransition: ModalTransition.DEFAULT,
       onDisappear: () => {
         this.showCropCover = false;
+      }
+    })
+  }
+}
+
+/**
+ * 兼容旧配置流程的弹窗外壳。新添加/编辑令牌流程使用独立 IconPickerPage，
+ * 选择器主体由 IconPicker 共用，避免页面版与弹窗版的搜索、图标包和裁剪逻辑分叉。
+ */
+@Preview
+@CustomDialog
+export struct SelectIconDialog {
+  @Prop @Require issuer: string = '';
+  @Prop currentIconPath: string = '';
+  controller?: CustomDialogController;
+  cancel?: () => void;
+  confirm: (new_conf: string) => void = () => {};
+
+  build() {
+    IconPicker({
+      issuer: this.issuer,
+      currentIconPath: this.currentIconPath,
+      showCancelButton: true,
+      cancel: () => {
+        this.cancel?.();
+        this.controller?.close();
+      },
+      confirm: (path: string) => {
+        this.confirm(path);
+        this.controller?.close();
       }
     })
   }
