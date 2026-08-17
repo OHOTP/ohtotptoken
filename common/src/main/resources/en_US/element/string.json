@@ -65,6 +65,66 @@
       "value": "Cancel"
     },
     {
+      "name": "add_token_scan",
+      "value": "Scan code"
+    },
+    {
+      "name": "add_token_choose_icon",
+      "value": "Choose token icon"
+    },
+    {
+      "name": "add_token_icon_guide",
+      "value": "Tap the icon to choose a custom icon"
+    },
+    {
+      "name": "add_token_icon_guide_confirm",
+      "value": "Got it"
+    },
+    {
+      "name": "add_token_account_section",
+      "value": "Token details"
+    },
+    {
+      "name": "add_token_advanced_section",
+      "value": "Advanced settings"
+    },
+    {
+      "name": "add_token_activation_section",
+      "value": "Activation"
+    },
+    {
+      "name": "add_token_type",
+      "value": "Token type"
+    },
+    {
+      "name": "add_token_save",
+      "value": "Save token"
+    },
+    {
+      "name": "add_token_saving",
+      "value": "Saving…"
+    },
+    {
+      "name": "add_totp_intro",
+      "value": "Add a TOTP or HOTP account manually, or scan an otpauth QR code."
+    },
+    {
+      "name": "add_forti_intro",
+      "value": "Activate a FortiToken and securely request its secret for this device."
+    },
+    {
+      "name": "add_steam_intro",
+      "value": "Import a Steam Guard account by QR code, maFile, or manual entry."
+    },
+    {
+      "name": "add_forti_regenerate_device_id",
+      "value": "Generate a new device ID"
+    },
+    {
+      "name": "add_steam_import_failed",
+      "value": "Could not import the maFile."
+    },
+    {
       "name": "dialog_btn_delete",
       "value": "Delete"
     },
@@ -821,6 +881,10 @@
       "value": "Edit"
     },
     {
+      "name": "edit_token_title",
+      "value": "Edit Token"
+    },
+    {
       "name": "token_right_menu_delete",
       "value": "Delete"
     },
@@ -958,7 +1022,7 @@
     },
     {
       "name": "setting_material_mode_desc",
-      "value": "Immersive light-sense material for cards and surfaces (requires device support)"
+      "value": "Immersive light-sense material for cards and surfaces, requires device support."
     },
     {
       "name": "setting_material_mode_auto",
@@ -978,7 +1042,7 @@
     },
     {
       "name": "setting_immersive_style_desc",
-      "value": "Thickness of the immersive material"
+      "value": "Thickness of the immersive material."
     },
     {
       "name": "setting_immersive_style_ultra_thin",
@@ -1018,7 +1082,7 @@
     },
     {
       "name": "setting_token_item_material_desc",
-      "value": "Enable immersive material for each token list item (per-item, may increase scrolling overhead)"
+      "value": "Enable immersive material for each token list item."
     },
     {
       "name": "setting_light_effect_mode",
@@ -1026,7 +1090,7 @@
     },
     {
       "name": "setting_light_effect_mode_desc",
-      "value": "Light spot feedback on material surfaces when touched. Follow components keeps each surface's own setting; Always on enables it for all immersive surfaces"
+      "value": "Show light spot feedback on material surfaces when touched."
     },
     {
       "name": "setting_light_effect_mode_default",

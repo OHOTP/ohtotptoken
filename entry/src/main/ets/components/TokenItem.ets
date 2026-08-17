@@ -6,9 +6,6 @@ import { TokenIcon } from 'uikit';
 import { SteamUtils } from 'common';
 import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
 import { AppStorageV2, SymbolGlyphModifier } from '@kit.ArkUI';
-import { TOTPConfigDialog } from 'uikit';
-import { FortiConfigDialog } from 'uikit';
-import { SteamConfigDialog } from 'uikit';
 import { QRCodeDialog } from 'uikit';
 import { AppWindowInfo } from 'common';
 import { TokenStore } from 'common';
@@ -27,6 +24,7 @@ let tkStore = TokenStore.getInstance();
 export struct TokenItem {
   @Require @Param Config: TokenConfig = new TokenConfig();
   @Event Update: (conf: TokenConfig) => Promise<boolean> = async () => false;
+  @Event Edit: (conf: TokenConfig) => void = () => {};
   @Param sortMode: boolean = false;
 
   @Local token_preference: TokenPreference = AppStorageV2.connect(TokenPreference) as TokenPreference;
@@ -46,9 +44,6 @@ export struct TokenItem {
   @Local menu_icon_copy: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.doc_text_on_doc_text')).fontSize('22vp');
   @Local menu_icon_sort: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.list_bullet')).fontSize('22vp');
 
-  private dialog_totp_config?: CustomDialogController;
-  private dialog_forti_config?: CustomDialogController;
-  private dialog_steam_config?: CustomDialogController;
   private dialog_qrcode?: CustomDialogController;
 
   private token_steps: number = 0;
@@ -497,38 +492,11 @@ export struct TokenItem {
           .onClick(() => {
             if (this.Config.TokenType === otpType.TOTP || this.Config.TokenType === otpType.HOTP ||
               this.Config.TokenType === undefined) { // default
-              this.dialog_totp_config = new CustomDialogController({
-                systemMaterial: dialogSystemMaterial(),
-                builder: TOTPConfigDialog({
-                  conf_json: JSON.stringify(this.Config),
-                  confirm: async (new_conf): Promise<boolean> => {
-                    return await this.Update(JSON.parse(new_conf))
-                  }
-                })
-              })
-              this.dialog_totp_config.open()
+              this.Edit(this.Config);
             } else if (this.Config.TokenType === otpType.Forti) { // forti
-              this.dialog_forti_config = new CustomDialogController({
-                systemMaterial: dialogSystemMaterial(),
-                builder: FortiConfigDialog({
-                  conf_json: JSON.stringify(this.Config),
-                  confirm: async (new_conf): Promise<boolean> => {
-                    return await this.Update(JSON.parse(new_conf))
-                  }
-                })
-              })
-              this.dialog_forti_config.open()
+              this.Edit(this.Config);
             } else if (this.Config.TokenType === otpType.Steam) { // steam
-              this.dialog_steam_config = new CustomDialogController({
-                systemMaterial: dialogSystemMaterial(),
-                builder: SteamConfigDialog({
-                  conf_json: JSON.stringify(this.Config),
-                  confirm: async (new_conf): Promise<boolean> => {
-                    return await this.Update(JSON.parse(new_conf))
-                  }
-                })
-              })
-              this.dialog_steam_config.open()
+              this.Edit(this.Config);
             }
           })
           .accessibilityText($r('app.string.token_right_menu_edit'))

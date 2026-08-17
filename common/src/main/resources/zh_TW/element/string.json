@@ -65,6 +65,66 @@
       "value": "取消"
     },
     {
+      "name": "add_token_scan",
+      "value": "掃描二維碼"
+    },
+    {
+      "name": "add_token_choose_icon",
+      "value": "選擇令牌圖示"
+    },
+    {
+      "name": "add_token_icon_guide",
+      "value": "點選圖示可選擇自訂圖示"
+    },
+    {
+      "name": "add_token_icon_guide_confirm",
+      "value": "我知道了"
+    },
+    {
+      "name": "add_token_account_section",
+      "value": "令牌資訊"
+    },
+    {
+      "name": "add_token_advanced_section",
+      "value": "進階設定"
+    },
+    {
+      "name": "add_token_activation_section",
+      "value": "啟用資訊"
+    },
+    {
+      "name": "add_token_type",
+      "value": "令牌類型"
+    },
+    {
+      "name": "add_token_save",
+      "value": "儲存令牌"
+    },
+    {
+      "name": "add_token_saving",
+      "value": "正在儲存…"
+    },
+    {
+      "name": "add_totp_intro",
+      "value": "手動新增 TOTP 或 HOTP 帳戶，也可以掃描 otpauth 二維碼。"
+    },
+    {
+      "name": "add_forti_intro",
+      "value": "啟用 FortiToken，並為目前裝置安全取得密鑰。"
+    },
+    {
+      "name": "add_steam_intro",
+      "value": "透過二維碼、maFile 或手動輸入匯入 Steam Guard 帳戶。"
+    },
+    {
+      "name": "add_forti_regenerate_device_id",
+      "value": "產生新的裝置 ID"
+    },
+    {
+      "name": "add_steam_import_failed",
+      "value": "無法匯入 maFile 檔案。"
+    },
+    {
       "name": "dialog_btn_delete",
       "value": "刪除"
     },
@@ -821,6 +881,10 @@
       "value": "編輯"
     },
     {
+      "name": "edit_token_title",
+      "value": "編輯權杖"
+    },
+    {
       "name": "token_right_menu_delete",
       "value": "刪除"
     },
@@ -958,7 +1022,7 @@
     },
     {
       "name": "setting_material_mode_desc",
-      "value": "為卡片與表面啟用沉浸光感材質（需要裝置支援）"
+      "value": "為卡片與表面啟用沉浸光感材質，需要裝置支援。"
     },
     {
       "name": "setting_material_mode_auto",
@@ -978,7 +1042,7 @@
     },
     {
       "name": "setting_immersive_style_desc",
-      "value": "沉浸材質的厚度檔位"
+      "value": "沉浸材質的厚度檔位。"
     },
     {
       "name": "setting_immersive_style_ultra_thin",
@@ -1018,7 +1082,7 @@
     },
     {
       "name": "setting_token_item_material_desc",
-      "value": "為令牌清單項目啟用光感材質（逐項生效，可能增加捲動開銷）"
+      "value": "為令牌清單項目逐項啟用光感材質。"
     },
     {
       "name": "setting_light_effect_mode",
@@ -1026,7 +1090,7 @@
     },
     {
       "name": "setting_light_effect_mode_desc",
-      "value": "觸摸時材質表面的光斑回饋；跟隨元件保留各表面自身設定，全部開啟為所有光感表面啟用"
+      "value": "觸摸時在材質表面顯示光斑回饋。"
     },
     {
       "name": "setting_light_effect_mode_default",
