@@ -9,6 +9,8 @@ export const BUILTIN_DEFAULT_PACK_ID = '__builtin_default_pack__';
 export enum EVENT_NAMES {
   /** 顶部模糊效果类型变更事件 */
   TOP_EFFECT_TYPE_CHANGED = 'onTopEffectTypeChanged',
+  /** 底部页签类型变更事件 */
+  BOTTOM_TABS_TYPE_CHANGED = 'onBottomTabsTypeChanged',
   /** Token变更事件 */
   TOKEN_CHANGED = 'onTokenChanged',
   /** NFC外部令牌变更事件 */
@@ -64,6 +66,8 @@ export enum PREF_KEYS {
   SAFETY_AUTO_UNLOCK_ENABLE = 'app_safety_auto_unlock_enable',
   /** 顶部模糊效果类型 */
   APPEARANCE_TOP_EFFECT_TYPE = 'app_appearance_top_effect_type',
+  /** 底部页签类型 */
+  APPEARANCE_BOTTOM_TABS_TYPE = 'app_appearance_bottom_tabs_type',
   /** 背景模糊开关 */
   SAFETY_BACKGROUND_BLUR_ENABLE = 'app_safety_background_blur_enable',
   /** 快速扫描开关 */
@@ -462,6 +466,22 @@ export enum EXTERNAL_URLS {
   FEEDBACK_SURVEY = 'https://wj.qq.com/s2/24518107/2b26/',
   /** GitHub反馈 */
   FEEDBACK_GITHUB = 'https://github.com/OHOTP/ohtotptoken/issues',
+  /** 代码仓主页 */
+  REPO_HOME = 'https://github.com/OHOTP/ohtotptoken',
+  /** 贡献者列表 */
+  REPO_CONTRIBUTORS = 'https://github.com/OHOTP/ohtotptoken/graphs/contributors',
+  /** MIT 许可证全文 */
+  REPO_LICENSE = 'https://github.com/OHOTP/ohtotptoken/blob/main/LICENSE',
+  /** 开源软件: libcotp */
+  OSS_LIBCOTP = 'https://github.com/paolostivanin/libcotp',
+  /** 开源软件: TOTP-MCU */
+  OSS_TOTP_MCU = 'https://github.com/Netthaw/TOTP-MCU',
+  /** 开源软件: fortitoken-mobile-registration */
+  OSS_FORTI_REGISTRATION = 'https://github.com/ss23/fortitoken-mobile-registration',
+  /** 开源软件: Aigis */
+  OSS_AIGIS = 'https://github.com/iamhyc/Aigis',
+  /** 开源软件: andOTP 图标 */
+  OSS_ANDOTP_ICONS = 'https://github.com/andOTP/andOTP',
 }
 
 /**
@@ -558,6 +578,8 @@ export class AppPreference {
     [PREF_KEYS.APPEARANCE_LONG_PRESS_DURATION, 300],
     // 外观-顶部模糊类型
     [PREF_KEYS.APPEARANCE_TOP_EFFECT_TYPE, SettingTopEffectType.IMMERSIVE_GRADIENT_BLUR],
+    // 外观-底部页签类型（默认悬浮，平铺为鸿蒙 6.1+ 另一种呈现方式）
+    [PREF_KEYS.APPEARANCE_BOTTOM_TABS_TYPE, SettingBottomTabsType.SUSPENSION],
     [PREF_KEYS.APPEARANCE_HUAWEI_CLOUD_SYNC_ENABLE, false],
   ]);
   private static settings: Map<string, SettingValue> = new Map<string, SettingValue>([

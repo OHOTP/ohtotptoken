@@ -68,15 +68,15 @@ export struct SubItemColor {
             .translate(this.collapsed ? {} : { x: -3 })
         }
         .alignItems(VerticalAlign.Center)
-        .onClick(() => {
-          this.window.uiContext?.animateTo({ duration: 200, curve: Curve.Sharp }, () => {
-            this.collapsed = !this.collapsed;
-          })
-        })
 
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
+      .onClick(() => {
+        this.window.uiContext?.animateTo({ duration: 200, curve: Curve.Sharp }, () => {
+          this.collapsed = !this.collapsed;
+        })
+      })
       if (!this.collapsed) {
         Blank()
           .height(10)

@@ -170,7 +170,11 @@
     },
     {
       "name": "dialog_backup_password",
-      "value": "密码"
+      "value": "输入备份密码"
+    },
+    {
+      "name": "dialog_backup_password_set",
+      "value": "设置备份密码"
     },
     {
       "name": "dialog_backup_password_placeholder",
@@ -187,6 +191,50 @@
     {
       "name": "setting_about",
       "value": "关于"
+    },
+    {
+      "name": "about_app_version",
+      "value": "版本 %s"
+    },
+    {
+      "name": "about_software_info",
+      "value": "软件信息"
+    },
+    {
+      "name": "about_opensource_project",
+      "value": "开源信息"
+    },
+    {
+      "name": "about_bundle_name",
+      "value": "包名"
+    },
+    {
+      "name": "about_version_code",
+      "value": "版本号"
+    },
+    {
+      "name": "about_contact_email",
+      "value": "联系邮箱"
+    },
+    {
+      "name": "about_repo",
+      "value": "代码仓"
+    },
+    {
+      "name": "about_repo_desc",
+      "value": "前往 GitHub 查看源代码。"
+    },
+    {
+      "name": "about_contributors",
+      "value": "贡献者"
+    },
+    {
+      "name": "about_license",
+      "value": "许可证"
+    },
+    {
+      "name": "about_license_desc",
+      "value": "查看 MIT 许可证全文。"
     },
     {
       "name": "setting_backup",
@@ -222,23 +270,19 @@
     },
     {
       "name": "setting_backup_output",
-      "value": "导出密码？"
-    },
-    {
-      "name": "setting_backup_output_des",
-      "value": "如果您选择普通导出方式，密码将以纯文本形式显示给有权访问该文件的任何人。是否确实要导出密码？"
+      "value": "导出备份？"
     },
     {
       "name": "setting_backup_output_msg",
-      "value": "请选择导出方式"
+      "value": "明文备份未经加密，获得该文件的任何人都能读取其中的令牌密钥。"
     },
     {
       "name": "setting_backup_type_default",
-      "value": "明文"
+      "value": "明文导出"
     },
     {
       "name": "setting_backup_type_enc",
-      "value": "加密"
+      "value": "加密导出"
     },
     {
       "name": "setting_backup_cancel",
@@ -1118,11 +1162,11 @@
     },
     {
       "name": "setting_bottom_tabs_type",
-      "value": "底部Tabs类型"
+      "value": "底部页签类型"
     },
     {
       "name": "setting_bottom_tabs_type_desc",
-      "value": "控制底部标签栏的显示类型"
+      "value": "控制底部页签的显示样式。"
     },
     {
       "name": "setting_bottom_tabs_type_flatten",

@@ -170,7 +170,11 @@
     },
     {
       "name": "dialog_backup_password",
-      "value": "Password"
+      "value": "Enter backup password"
+    },
+    {
+      "name": "dialog_backup_password_set",
+      "value": "Set backup password"
     },
     {
       "name": "dialog_backup_password_placeholder",
@@ -187,6 +191,50 @@
     {
       "name": "setting_about",
       "value": "About"
+    },
+    {
+      "name": "about_app_version",
+      "value": "Version %s"
+    },
+    {
+      "name": "about_software_info",
+      "value": "Software Information"
+    },
+    {
+      "name": "about_opensource_project",
+      "value": "Open Source Info"
+    },
+    {
+      "name": "about_bundle_name",
+      "value": "Bundle Name"
+    },
+    {
+      "name": "about_version_code",
+      "value": "Version Code"
+    },
+    {
+      "name": "about_contact_email",
+      "value": "Contact E-mail"
+    },
+    {
+      "name": "about_repo",
+      "value": "Repository"
+    },
+    {
+      "name": "about_repo_desc",
+      "value": "View the source code on GitHub."
+    },
+    {
+      "name": "about_contributors",
+      "value": "Contributors"
+    },
+    {
+      "name": "about_license",
+      "value": "License"
+    },
+    {
+      "name": "about_license_desc",
+      "value": "Read the full MIT License text."
     },
     {
       "name": "setting_backup",
@@ -222,23 +270,19 @@
     },
     {
       "name": "setting_backup_output",
-      "value": "Export password？"
-    },
-    {
-      "name": "setting_backup_output_des",
-      "value": "If you choose the normal export method, the password will be displayed in plain text to anyone who has access to the file. Do you really want to export the password？"
+      "value": "Export backup?"
     },
     {
       "name": "setting_backup_output_msg",
-      "value": "Please choose the export method"
+      "value": "Unencrypted backups can be read by anyone who gains access to the file."
     },
     {
       "name": "setting_backup_type_default",
-      "value": "default"
+      "value": "Unencrypted"
     },
     {
       "name": "setting_backup_type_enc",
-      "value": "Encryption"
+      "value": "Encrypted"
     },
     {
       "name": "setting_backup_cancel",
@@ -1130,11 +1174,11 @@
     },
     {
       "name": "setting_bottom_tabs_type",
-      "value": "Bottom Tabs Type"
+      "value": "Bottom Tab Type"
     },
     {
       "name": "setting_bottom_tabs_type_desc",
-      "value": "Control the display type of bottom tab bar"
+      "value": "Controls the display style of the bottom tab bar."
     },
     {
       "name": "setting_bottom_tabs_type_flatten",

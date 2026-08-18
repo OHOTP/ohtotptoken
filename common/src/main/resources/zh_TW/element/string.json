@@ -170,7 +170,11 @@
     },
     {
       "name": "dialog_backup_password",
-      "value": "密碼"
+      "value": "輸入備份密碼"
+    },
+    {
+      "name": "dialog_backup_password_set",
+      "value": "設定備份密碼"
     },
     {
       "name": "dialog_backup_password_placeholder",
@@ -187,6 +191,50 @@
     {
       "name": "setting_about",
       "value": "關於"
+    },
+    {
+      "name": "about_app_version",
+      "value": "版本 %s"
+    },
+    {
+      "name": "about_software_info",
+      "value": "軟體資訊"
+    },
+    {
+      "name": "about_opensource_project",
+      "value": "開源資訊"
+    },
+    {
+      "name": "about_bundle_name",
+      "value": "套件名稱"
+    },
+    {
+      "name": "about_version_code",
+      "value": "版本代碼"
+    },
+    {
+      "name": "about_contact_email",
+      "value": "聯絡信箱"
+    },
+    {
+      "name": "about_repo",
+      "value": "程式碼倉庫"
+    },
+    {
+      "name": "about_repo_desc",
+      "value": "前往 GitHub 檢視原始碼。"
+    },
+    {
+      "name": "about_contributors",
+      "value": "貢獻者"
+    },
+    {
+      "name": "about_license",
+      "value": "授權條款"
+    },
+    {
+      "name": "about_license_desc",
+      "value": "檢視 MIT 授權條款全文。"
     },
     {
       "name": "setting_backup",
@@ -222,23 +270,19 @@
     },
     {
       "name": "setting_backup_output",
-      "value": "匯出密碼？"
-    },
-    {
-      "name": "setting_backup_output_des",
-      "value": "如果您選擇普通匯出方式，密碼將以純文字形式顯示給有權存取該檔案的任何人。是否確實要匯出密碼？"
+      "value": "匯出備份？"
     },
     {
       "name": "setting_backup_output_msg",
-      "value": "請選擇匯出方式"
+      "value": "明文備份未經加密，獲得該檔案的任何人都能讀取其中的權杖密鑰。"
     },
     {
       "name": "setting_backup_type_default",
-      "value": "明文"
+      "value": "明文匯出"
     },
     {
       "name": "setting_backup_type_enc",
-      "value": "加密"
+      "value": "加密匯出"
     },
     {
       "name": "setting_backup_cancel",
@@ -1118,11 +1162,11 @@
     },
     {
       "name": "setting_bottom_tabs_type",
-      "value": "底部Tabs類型"
+      "value": "底部頁籤類型"
     },
     {
       "name": "setting_bottom_tabs_type_desc",
-      "value": "控制底部標籤欄的顯示類型"
+      "value": "控制底部頁籤的顯示樣式。"
     },
     {
       "name": "setting_bottom_tabs_type_flatten",

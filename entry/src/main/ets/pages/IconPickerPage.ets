@@ -178,6 +178,7 @@ export struct IconPickerPage {
           showSearch: false,
           showPackTabs: false,
           currentPackIndex: this.currentPackIndex,
+          immersiveMaterialEnabled: MaterialTheme.isImmersiveEffective(),
           iconScrollers: this.iconScrollers,
           searchText: this.iconSearchText,
           confirm: (path: string) => this.completeSelection(path)

@@ -4,7 +4,7 @@ import { getImageDimensions, savePixelMapToFile, copyFileToDir } from 'common';
 import { showSelectFilePicker } from 'common';
 import { AegisIconPack, TokenIconPacks } from 'common';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { LengthMetrics } from '@kit.ArkUI';
+import { LengthMetrics, uiMaterial } from '@kit.ArkUI';
 import { showSnackBar, SnackBarNotifyType } from 'common';
 
 const MAX_ICON_SIZE = 256;
@@ -28,6 +28,12 @@ export struct IconPicker {
   @Prop showSearch: boolean = true;
   @Prop showPackTabs: boolean = true;
   @Prop currentPackIndex: number = 0;
+  /**
+   * 确认按钮是否启用沉浸光感材质（跟随设置里的材质模式选项）。
+   * uikit 无法依赖 entry 侧 MaterialTheme，由调用方（entry 页面）求值后传入；
+   * 默认 false 保持实体蓝底（SelectIconDialog 等未传入场景行为不变）。
+   */
+  @Prop immersiveMaterialEnabled: boolean = false;
   iconScrollers: Scroller[] = [];
   @Prop @Watch('onSearchTextChanged') searchText: string = '';
   cancel: () => void = () => {};
@@ -326,8 +332,11 @@ export struct IconPicker {
         top: LengthMetrics.vp(8).value, bottom: LengthMetrics.vp(8).value })
       .scrollBar(BarState.Auto)
       .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-      // 显示顶部两行预加载节点；配合 clip(false)，图标越过屏幕顶部后才离开显示区。
-      .cachedCount(2, true)
+      // HdsNavDestination 内容区从标题栏下方开始布局，Grid 显示区域上边缘距屏幕顶部
+      // 最远约 状态栏(~40vp) + MINI标题(56vp) + bottomBuilder(112vp) + 页面padding(10vp) ≈ 218vp。
+      // 行高 56+8=64vp，顶部缓存 4 行(256vp) 可覆盖整个标题栏区域；配合 clip(false)，
+      // 图标滚过屏幕顶部后才离开显示+缓存范围被销毁，不会在状态栏附近提前消失。
+      .cachedCount(4, true)
       .clip(false)
     }
   }
@@ -421,12 +430,31 @@ export struct IconPicker {
             .onClick(() => this.cancel())
             .layoutWeight(1)
         }
-        Button($r('app.string.dialog_btn_confirm'))
-          .fontColor(Color.White)
-          .backgroundColor($r('app.color.button_blue'))
-          .borderRadius(20)
-          .onClick(() => this.confirm(this.selected_icon_path))
-          .layoutWeight(1)
+        if (this.immersiveMaterialEnabled) {
+          // 沉浸档：材质参数与 AddTokenActionButton 对齐（THIN/蓝色赋色/光感/形变），
+          // 背景透明透出材质层；uiMaterial 符号仅在本分支求值，低 API 设备不触达。
+          Button($r('app.string.dialog_btn_confirm'))
+            .fontColor(Color.White)
+            .backgroundColor(Color.Transparent)
+            .height(48)
+            .borderRadius(24)
+            .systemMaterial(new uiMaterial.ImmersiveMaterial({
+              style: uiMaterial.ImmersiveStyle.THIN,
+              materialColor: $r('app.color.button_blue'),
+              interactive: true,
+              lightEffect: { color: Color.White }
+            }))
+            .onClick(() => this.confirm(this.selected_icon_path))
+            .layoutWeight(1)
+        } else {
+          Button($r('app.string.dialog_btn_confirm'))
+            .fontColor(Color.White)
+            .backgroundColor($r('app.color.button_blue'))
+            .height(48)
+            .borderRadius(24)
+            .onClick(() => this.confirm(this.selected_icon_path))
+            .layoutWeight(1)
+        }
       }
       .width('100%')
       .padding({ top: LengthMetrics.vp(8).value })
