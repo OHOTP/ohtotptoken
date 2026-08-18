@@ -5,7 +5,7 @@ import { util, url } from '@kit.ArkTS';
 import lazy { fileIo as fs } from '@kit.CoreFileKit';
 import { BusinessError, systemDateTime } from '@kit.BasicServicesKit';
 import { showSnackBar, SnackBarNotifyType } from 'common';
-import { AppPreference, SettingTopEffectType, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES, BUILTIN_DEFAULT_PACK_ID } from 'common';
+import { AppPreference, SettingTopEffectType, SettingBottomTabsType, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES, BUILTIN_DEFAULT_PACK_ID } from 'common';
 // [冷启动优化] privacyManager 仅在 deferredInit 的 GetPrivacyManageInfo 中使用
 import lazy { privacyManager } from '@kit.StoreKit';
 import { hilog, hiTraceMeter } from '@kit.PerformanceAnalysisKit';
@@ -109,6 +109,7 @@ struct Index {
   @Local settingEntryScroller: Scroller = new Scroller();
   @Local CurrentTokensCount: number = 0;
   @Local scrollEffectVersion: number = 0;
+  @Local bottomTabsTypeVersion: number = 0;
   @Local isAppLockOverlayVisible: boolean = false;
   pageInfos: NavPathStack = new NavPathStack();
 
@@ -122,6 +123,17 @@ struct Index {
     const _ = this.scrollEffectVersion;
     const topEffectType = AppPreference.getPreference(PREF_KEYS.APPEARANCE_TOP_EFFECT_TYPE) as SettingTopEffectType;
     return SCROLL_EFFECT_TYPE_MAP.get(topEffectType) ?? ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
+  }
+
+  /**
+   * 获取当前的底部页签类型
+   * 根据用户设置的底部页签类型（悬浮/平铺）驱动 HomeTabs 重建
+   */
+  @Computed
+  get currentBottomTabsType(): SettingBottomTabsType {
+    // 依赖bottomTabsTypeVersion以触发重新计算
+    const _ = this.bottomTabsTypeVersion;
+    return AppPreference.getPreference(PREF_KEYS.APPEARANCE_BOTTOM_TABS_TYPE) as SettingBottomTabsType;
   }
 
   private appIsInit = false;
@@ -240,6 +252,9 @@ struct Index {
         this.appCtx.eventHub.on(EVENT_NAMES.TOKEN_CHANGED, () => this.onTokenChanged());
         this.appCtx.eventHub.on(EVENT_NAMES.TOP_EFFECT_TYPE_CHANGED, () => {
           this.scrollEffectVersion++;
+        });
+        this.appCtx.eventHub.on(EVENT_NAMES.BOTTOM_TABS_TYPE_CHANGED, () => {
+          this.bottomTabsTypeVersion++;
         });
       }
       return tkStore.getTokens();
@@ -772,6 +787,7 @@ struct Index {
       tokens: this.CurrentTokens,
       window: this.window,
       scrollEffectType: this.currentScrollEffectType,
+      bottomTabsType: this.currentBottomTabsType,
       pageInfos: this.pageInfos,
       updateTokenConfig: (conf: TokenConfig, toast?: boolean) => this.updateTokenConfig(conf, toast),
       updateTokenConfigs: (tokens: Array<TokenConfig>) => this.updateTokenConfigs(tokens),

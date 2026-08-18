@@ -1118,11 +1118,11 @@
     },
     {
       "name": "setting_bottom_tabs_type",
-      "value": "底部Tabs類型"
+      "value": "底部頁籤類型"
     },
     {
       "name": "setting_bottom_tabs_type_desc",
-      "value": "控制底部標籤欄的顯示類型"
+      "value": "控制底部頁籤的顯示樣式。"
     },
     {
       "name": "setting_bottom_tabs_type_flatten",

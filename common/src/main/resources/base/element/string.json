@@ -1130,11 +1130,11 @@
     },
     {
       "name": "setting_bottom_tabs_type",
-      "value": "Bottom Tabs Type"
+      "value": "Bottom Tab Type"
     },
     {
       "name": "setting_bottom_tabs_type_desc",
-      "value": "Control the display type of bottom tab bar"
+      "value": "Controls the display style of the bottom tab bar."
     },
     {
       "name": "setting_bottom_tabs_type_flatten",

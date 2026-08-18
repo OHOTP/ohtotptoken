@@ -1118,11 +1118,11 @@
     },
     {
       "name": "setting_bottom_tabs_type",
-      "value": "底部Tabs类型"
+      "value": "底部页签类型"
     },
     {
       "name": "setting_bottom_tabs_type_desc",
-      "value": "控制底部标签栏的显示类型"
+      "value": "控制底部页签的显示样式。"
     },
     {
       "name": "setting_bottom_tabs_type_flatten",

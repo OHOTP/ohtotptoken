@@ -166,6 +166,23 @@ export struct AppearanceSheet {
 
                 SubItemDivider()
 
+                SubItemEnumSelect({
+                  icon: $r('sys.symbol.blur_bar'),
+                  title: $r('app.string.setting_bottom_tabs_type'),
+                  options: AVAILABLE_BOTTOM_TABS_TYPES,
+                  description: $r('app.string.setting_bottom_tabs_type_desc'),
+                  selected: AppPreference.getPreference(PREF_KEYS.APPEARANCE_BOTTOM_TABS_TYPE) as number ??
+                    SettingBottomTabsType.SUSPENSION,
+                  onChange: (value: number) => {
+                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_BOTTOM_TABS_TYPE, value);
+                    if (this.appCtx.eventHub != undefined) {
+                      this.appCtx.eventHub.emit(EVENT_NAMES.BOTTOM_TABS_TYPE_CHANGED);
+                    }
+                  }
+                })
+
+                SubItemDivider()
+
                 SubItemIconManager()
 
                 SubItemDivider()
