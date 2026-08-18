@@ -140,7 +140,10 @@ export struct TokenListPage {
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
         .clip(false)
-        .cachedCount(3, true)
+        // 官方建议 cachedCount=n/2（n=一屏列表项数，手机约10.5），取 5；
+        // 配合 clip(false)+show=true，令牌项滚入标题栏渐变模糊区时不提前回收。
+        // 计量单位是行：多列（lanes）设备行高不变，无需按设备调整。
+        .cachedCount(5, true)
       }
       .alignItems(HorizontalAlign.Center)
     }
