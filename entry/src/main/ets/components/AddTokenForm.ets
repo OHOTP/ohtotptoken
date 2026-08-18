@@ -8,7 +8,8 @@ export const ADD_TOKEN_PAGE_INSET: number = 16;
 export const ADD_TOKEN_SECTION_RADIUS: number = 16;
 export const ADD_TOKEN_SECTION_PADDING: number = 16;
 export const ADD_TOKEN_FIELD_GAP: number = 8;
-export const ADD_TOKEN_BOTTOM_ACTION_INSET: number = 16;
+/** 底部操作按钮距屏幕底部的留白，取官方设计指南「间隔参数」屏幕底部边距推荐值（手机/折叠屏/平板均为 28vp）。 */
+export const ADD_TOKEN_BOTTOM_ACTION_INSET: number = 28;
 
 /** 添加/编辑令牌页面的统一路由参数。 */
 export class AddTokenPageParams {
@@ -42,6 +43,7 @@ export struct AddTokenActionButton {
       interactive: this.buttonEnabled,
       lightEffect: this.buttonEnabled,
       materialColor: this.buttonEnabled ? $r('app.color.button_blue') : Color.Gray,
+      // 高度 48vp，圆角取高度一半保持胶囊形
       radius: 24,
       solidColor: Color.Transparent
     }) {
