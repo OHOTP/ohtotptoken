@@ -170,7 +170,11 @@
     },
     {
       "name": "dialog_backup_password",
-      "value": "密碼"
+      "value": "輸入備份密碼"
+    },
+    {
+      "name": "dialog_backup_password_set",
+      "value": "設定備份密碼"
     },
     {
       "name": "dialog_backup_password_placeholder",
@@ -266,23 +270,19 @@
     },
     {
       "name": "setting_backup_output",
-      "value": "匯出密碼？"
-    },
-    {
-      "name": "setting_backup_output_des",
-      "value": "如果您選擇普通匯出方式，密碼將以純文字形式顯示給有權存取該檔案的任何人。是否確實要匯出密碼？"
+      "value": "匯出備份？"
     },
     {
       "name": "setting_backup_output_msg",
-      "value": "請選擇匯出方式"
+      "value": "明文備份未經加密，獲得該檔案的任何人都能讀取其中的權杖密鑰。"
     },
     {
       "name": "setting_backup_type_default",
-      "value": "明文"
+      "value": "明文匯出"
     },
     {
       "name": "setting_backup_type_enc",
-      "value": "加密"
+      "value": "加密匯出"
     },
     {
       "name": "setting_backup_cancel",

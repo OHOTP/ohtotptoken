@@ -41,8 +41,7 @@ export struct BackupAndMigrationSheet {
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   private sheetScroller: Scroller = new Scroller();
 
-  //备份时是否为导出模式
-  private backup_is_input: boolean = true;
+  // 导入时选择的备份文件路径
   private backup_select_uri: string = '';
   private appCtx = AppStorage.get<common.UIAbilityContext>('appContext') as common.UIAbilityContext;
   // URI 导入对话框控制器（组件内持有，避免非组件上下文问题）
@@ -60,33 +59,29 @@ export struct BackupAndMigrationSheet {
   }
 
   //region 加密导入导出
-  private password_input_dialog: CustomDialogController | null = new CustomDialogController({
+  // 加密导出：设置备份密码
+  private password_export_dialog: CustomDialogController | null = new CustomDialogController({
     systemMaterial: dialogSystemMaterial(),
     builder: EncryptionPassWordDialog({
+      title: $r('app.string.dialog_backup_password_set'),
       cancel: () => {},
       confirm: (password: string) => {
-        if (this.backup_is_input) { // 如果是导出 就要调用导出加密函数
-          // NFC 外部令牌仅会话存在、不持久化，导出前统一过滤（不含空 secret 伪 TOTP）
-          const exportable = this.Tokens.filter(t => t.TokenType !== otpType.NFC_external);
-          if (exportable.length === 0) {
-            showSnackBar($r('app.string.toast_no_exportable_tokens'), SnackBarNotifyType.WARNING);
-            return;
-          }
-          showSaveFilePicker([`totp_backup_${generateFileNameWithDate()}.bak`], ['BAK|.bak']).then((uris) => {
-            const backup: TokenBackup = new TokenBackup(this.versionCode ?? 0, exportable);
-            if (uris[0] !== undefined && uris[0] !== '') {
-                  saveBackupToFile(uris[0], backup, true, password).then(() => {
-                    showSnackBar($r('app.string.toast_backup_success'), SnackBarNotifyType.SUCCESS);
-                  }).catch((reason: BusinessError) => {
-                    showSnackBar(reason.message, SnackBarNotifyType.ERROR);
-                  });
-            }
-          });
-        } else { // 加密导入
-          restoreFromBackup(this.backup_select_uri, true, password).then((backup) => {
-            this.backupReload(backup.configs);
-          });
+        // NFC 外部令牌仅会话存在、不持久化，导出前统一过滤（不含空 secret 伪 TOTP）
+        const exportable = this.Tokens.filter(t => t.TokenType !== otpType.NFC_external);
+        if (exportable.length === 0) {
+          showSnackBar($r('app.string.toast_no_exportable_tokens'), SnackBarNotifyType.WARNING);
+          return;
         }
+        showSaveFilePicker([`totp_backup_${generateFileNameWithDate()}.bak`], ['BAK|.bak']).then((uris) => {
+          const backup: TokenBackup = new TokenBackup(this.versionCode ?? 0, exportable);
+          if (uris[0] !== undefined && uris[0] !== '') {
+            saveBackupToFile(uris[0], backup, true, password).then(() => {
+              showSnackBar($r('app.string.toast_backup_success'), SnackBarNotifyType.SUCCESS);
+            }).catch((reason: BusinessError) => {
+              showSnackBar(reason.message, SnackBarNotifyType.ERROR);
+            });
+          }
+        });
       },
     }),
     cancel: () => {},
@@ -101,11 +96,40 @@ export struct BackupAndMigrationSheet {
         dismissDialogAction.dismiss()
       }
     },
-    alignment: DialogAlignment.Bottom,
-    offset: { dx: 0, dy: -20 },
+    alignment: DialogAlignment.Center,
     gridCount: 4,
     customStyle: false,
-    cornerRadius: 10,
+    cornerRadius: $r('sys.float.ohos_id_corner_radius_panel'),
+  })
+
+  // 加密导入：输入备份密码
+  private password_import_dialog: CustomDialogController | null = new CustomDialogController({
+    systemMaterial: dialogSystemMaterial(),
+    builder: EncryptionPassWordDialog({
+      title: $r('app.string.dialog_backup_password'),
+      cancel: () => {},
+      confirm: (password: string) => {
+        restoreFromBackup(this.backup_select_uri, true, password).then((backup) => {
+          this.backupReload(backup.configs);
+        });
+      },
+    }),
+    cancel: () => {},
+    autoCancel: true,
+    onWillDismiss: (dismissDialogAction: DismissDialogAction) => {
+      hilog.info(0, 'BackupAndMigrationSheet', "reason=" + JSON.stringify(dismissDialogAction.reason))
+      hilog.info(0, 'BackupAndMigrationSheet', "dialog onWillDismiss")
+      if (dismissDialogAction.reason == DismissReason.PRESS_BACK) {
+        dismissDialogAction.dismiss()
+      }
+      if (dismissDialogAction.reason == DismissReason.TOUCH_OUTSIDE) {
+        dismissDialogAction.dismiss()
+      }
+    },
+    alignment: DialogAlignment.Center,
+    gridCount: 4,
+    customStyle: false,
+    cornerRadius: $r('sys.float.ohos_id_corner_radius_panel'),
   })
 
   async callFilePickerSaveMigrationFile(): Promise<void> {
@@ -115,9 +139,8 @@ export struct BackupAndMigrationSheet {
         subtitle: $r('app.string.setting_migration_output_des'),
         message: $r('app.string.setting_migration_output_msg'),
         autoCancel: true,
-        alignment: DialogAlignment.Bottom,
+        alignment: DialogAlignment.Center,
         gridCount: 4,
-        offset: { dx: 0, dy: -20 },
         buttonDirection: DialogButtonDirection.HORIZONTAL,
         buttons: [
           {
@@ -169,14 +192,18 @@ export struct BackupAndMigrationSheet {
     this.getUIContext().showAlertDialog(
       {
         title: $r('app.string.setting_backup_output'),
-        subtitle: $r('app.string.setting_backup_output_des'),
         message: $r('app.string.setting_backup_output_msg'),
         autoCancel: true,
-        alignment: DialogAlignment.Bottom,
+        alignment: DialogAlignment.Center,
         gridCount: 4,
-        offset: { dx: 0, dy: -20 },
         buttonDirection: DialogButtonDirection.HORIZONTAL,
         buttons: [
+          {
+            value: $r('app.string.setting_backup_type_enc'),
+            action: () => {
+              this.password_export_dialog?.open();
+            }
+          },
           {
             value: $r('app.string.setting_backup_type_default'),
             action: () => {
@@ -196,12 +223,6 @@ export struct BackupAndMigrationSheet {
                   });
                 }
               });
-            }
-          },
-          {
-            value: $r('app.string.setting_backup_type_enc'),
-            action: () => {
-              this.password_input_dialog?.open();
             }
           },
           {
@@ -234,7 +255,7 @@ export struct BackupAndMigrationSheet {
       this.backup_select_uri = uris[0];
       if (this.backup_select_uri.endsWith('.bak')) {
         //后缀bak为加密包 唤醒加密导入弹窗
-        this.password_input_dialog?.open();
+        this.password_import_dialog?.open();
       } else {
         restoreFromBackup(uris[0]).then((backup) => {
           this.backupReload(backup.configs);
@@ -255,7 +276,8 @@ export struct BackupAndMigrationSheet {
   //endregion
   // 在自定义组件即将析构销毁时将dialogController置空
   aboutToDisappear() {
-    this.password_input_dialog = null // 将dialogController置空
+    this.password_export_dialog = null // 将dialogController置空
+    this.password_import_dialog = null
     this.uriDialogController = null
   }
 
@@ -271,7 +293,6 @@ export struct BackupAndMigrationSheet {
                   text: $r('app.string.setting_backup_export')
                 })
                   .onClick(() => {
-                    this.backup_is_input = true;
                     this.callFilePickerSaveFile()
                   })
 
@@ -282,7 +303,6 @@ export struct BackupAndMigrationSheet {
                   text: $r('app.string.setting_backup_import')
                 })
                   .onClick(() => {
-                    this.backup_is_input = false;
                     this.callFilePickerSelectFile()
                   })
 

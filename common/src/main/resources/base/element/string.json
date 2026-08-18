@@ -170,7 +170,11 @@
     },
     {
       "name": "dialog_backup_password",
-      "value": "Password"
+      "value": "Enter backup password"
+    },
+    {
+      "name": "dialog_backup_password_set",
+      "value": "Set backup password"
     },
     {
       "name": "dialog_backup_password_placeholder",
@@ -266,23 +270,19 @@
     },
     {
       "name": "setting_backup_output",
-      "value": "Export password？"
-    },
-    {
-      "name": "setting_backup_output_des",
-      "value": "If you choose the normal export method, the password will be displayed in plain text to anyone who has access to the file. Do you really want to export the password？"
+      "value": "Export backup?"
     },
     {
       "name": "setting_backup_output_msg",
-      "value": "Please choose the export method"
+      "value": "Unencrypted backups can be read by anyone who gains access to the file."
     },
     {
       "name": "setting_backup_type_default",
-      "value": "default"
+      "value": "Unencrypted"
     },
     {
       "name": "setting_backup_type_enc",
-      "value": "Encryption"
+      "value": "Encrypted"
     },
     {
       "name": "setting_backup_cancel",

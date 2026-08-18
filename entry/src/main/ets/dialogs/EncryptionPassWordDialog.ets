@@ -1,8 +1,8 @@
-
 @Preview
 @CustomDialog
 @Component
 export struct EncryptionPassWordDialog {
+  title: Resource = $r('app.string.dialog_backup_password');
   private textValue: string = '';
   private inputValue: string = '';
   controller?: CustomDialogController;
@@ -12,30 +12,59 @@ export struct EncryptionPassWordDialog {
   };
 
   build() {
-    Column({ space: 10 }) {
-      Text($r('app.string.dialog_backup_password')).fontSize(20).margin({ top: 10, bottom: 10 })
+    Column() {
+      // 标题：对齐系统 AlertDialog 标题（ohos_id_text_size_dialog_tittle / Bold / 主文本色 / 居中）
+      Text(this.title)
+        .fontSize($r('sys.float.ohos_id_text_size_dialog_tittle'))
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .textAlign(TextAlign.Center)
+        .maxLines(2)
+        .width('100%')
+        .padding({ left: 24, right: 24, top: 24 })
+
       TextInput({ placeholder: $r('app.string.dialog_backup_password_placeholder'), text: this.textValue })
-        .height(60)
-        .width('90%')
-        .maxLength(16)
-        .type(InputType.Password)
+        .height(40)
+        .margin({ left: 24, right: 24, top: 16 })
         .maxLength(32)
+        .type(InputType.Password)
         .showPasswordIcon(true)
         .onChange((value: string) => {
           this.textValue = value
         })
-      Flex({ justifyContent: FlexAlign.SpaceAround }) {
+
+      // 按钮区：对齐系统 AlertDialog（40vp 胶囊文本按钮 + 竖分隔线，行内边距 16/8/16）
+      Row() {
         Button($r('app.string.setting_backup_cancel'))
+          .type(ButtonType.ROUNDED_RECTANGLE)
+          .borderRadius($r('sys.float.ohos_id_corner_radius_button'))
+          .height($r('sys.float.ohos_id_button_height'))
+          .layoutWeight(1)
+          .backgroundColor(Color.Transparent)
+          .fontColor($r('sys.color.font_emphasize'))
+          .fontSize($r('sys.float.ohos_id_text_size_body1'))
+          .fontWeight(FontWeight.Medium)
           .onClick(() => {
             if (this.controller != undefined) {
               this.cancel()
               this.controller.close()
             }
           })
-          .fontColor($r('app.color.item_fg'))
-          .backgroundColor(Color.Transparent)
-          .width('100%')
+        Divider()
+          .vertical(true)
+          .height(24)
+          .strokeWidth(2)
+          .color($r('sys.color.ohos_id_color_list_separator'))
+          .margin({ left: 3, right: 3 })
         Button($r('app.string.setting_backup_confirm'))
+          .type(ButtonType.ROUNDED_RECTANGLE)
+          .borderRadius($r('sys.float.ohos_id_corner_radius_button'))
+          .height($r('sys.float.ohos_id_button_height'))
+          .layoutWeight(1)
+          .backgroundColor(Color.Transparent)
+          .fontColor($r('sys.color.font_emphasize'))
+          .fontSize($r('sys.float.ohos_id_text_size_body1'))
+          .fontWeight(FontWeight.Medium)
           .onClick(() => {
             if (this.controller != undefined) {
               this.inputValue = this.textValue
@@ -43,11 +72,9 @@ export struct EncryptionPassWordDialog {
               this.controller.close()
             }
           })
-          .fontColor($r('app.color.item_fg'))
-          .backgroundColor(Color.Transparent)
-          .width('100%')
-      }.margin({ bottom: 10 })
+      }
+      .width('100%')
+      .padding({ left: 16, right: 16, top: 8, bottom: 16 })
     }
-    .borderRadius(10)
   }
 }

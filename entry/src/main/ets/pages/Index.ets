@@ -383,11 +383,10 @@ struct Index {
         dismissDialogAction.dismiss()
       }
     },
-    alignment: DialogAlignment.Bottom,
-    offset: { dx: 0, dy: -20 },
+    alignment: DialogAlignment.Center,
     gridCount: 4,
     customStyle: false,
-    cornerRadius: 10,
+    cornerRadius: $r('sys.float.ohos_id_corner_radius_panel'),
   })
 
   async refreshIconPack(): Promise<void> {

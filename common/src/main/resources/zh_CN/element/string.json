@@ -170,7 +170,11 @@
     },
     {
       "name": "dialog_backup_password",
-      "value": "密码"
+      "value": "输入备份密码"
+    },
+    {
+      "name": "dialog_backup_password_set",
+      "value": "设置备份密码"
     },
     {
       "name": "dialog_backup_password_placeholder",
@@ -266,23 +270,19 @@
     },
     {
       "name": "setting_backup_output",
-      "value": "导出密码？"
-    },
-    {
-      "name": "setting_backup_output_des",
-      "value": "如果您选择普通导出方式，密码将以纯文本形式显示给有权访问该文件的任何人。是否确实要导出密码？"
+      "value": "导出备份？"
     },
     {
       "name": "setting_backup_output_msg",
-      "value": "请选择导出方式"
+      "value": "明文备份未经加密，获得该文件的任何人都能读取其中的令牌密钥。"
     },
     {
       "name": "setting_backup_type_default",
-      "value": "明文"
+      "value": "明文导出"
     },
     {
       "name": "setting_backup_type_enc",
-      "value": "加密"
+      "value": "加密导出"
     },
     {
       "name": "setting_backup_cancel",
