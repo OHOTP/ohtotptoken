@@ -203,15 +203,15 @@ export struct SubItemIconManager {
             .translate(this.collapsed ? {} : { x: -3 })
         }
         .layoutWeight(1)
-        .onClick(() => {
-          this.window.uiContext?.animateTo({ duration: 200, curve: Curve.Sharp }, () => {
-            this.collapsed = !this.collapsed;
-          })
-        })
 
       }
       .justifyContent(FlexAlign.SpaceBetween)
       .width('100%')
+      .onClick(() => {
+        this.window.uiContext?.animateTo({ duration: 200, curve: Curve.Sharp }, () => {
+          this.collapsed = !this.collapsed;
+        })
+      })
 
       if (!this.collapsed) {
         Column() {
