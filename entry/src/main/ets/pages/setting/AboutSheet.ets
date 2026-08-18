@@ -157,23 +157,25 @@ export struct AboutSheet {
               SubItemDivider()
 
               SubItemButton({
-                symbol: $r('sys.symbol.person_crop_circle_fill_1'),
-                text: $r('app.string.about_contributors'),
-                description: this.contributors
-              })
-                .onClick(throttle((event) => {
-                  startBrowsableAbility(this.appCtx, EXTERNAL_URLS.REPO_CONTRIBUTORS);
-                }, 1000))
-
-              SubItemDivider()
-
-              SubItemButton({
                 symbol: $r('sys.symbol.doc_plaintext'),
                 text: $r('app.string.about_license'),
                 description: $r('app.string.about_license_desc')
               })
                 .onClick(throttle((event) => {
                   startBrowsableAbility(this.appCtx, EXTERNAL_URLS.REPO_LICENSE);
+                }, 1000))
+
+              SubItemDivider()
+
+              // 贡献者名单完整展示，不设行数上限
+              SubItemButton({
+                symbol: $r('sys.symbol.person_crop_circle_fill_1'),
+                text: $r('app.string.about_contributors'),
+                description: this.contributors,
+                descriptionMaxLines: 0
+              })
+                .onClick(throttle((event) => {
+                  startBrowsableAbility(this.appCtx, EXTERNAL_URLS.REPO_CONTRIBUTORS);
                 }, 1000))
             }
           }

@@ -9,6 +9,8 @@ export struct SubItemButton {
   @Require @Param text: ResourceStr | string = 'TEST';
   @Param description: string  | Resource = '';
   @Param descriptionColor: ResourceColor = $r('sys.color.ohos_id_color_text_secondary');
+  /** 副标题最大行数，默认 2 行超出省略；传 0 表示不限制行数、完整展示全部文字 */
+  @Param descriptionMaxLines: number = 2;
 
   build() {
     Column() {
@@ -40,15 +42,26 @@ export struct SubItemButton {
           .alignItems(VerticalAlign.Top)
           
           if (this.description != '') {
-            Text(this.description)
-              .fontSize($r('sys.float.ohos_id_text_size_body2'))
-              .fontColor(this.descriptionColor)
-              .fontWeight(FontWeight.Regular)
-              .fontFamily('HarmonyHeiTi')
-              .lineHeight(19)
-              .textAlign(TextAlign.Start)
-              .maxLines(2)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
+            if (this.descriptionMaxLines > 0) {
+              Text(this.description)
+                .fontSize($r('sys.float.ohos_id_text_size_body2'))
+                .fontColor(this.descriptionColor)
+                .fontWeight(FontWeight.Regular)
+                .fontFamily('HarmonyHeiTi')
+                .lineHeight(19)
+                .textAlign(TextAlign.Start)
+                .maxLines(this.descriptionMaxLines)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+            } else {
+              // 不设 maxLines：超长自动换行完整显示（官方 arkts-text-faq 推荐做法）
+              Text(this.description)
+                .fontSize($r('sys.float.ohos_id_text_size_body2'))
+                .fontColor(this.descriptionColor)
+                .fontWeight(FontWeight.Regular)
+                .fontFamily('HarmonyHeiTi')
+                .lineHeight(19)
+                .textAlign(TextAlign.Start)
+            }
           }
         }
         .layoutWeight(1)
