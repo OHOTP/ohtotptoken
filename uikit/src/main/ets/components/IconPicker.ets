@@ -332,8 +332,11 @@ export struct IconPicker {
         top: LengthMetrics.vp(8).value, bottom: LengthMetrics.vp(8).value })
       .scrollBar(BarState.Auto)
       .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-      // 显示顶部两行预加载节点；配合 clip(false)，图标越过屏幕顶部后才离开显示区。
-      .cachedCount(2, true)
+      // HdsNavDestination 内容区从标题栏下方开始布局，Grid 显示区域上边缘距屏幕顶部
+      // 最远约 状态栏(~40vp) + MINI标题(56vp) + bottomBuilder(112vp) + 页面padding(10vp) ≈ 218vp。
+      // 行高 56+8=64vp，顶部缓存 4 行(256vp) 可覆盖整个标题栏区域；配合 clip(false)，
+      // 图标滚过屏幕顶部后才离开显示+缓存范围被销毁，不会在状态栏附近提前消失。
+      .cachedCount(4, true)
       .clip(false)
     }
   }
