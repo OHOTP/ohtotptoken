@@ -189,6 +189,50 @@
       "value": "About"
     },
     {
+      "name": "about_app_version",
+      "value": "Version %s"
+    },
+    {
+      "name": "about_software_info",
+      "value": "Software Information"
+    },
+    {
+      "name": "about_opensource_project",
+      "value": "Open Source Info"
+    },
+    {
+      "name": "about_bundle_name",
+      "value": "Bundle Name"
+    },
+    {
+      "name": "about_version_code",
+      "value": "Version Code"
+    },
+    {
+      "name": "about_contact_email",
+      "value": "Contact E-mail"
+    },
+    {
+      "name": "about_repo",
+      "value": "Repository"
+    },
+    {
+      "name": "about_repo_desc",
+      "value": "View the source code on GitHub."
+    },
+    {
+      "name": "about_contributors",
+      "value": "Contributors"
+    },
+    {
+      "name": "about_license",
+      "value": "License"
+    },
+    {
+      "name": "about_license_desc",
+      "value": "Read the full MIT License text."
+    },
+    {
       "name": "setting_backup",
       "value": "Backup & Migration"
     },

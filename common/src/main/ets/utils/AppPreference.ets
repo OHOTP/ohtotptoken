@@ -466,6 +466,22 @@ export enum EXTERNAL_URLS {
   FEEDBACK_SURVEY = 'https://wj.qq.com/s2/24518107/2b26/',
   /** GitHub反馈 */
   FEEDBACK_GITHUB = 'https://github.com/OHOTP/ohtotptoken/issues',
+  /** 代码仓主页 */
+  REPO_HOME = 'https://github.com/OHOTP/ohtotptoken',
+  /** 贡献者列表 */
+  REPO_CONTRIBUTORS = 'https://github.com/OHOTP/ohtotptoken/graphs/contributors',
+  /** MIT 许可证全文 */
+  REPO_LICENSE = 'https://github.com/OHOTP/ohtotptoken/blob/main/LICENSE',
+  /** 开源软件: libcotp */
+  OSS_LIBCOTP = 'https://github.com/paolostivanin/libcotp',
+  /** 开源软件: TOTP-MCU */
+  OSS_TOTP_MCU = 'https://github.com/Netthaw/TOTP-MCU',
+  /** 开源软件: fortitoken-mobile-registration */
+  OSS_FORTI_REGISTRATION = 'https://github.com/ss23/fortitoken-mobile-registration',
+  /** 开源软件: Aigis */
+  OSS_AIGIS = 'https://github.com/iamhyc/Aigis',
+  /** 开源软件: andOTP 图标 */
+  OSS_ANDOTP_ICONS = 'https://github.com/andOTP/andOTP',
 }
 
 /**

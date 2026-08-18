@@ -189,6 +189,50 @@
       "value": "关于"
     },
     {
+      "name": "about_app_version",
+      "value": "版本 %s"
+    },
+    {
+      "name": "about_software_info",
+      "value": "软件信息"
+    },
+    {
+      "name": "about_opensource_project",
+      "value": "开源信息"
+    },
+    {
+      "name": "about_bundle_name",
+      "value": "包名"
+    },
+    {
+      "name": "about_version_code",
+      "value": "版本号"
+    },
+    {
+      "name": "about_contact_email",
+      "value": "联系邮箱"
+    },
+    {
+      "name": "about_repo",
+      "value": "代码仓"
+    },
+    {
+      "name": "about_repo_desc",
+      "value": "前往 GitHub 查看源代码。"
+    },
+    {
+      "name": "about_contributors",
+      "value": "贡献者"
+    },
+    {
+      "name": "about_license",
+      "value": "许可证"
+    },
+    {
+      "name": "about_license_desc",
+      "value": "查看 MIT 许可证全文。"
+    },
+    {
       "name": "setting_backup",
       "value": "备份与迁移"
     },
