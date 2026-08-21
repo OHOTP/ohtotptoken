@@ -181,6 +181,14 @@
       "value": "輸入備份檔案的密碼..."
     },
     {
+      "name": "dialog_backup_password_confirm_placeholder",
+      "value": "再次輸入備份密碼..."
+    },
+    {
+      "name": "dialog_backup_password_mismatch",
+      "value": "兩次輸入的密碼不一致"
+    },
+    {
       "name": "warn_forti_dev_id_popup",
       "value": "Forti只允許你啟用一次並綁定此裝置ID"
     },

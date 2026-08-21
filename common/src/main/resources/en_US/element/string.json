@@ -181,6 +181,14 @@
       "value": "Enter backup file password..."
     },
     {
+      "name": "dialog_backup_password_confirm_placeholder",
+      "value": "Confirm backup password..."
+    },
+    {
+      "name": "dialog_backup_password_mismatch",
+      "value": "Passwords do not match"
+    },
+    {
       "name": "warn_forti_dev_id_popup",
       "value": "Forti only allows you to activate once and bind to this Device ID"
     },

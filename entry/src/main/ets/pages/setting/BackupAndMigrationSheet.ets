@@ -64,6 +64,7 @@ export struct BackupAndMigrationSheet {
     systemMaterial: dialogSystemMaterial(),
     builder: EncryptionPassWordDialog({
       title: $r('app.string.dialog_backup_password_set'),
+      showConfirmPassword: true,
       cancel: () => {},
       confirm: (password: string) => {
         // NFC 外部令牌仅会话存在、不持久化，导出前统一过滤（不含空 secret 伪 TOTP）

@@ -181,6 +181,14 @@
       "value": "input your password..."
     },
     {
+      "name": "dialog_backup_password_confirm_placeholder",
+      "value": "Confirm backup password..."
+    },
+    {
+      "name": "dialog_backup_password_mismatch",
+      "value": "Passwords do not match"
+    },
+    {
       "name": "warn_forti_dev_id_popup",
       "value": "FortiToken allows you to register a token only once with this device id"
     },
