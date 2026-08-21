@@ -188,10 +188,10 @@ export struct TokenSearchPage {
           }, (vm: TokenConfigVM) => vm.objid)
         }
         .clip(false)
-        // 官方建议 cachedCount=n/2（n=一屏列表项数，手机约10.5），取 5；
-        // 配合 clip(false)+show=true，令牌项滚入标题栏渐变模糊区时不提前回收。
-        // 计量单位是行：多列（lanes）设备行高不变，无需按设备调整。
-        .cachedCount(5, true)
+        // 至少缓存 5 行，UI 空闲时扩展到 10 行；配合 clip(false)+show=true，
+        // 避免令牌项滚入标题栏渐变模糊区时尚未创建或未参与绘制。
+        // 计量单位是行：多列（lanes）设备行高不变。
+        .cachedCount({ minCount: 5, maxCount: 10 }, true)
         .alignListItem(ListItemAlign.Center)
         .lanes({ minLength: 400, maxLength: this.token_preference.app_appearance_item_max_width })
         .layoutWeight(1)
