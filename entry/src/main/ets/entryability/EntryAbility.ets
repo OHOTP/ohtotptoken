@@ -33,6 +33,29 @@ export default class EntryAbility extends UIAbility {
 
   private selectPage: string = '';
 
+  /**
+   * 统一所有设备的窗口与 ArkUI 页面背景色；PC/2in1/Tablet 额外统一系统标题栏容器。
+   * 不支持窗口容器配色能力的设备会返回 801，不影响已设置的窗口背景色。
+   */
+  private applyWindowColors(windowClass?: window.Window): void {
+    if (!windowClass) {
+      return;
+    }
+
+    try {
+      const colorValue = this.context.resourceManager.getColorByNameSync('window_background');
+      const color = `#${colorValue.toString(16).padStart(8, '0').toUpperCase()}`;
+      windowClass.setWindowBackgroundColor(color);
+      windowClass.setWindowContainerColor(color, color);
+    } catch (exception) {
+      const error = exception as BusinessError;
+      if (error.code !== 801) {
+        hilog.error(error.code, 'EntryAbility',
+          `Failed to set window colors. Cause code: ${error.code}, message: ${error.message}`);
+      }
+    }
+  }
+
   private handleCardAction(want: Want): void {
     hilog.info(0x0000, 'EntryAbility', `handleCardAction parameters: ${JSON.stringify(want?.parameters)}`);
 
@@ -158,6 +181,7 @@ export default class EntryAbility extends UIAbility {
 
         win.uiContext = this.uiContext;
         win.WindowClass = windowClass;
+        this.applyWindowColors(windowClass);
 
         windowClass.setWindowLayoutFullScreen(true)
 
@@ -211,6 +235,7 @@ export default class EntryAbility extends UIAbility {
   onConfigurationUpdate(newConfig: Configuration): void {
     let window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
     window.ColorMode = newConfig.colorMode ?? -1;
+    this.applyWindowColors(window.WindowClass);
   }
   onWindowStageDestroy(): void {
     // Main window is destroyed, release UI related resources
