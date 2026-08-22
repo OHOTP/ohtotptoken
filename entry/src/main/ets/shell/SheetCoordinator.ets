@@ -11,12 +11,13 @@ import lazy { FeedbackSheet } from '../pages/setting/FeedbackSheet'
 import { showSnackBar, SnackBarNotifyType } from 'common';
 import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
 import { AppStorageV2 } from '@kit.ArkUI';
-import { HdsListItemCard, PrefixIcon, IconSize, SuffixArrow, ScrollEffectType } from '@kit.UIDesignKit';
-import { CommonConstants } from 'common';
+import { ScrollEffectType } from '@kit.UIDesignKit';
 import lazy { HuaweiAccountManager, HuaweiUserInfo, HuaweiAccountLoginError } from 'common';
 import { MaterialSheetStyle } from '../components/MaterialSheetStyle';
-import { MaterialSurface } from '../components/MaterialSurface';
-import { MaterialTheme } from '../components/MaterialTheme';
+import { SettingItem } from '../components/SettingItem';
+import { SubItemButton } from '../components/SubItemButton';
+import { SubItemDivider } from '../components/SubItemDivider';
+import { SETTING_PAGE_INSET, SETTING_ROW_PADDING } from '../components/SettingStyle';
 
 /**
  * Sheet 协调器(Task 3.1)
@@ -265,61 +266,64 @@ export struct SheetCoordinator {
 
   build() {
     List({ space: 10, scroller: this.scroller }) {
-      // 华为账号登录卡片
+      // 华为账号登录卡片：与设置子项共用 SettingItem 分组卡片表面
       ListItem() {
-        MaterialSurface({ radius: $r('sys.float.ohos_id_menu_outer_border_radius') }) {
+        SettingItem({ title: '' }) {
           Row({ space: 16 }) {
-          if (this.isHuaweiLoggedIn && this.huaweiUser && this.huaweiUser.avatarUri !== '') {
-            Image(this.huaweiUser.avatarUri)
-              .draggable(false)
-              .width(48)
-              .height(48)
-              .borderRadius(24)
-          } else if (this.isHuaweiLoggedIn && this.huaweiUser && this.huaweiUser.nickname !== '') {
-            Text(this.huaweiUser.nickname.length > 0 ?
-              this.huaweiUser.nickname.substring(this.huaweiUser.nickname.length - 1) : '')
-              .width(48)
-              .height(48)
-              .borderRadius(24)
-              .backgroundColor($r('sys.color.ohos_id_color_tertiary'))
-              .linearGradient({
-                colors: [
-                  [$r('sys.color.ohos_id_color_tertiary'), 0.0],
-                  [$r('sys.color.ohos_id_color_foreground_contrary'), 1.0]
-                ]
-              })
-              .fontColor($r('sys.color.font_on_primary'))
-              .fontSize(20)
-              .fontWeight(FontWeight.Bold)
-              .textAlign(TextAlign.Center)
-          } else {
-            SymbolGlyph($r('sys.symbol.person_crop_circle_fill_1'))
-              .fontSize(48)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
-          }
+            if (this.isHuaweiLoggedIn && this.huaweiUser && this.huaweiUser.avatarUri !== '') {
+              Image(this.huaweiUser.avatarUri)
+                .draggable(false)
+                .width(48)
+                .height(48)
+                .borderRadius(24)
+            } else if (this.isHuaweiLoggedIn && this.huaweiUser && this.huaweiUser.nickname !== '') {
+              Text(this.huaweiUser.nickname.length > 0 ?
+                this.huaweiUser.nickname.substring(this.huaweiUser.nickname.length - 1) : '')
+                .width(48)
+                .height(48)
+                .borderRadius(24)
+                .backgroundColor($r('sys.color.ohos_id_color_tertiary'))
+                .linearGradient({
+                  colors: [
+                    [$r('sys.color.ohos_id_color_tertiary'), 0.0],
+                    [$r('sys.color.ohos_id_color_foreground_contrary'), 1.0]
+                  ]
+                })
+                .fontColor($r('sys.color.font_on_primary'))
+                .fontSize(20)
+                .fontWeight(FontWeight.Bold)
+                .textAlign(TextAlign.Center)
+            } else {
+              SymbolGlyph($r('sys.symbol.person_crop_circle_fill_1'))
+                .fontSize(48)
+                .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+            }
 
-          Column({ space: 4 }) {
-            Text(this.isHuaweiLoggedIn && this.huaweiUser ?
-              this.huaweiUser.nickname : $r('app.string.huawei_account_login'))
-              .fontSize(18)
-              .fontWeight(FontWeight.Medium)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
+            Column({ space: 4 }) {
+              Text(this.isHuaweiLoggedIn && this.huaweiUser ?
+                this.huaweiUser.nickname : $r('app.string.huawei_account_login'))
+                .fontSize(18)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-            Text(this.isHuaweiLoggedIn ?
-              $r('app.string.huawei_account_current') :
-              $r('app.string.huawei_account_login_desc'))
-              .fontSize(14)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-              .maxLines(1)
+              Text(this.isHuaweiLoggedIn ?
+                $r('app.string.huawei_account_current') :
+                $r('app.string.huawei_account_login_desc'))
+                .fontSize(14)
+                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .maxLines(1)
+            }
+            .alignItems(HorizontalAlign.Start)
+            .layoutWeight(1)
           }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-        }
           .width('100%')
-          .padding({ left: 20, right: 20, top: 16, bottom: 16 })
+          .padding(SETTING_ROW_PADDING)
           .alignItems(VerticalAlign.Center)
+          // PC/2in1 光标悬浮时提供系统高亮反馈
+          .hoverEffect(HoverEffect.Highlight)
+          .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.95 })
           .onClick(() => {
             if (!this.isHuaweiLoggedIn) {
               this.triggerHuaweiLogin();
@@ -331,290 +335,103 @@ export struct SheetCoordinator {
             MaterialSheetStyle.options(SheetSize.MEDIUM))
         }
       }
-      .padding({
-        left: $r('sys.float.padding_level8'),
-        right: $r('sys.float.padding_level8'),
-      })
+      .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
 
-      // 备份与迁移入口
+      // 数据管理：备份与迁移、数据同步属于同一数据生命周期分类
       ListItem() {
-        MaterialSurface({ radius: $r('sys.float.ohos_id_menu_outer_border_radius') }) {
-          Column() {
-          HdsListItemCard({
-            cardPrefixMargin: $r('sys.float.padding_level2'),
-            cardSuffixMargin: $r('sys.float.padding_level2'),
-            // 沉浸档透明透出 MaterialSurface 材质层，其余档位保持 item_bg
-            cardBackgroundColor: MaterialTheme.surfaceBackground($r('app.color.item_bg')),
-            cardHeight: CommonConstants.SETTING_OPTION_CARD_HEIGHT,
-            prefixItem: new PrefixIcon({
-              iconSize: IconSize.SYSTEM_ICON,
-              iconValue: {
-                symbol: $r('sys.symbol.save')
-              }
-            }),
-            textItem: {
-              primaryText: {
-                text: $r('app.string.setting_backup')
-              }
-            },
-            suffixItem: new SuffixArrow({}),
-            onClick: () => {
-              this.isBackupSheetVisible = true;
-            }
+        SettingItem({ title: $r('app.string.setting_group_data_management') }) {
+          SubItemButton({
+            symbol: $r('sys.symbol.save'),
+            text: $r('app.string.setting_backup')
           })
+            .onClick(() => {
+              this.isBackupSheetVisible = true;
+            })
             .bindSheet($$this.isBackupSheetVisible, this.BackupAndMigrationSheetBuilder(),
               MaterialSheetStyle.options())
-          }
-          .padding({
-            top: $r('sys.float.padding_level2'),
-            bottom: $r('sys.float.padding_level2'),
-          })
-        }
-      }
-      .padding({
-        left: $r('sys.float.padding_level8'),
-        right: $r('sys.float.padding_level8'),
-      })
 
-      // 安全性入口
-      ListItem() {
-        MaterialSurface({ radius: $r('sys.float.ohos_id_menu_outer_border_radius') }) {
-          Column() {
-          HdsListItemCard({
-            cardPrefixMargin: $r('sys.float.padding_level2'),
-            cardSuffixMargin: $r('sys.float.padding_level2'),
-            // 沉浸档透明透出 MaterialSurface 材质层，其余档位保持 item_bg
-            cardBackgroundColor: MaterialTheme.surfaceBackground($r('app.color.item_bg')),
-            cardHeight: CommonConstants.SETTING_OPTION_CARD_HEIGHT,
-            prefixItem: new PrefixIcon({
-              iconSize: IconSize.SYSTEM_ICON,
-              iconValue: {
-                symbol: $r('sys.symbol.staroflife_rectangle')
-              }
-            }),
-            textItem: {
-              primaryText: {
-                text: $r('app.string.setting_safety')
-              }
-            },
-            suffixItem: new SuffixArrow({}),
-            onClick: () => {
-              this.isSafetySheetVisible = true;
-            }
-          })
-            .bindSheet($$this.isSafetySheetVisible, this.SecuritySheetBuilder(),
-              MaterialSheetStyle.options())
-          }
-          .padding({
-            top: $r('sys.float.padding_level2'),
-            bottom: $r('sys.float.padding_level2'),
-          })
-        }
-      }
-      .padding({
-        left: $r('sys.float.padding_level8'),
-        right: $r('sys.float.padding_level8'),
-      })
+          SubItemDivider()
 
-      // 外观与功能入口
-      ListItem() {
-        MaterialSurface({ radius: $r('sys.float.ohos_id_menu_outer_border_radius') }) {
-          Column() {
-          HdsListItemCard({
-            cardPrefixMargin: $r('sys.float.padding_level2'),
-            cardSuffixMargin: $r('sys.float.padding_level2'),
-            // 沉浸档透明透出 MaterialSurface 材质层，其余档位保持 item_bg
-            cardBackgroundColor: MaterialTheme.surfaceBackground($r('app.color.item_bg')),
-            cardHeight: CommonConstants.SETTING_OPTION_CARD_HEIGHT,
-            prefixItem: new PrefixIcon({
-              iconSize: IconSize.SYSTEM_ICON,
-              iconValue: {
-                symbol: $r('sys.symbol.chevron_up_2_circle')
-              }
-            }),
-            textItem: {
-              primaryText: {
-                text: $r('app.string.app_appearance')
-              }
-            },
-            suffixItem: new SuffixArrow({}),
-            onClick: () => {
-              this.isAppearanceSheetVisible = true;
-            }
+          SubItemButton({
+            symbol: $r('sys.symbol.link'),
+            text: $r('app.string.data_sync')
           })
-            .bindSheet($$this.isAppearanceSheetVisible, this.AppearanceSheetBuilder(),
-              MaterialSheetStyle.options())
-          }
-          .padding({
-            top: $r('sys.float.padding_level2'),
-            bottom: $r('sys.float.padding_level2'),
-          })
-        }
-      }
-      .padding({
-        left: $r('sys.float.padding_level8'),
-        right: $r('sys.float.padding_level8'),
-      })
-
-      // 数据同步入口
-      ListItem() {
-        MaterialSurface({ radius: $r('sys.float.ohos_id_menu_outer_border_radius') }) {
-          Column() {
-          HdsListItemCard({
-            cardPrefixMargin: $r('sys.float.padding_level2'),
-            cardSuffixMargin: $r('sys.float.padding_level2'),
-            // 沉浸档透明透出 MaterialSurface 材质层，其余档位保持 item_bg
-            cardBackgroundColor: MaterialTheme.surfaceBackground($r('app.color.item_bg')),
-            cardHeight: CommonConstants.SETTING_OPTION_CARD_HEIGHT,
-            prefixItem: new PrefixIcon({
-              iconSize: IconSize.SYSTEM_ICON,
-              iconValue: {
-                symbol: $r('sys.symbol.link')
-              }
-            }),
-            textItem: {
-              primaryText: {
-                text: $r('app.string.data_sync')
-              }
-            },
-            suffixItem: new SuffixArrow({}),
-            onClick: () => {
+            .onClick(() => {
               this.isDataSyncSheetVisible = true;
-            }
-          })
+            })
             .bindSheet($$this.isDataSyncSheetVisible, this.DataSyncSheetBuilder(),
               MaterialSheetStyle.options())
-          }
-          .padding({
-            top: $r('sys.float.padding_level2'),
-            bottom: $r('sys.float.padding_level2'),
-          })
         }
       }
-      .padding({
-        left: $r('sys.float.padding_level8'),
-        right: $r('sys.float.padding_level8'),
-      })
+      .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
 
-      // 协议与声明入口
+      // 应用设置
       ListItem() {
-        MaterialSurface({ radius: $r('sys.float.ohos_id_menu_outer_border_radius') }) {
-          Column() {
-          HdsListItemCard({
-            cardPrefixMargin: $r('sys.float.padding_level2'),
-            cardSuffixMargin: $r('sys.float.padding_level2'),
-            // 沉浸档透明透出 MaterialSurface 材质层，其余档位保持 item_bg
-            cardBackgroundColor: MaterialTheme.surfaceBackground($r('app.color.item_bg')),
-            cardHeight: CommonConstants.SETTING_OPTION_CARD_HEIGHT,
-            prefixItem: new PrefixIcon({
-              iconSize: IconSize.SYSTEM_ICON,
-              iconValue: {
-                symbol: $r('sys.symbol.person_shield')
-              }
-            }),
-            textItem: {
-              primaryText: {
-                text: $r('app.string.setting_agreement_statement')
-              }
-            },
-            suffixItem: new SuffixArrow({}),
-            onClick: () => {
-              this.isAgreementSheetVisible = true;
-            }
+        SettingItem({ title: $r('app.string.setting_group_app_settings') }) {
+          SubItemButton({
+            symbol: $r('sys.symbol.staroflife_rectangle'),
+            text: $r('app.string.setting_safety')
           })
+            .onClick(() => {
+              this.isSafetySheetVisible = true;
+            })
+            .bindSheet($$this.isSafetySheetVisible, this.SecuritySheetBuilder(),
+              MaterialSheetStyle.options())
+
+          SubItemDivider()
+
+          SubItemButton({
+            symbol: $r('sys.symbol.chevron_up_2_circle'),
+            text: $r('app.string.app_appearance')
+          })
+            .onClick(() => {
+              this.isAppearanceSheetVisible = true;
+            })
+            .bindSheet($$this.isAppearanceSheetVisible, this.AppearanceSheetBuilder(),
+              MaterialSheetStyle.options())
+        }
+      }
+      .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
+
+      // 支持与关于
+      ListItem() {
+        SettingItem({ title: $r('app.string.setting_group_support_about') }) {
+          SubItemButton({
+            symbol: $r('sys.symbol.person_shield'),
+            text: $r('app.string.setting_agreement_statement')
+          })
+            .onClick(() => {
+              this.isAgreementSheetVisible = true;
+            })
             .bindSheet($$this.isAgreementSheetVisible, this.AgreementSheetBuilder(),
               MaterialSheetStyle.options())
-          }
-          .padding({
-            top: $r('sys.float.padding_level2'),
-            bottom: $r('sys.float.padding_level2'),
-          })
-        }
-      }
-      .padding({
-        left: $r('sys.float.padding_level8'),
-        right: $r('sys.float.padding_level8'),
-      })
 
-      // 建议与反馈入口
-      ListItem() {
-        MaterialSurface({ radius: $r('sys.float.ohos_id_menu_outer_border_radius') }) {
-          Column() {
-          HdsListItemCard({
-            cardPrefixMargin: $r('sys.float.padding_level2'),
-            cardSuffixMargin: $r('sys.float.padding_level2'),
-            // 沉浸档透明透出 MaterialSurface 材质层，其余档位保持 item_bg
-            cardBackgroundColor: MaterialTheme.surfaceBackground($r('app.color.item_bg')),
-            cardHeight: CommonConstants.SETTING_OPTION_CARD_HEIGHT,
-            prefixItem: new PrefixIcon({
-              iconSize: IconSize.SYSTEM_ICON,
-              iconValue: {
-                symbol: $r('sys.symbol.envelope')
-              }
-            }),
-            textItem: {
-              primaryText: {
-                text: $r('app.string.setting_feedback')
-              }
-            },
-            suffixItem: new SuffixArrow({}),
-            onClick: () => {
-              this.isFeedbackSheetVisible = true;
-            }
+          SubItemDivider()
+
+          SubItemButton({
+            symbol: $r('sys.symbol.envelope'),
+            text: $r('app.string.setting_feedback')
           })
+            .onClick(() => {
+              this.isFeedbackSheetVisible = true;
+            })
             .bindSheet($$this.isFeedbackSheetVisible, this.FeedbackSheetBuilder(),
               MaterialSheetStyle.options())
-          }
-          .padding({
-            top: $r('sys.float.padding_level2'),
-            bottom: $r('sys.float.padding_level2'),
-          })
-        }
-      }
-      .padding({
-        left: $r('sys.float.padding_level8'),
-        right: $r('sys.float.padding_level8'),
-      })
 
-      // 关于入口
-      ListItem() {
-        MaterialSurface({ radius: $r('sys.float.ohos_id_menu_outer_border_radius') }) {
-          Column() {
-          HdsListItemCard({
-            cardPrefixMargin: $r('sys.float.padding_level2'),
-            cardSuffixMargin: $r('sys.float.padding_level2'),
-            // 沉浸档透明透出 MaterialSurface 材质层，其余档位保持 item_bg
-            cardBackgroundColor: MaterialTheme.surfaceBackground($r('app.color.item_bg')),
-            cardHeight: CommonConstants.SETTING_OPTION_CARD_HEIGHT,
-            prefixItem: new PrefixIcon({
-              iconSize: IconSize.SYSTEM_ICON,
-              iconValue: {
-                symbol: $r('sys.symbol.info_circle')
-              }
-            }),
-            textItem: {
-              primaryText: {
-                text: $r('app.string.setting_about')
-              }
-            },
-            suffixItem: new SuffixArrow({}),
-            onClick: () => {
-              this.isAboutSheetVisible = true;
-            }
+          SubItemDivider()
+
+          SubItemButton({
+            symbol: $r('sys.symbol.info_circle'),
+            text: $r('app.string.setting_about')
           })
+            .onClick(() => {
+              this.isAboutSheetVisible = true;
+            })
             .bindSheet($$this.isAboutSheetVisible, this.AboutSheetBuilder(),
               MaterialSheetStyle.options())
-          }
-          .padding({
-            top: $r('sys.float.padding_level2'),
-            bottom: $r('sys.float.padding_level2'),
-          })
         }
       }
-      .padding({
-        left: $r('sys.float.padding_level8'),
-        right: $r('sys.float.padding_level8'),
-      })
+      .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
     }
     .clip(false)
     .chainAnimation(this.token_preference.app_appearance_chain_animation_enable)

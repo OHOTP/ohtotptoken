@@ -1129,6 +1129,18 @@
       "value": "光感材質"
     },
     {
+      "name": "setting_group_data_management",
+      "value": "資料管理"
+    },
+    {
+      "name": "setting_group_app_settings",
+      "value": "應用程式設定"
+    },
+    {
+      "name": "setting_group_support_about",
+      "value": "支援與關於"
+    },
+    {
       "name": "setting_token_item_material",
       "value": "清單項目材質"
     },

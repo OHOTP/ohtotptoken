@@ -1129,6 +1129,18 @@
       "value": "光感材质"
     },
     {
+      "name": "setting_group_data_management",
+      "value": "数据管理"
+    },
+    {
+      "name": "setting_group_app_settings",
+      "value": "应用设置"
+    },
+    {
+      "name": "setting_group_support_about",
+      "value": "支持与关于"
+    },
+    {
       "name": "setting_token_item_material",
       "value": "列表项材质"
     },

@@ -1141,6 +1141,18 @@
       "value": "Immersive Material"
     },
     {
+      "name": "setting_group_data_management",
+      "value": "Data Management"
+    },
+    {
+      "name": "setting_group_app_settings",
+      "value": "App Settings"
+    },
+    {
+      "name": "setting_group_support_about",
+      "value": "Support & About"
+    },
+    {
       "name": "setting_token_item_material",
       "value": "List Item Material"
     },
