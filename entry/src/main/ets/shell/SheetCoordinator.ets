@@ -4,6 +4,7 @@ import { TokenConfig } from 'common';
 import lazy { BackupAndMigrationSheet } from '../pages/setting/BackupAndMigrationSheet'
 import lazy { SecuritySheet } from '../pages/setting/SecuritySheet'
 import lazy { AppearanceSheet } from '../pages/setting/AppearanceSheet'
+import lazy { DeveloperOptionsSheet } from '../pages/setting/DeveloperOptionsSheet'
 import lazy { DataSyncSheet } from '../pages/setting/DataSyncSheet'
 import lazy { AgreementSheet } from '../pages/setting/AgreementSheet'
 import lazy { AboutSheet } from '../pages/setting/AboutSheet'
@@ -22,8 +23,8 @@ import { SETTING_PAGE_INSET, SETTING_ROW_PADDING } from '../components/SettingSt
 /**
  * Sheet 协调器(Task 3.1)
  *
- * 承载"我的"页签的全部内容:华为账号卡片 + 7 个设置入口卡片,
- * 以及 8 个 bindSheet(账号/备份/安全/外观/数据同步/协议/反馈/关于)的可见性状态与内容。
+ * 承载"我的"页签的全部内容:华为账号卡片 + 8 个设置入口,
+ * 以及 9 个 bindSheet(账号/备份/安全/外观/开发者选项/数据同步/协议/反馈/关于)的可见性状态与内容。
  * 华为账号 UI 状态与登录/登出流程内聚在本组件;
  * Index 侧在账号初始化完成、分布式登出等时机通过 EVENT_NAMES.HUAWEI_ACCOUNT_STATE_CHANGED 广播,
  * 本组件监听后重新同步,保证 SheetCoordinator 懒构建时序下状态依然正确。
@@ -35,10 +36,13 @@ export struct SheetCoordinator {
   @Require @Param scroller: Scroller = new Scroller();
   /** 备份恢复完成回调(由 Index 提供:批量更新 Token 并重新排序) */
   @Require @Param backupReload: (conf: TokenConfig[]) => Promise<void> = async (conf: TokenConfig[]) => {};
+  /** 开发者选项：生成并持久化 100 个随机测试令牌 */
+  @Event addTestTokens: () => Promise<boolean> = async () => false;
 
   @Local isBackupSheetVisible: boolean = false;
   @Local isSafetySheetVisible: boolean = false;
   @Local isAppearanceSheetVisible: boolean = false;
+  @Local isDeveloperOptionsSheetVisible: boolean = false;
   @Local isDataSyncSheetVisible: boolean = false;
   @Local isAgreementSheetVisible: boolean = false;
   @Local isAboutSheetVisible: boolean = false;
@@ -150,6 +154,15 @@ export struct SheetCoordinator {
   AppearanceSheetBuilder() {
     AppearanceSheet({
       scrollEffectType: this.scrollEffectType,
+    })
+      .height('100%')
+  }
+
+  @Builder
+  DeveloperOptionsSheetBuilder() {
+    DeveloperOptionsSheet({
+      scrollEffectType: this.scrollEffectType,
+      addTestTokens: () => this.addTestTokens()
     })
       .height('100%')
   }
@@ -388,6 +401,18 @@ export struct SheetCoordinator {
               this.isAppearanceSheetVisible = true;
             })
             .bindSheet($$this.isAppearanceSheetVisible, this.AppearanceSheetBuilder(),
+              MaterialSheetStyle.options())
+
+          SubItemDivider()
+
+          SubItemButton({
+            symbol: $r('sys.symbol.wrench_and_screwdriver'),
+            text: $r('app.string.setting_group_developer_options')
+          })
+            .onClick(() => {
+              this.isDeveloperOptionsSheetVisible = true;
+            })
+            .bindSheet($$this.isDeveloperOptionsSheetVisible, this.DeveloperOptionsSheetBuilder(),
               MaterialSheetStyle.options())
         }
       }

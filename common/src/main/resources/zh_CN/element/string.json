@@ -1639,6 +1639,26 @@
     {
       "name": "card_config_no_token",
       "value": "暂无可用令牌"
+    },
+    {
+      "name": "setting_group_developer_options",
+      "value": "开发者选项"
+    },
+    {
+      "name": "developer_add_test_tokens",
+      "value": "添加100个测试令牌"
+    },
+    {
+      "name": "developer_add_test_tokens_description",
+      "value": "生成随机名称和密钥，方便开发与调试。"
+    },
+    {
+      "name": "developer_add_test_tokens_confirm_title",
+      "value": "添加测试令牌？"
+    },
+    {
+      "name": "developer_add_test_tokens_confirm_message",
+      "value": "将添加100个名称和密钥均随机的测试令牌，是否继续？"
     }
   ]
 }

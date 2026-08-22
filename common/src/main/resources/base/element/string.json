@@ -1639,6 +1639,26 @@
     {
       "name": "card_config_no_token",
       "value": "No tokens available"
+    },
+    {
+      "name": "setting_group_developer_options",
+      "value": "Developer Options"
+    },
+    {
+      "name": "developer_add_test_tokens",
+      "value": "Add 100 Test Tokens"
+    },
+    {
+      "name": "developer_add_test_tokens_description",
+      "value": "Generate random token names and secrets for development and debugging."
+    },
+    {
+      "name": "developer_add_test_tokens_confirm_title",
+      "value": "Add Test Tokens?"
+    },
+    {
+      "name": "developer_add_test_tokens_confirm_message",
+      "value": "This will add 100 test tokens with random names and secrets. Continue?"
     }
   ]
 }

@@ -1,5 +1,5 @@
 import { bundleManager,common } from '@kit.AbilityKit';
-import { TokenConfig, dialogSystemMaterial } from 'common';
+import { base32Encode, otpType, TokenConfig, dialogSystemMaterial } from 'common';
 import { util, url } from '@kit.ArkTS';
 // [冷启动优化] 文件 I/O 仅在 deferredInit 中使用
 import lazy { fileIo as fs } from '@kit.CoreFileKit';
@@ -571,6 +571,20 @@ struct Index {
     }
   }
 
+  private async addTestTokens(): Promise<boolean> {
+    const tokens: TokenConfig[] = [];
+    for (let i = 0; i < 100; i++) {
+      const secret = base32Encode(util.generateRandomBinaryUUID()).substring(0, 26);
+      const issuer = `Test-${util.generateRandomUUID().substring(0, 8)}`;
+      const name = `User-${util.generateRandomUUID().substring(0, 8)}`;
+      tokens.push(new TokenConfig(secret, otpType.TOTP, issuer, name));
+    }
+    const success = await this.updateTokenConfigs(tokens);
+    hilog.info(0xFF00, 'DeveloperOptions',
+      `Added ${tokens.length} test tokens, result=${success}, storeCount=${(await tkStore.getTokens()).length}`);
+    return success;
+  }
+
   async updateTokenConfigs(tokens: Array<TokenConfig>): Promise<boolean> {
     let failCount = 0;
     let hasNew = false;
@@ -773,15 +787,16 @@ struct Index {
       backupReload: async (conf) => {
         await this.updateTokenConfigs(conf);
         tkStore.sortTokens();
-      }
+      },
+      addTestTokens: () => this.addTestTokens()
     })
   }
 
   /**
-   * 首页内容(Task 3.1):断点 lanes + 双页签,由 HomeTabs 承载
-   * [@LocalBuilder] 作为 @BuilderParam 传给 AppShell 时保持 this 指向 Index
+   * 首页内容(Task 3.1):断点 lanes + 双页签,由 HomeTabs 承载。
+   * 通过箭头函数传给 AppShell，使 @Builder 保持 Index 的 this 与状态刷新能力。
    */
-  @LocalBuilder
+  @Builder
   HomeContentBuilder() {
     HomeTabs({
       tokens: this.CurrentTokens,
@@ -829,7 +844,9 @@ struct Index {
         },
         saveToken: (conf: TokenConfig) => this.updateTokenConfig(conf, true),
         appLockContent: this.AppLockOverlayBuilder,
-        homeContent: this.HomeContentBuilder,
+        homeContent: () => {
+          this.HomeContentBuilder();
+        },
       })
     }
   }
