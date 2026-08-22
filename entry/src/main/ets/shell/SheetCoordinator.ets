@@ -34,6 +34,7 @@ export struct SheetCoordinator {
   @Require @Param tokens: TokenConfig[] = [];
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Require @Param scroller: Scroller = new Scroller();
+  @Require @Param bottomAvoidHeight: number = 0;
   /** 备份恢复完成回调(由 Index 提供:批量更新 Token 并重新排序) */
   @Require @Param backupReload: (conf: TokenConfig[]) => Promise<void> = async (conf: TokenConfig[]) => {};
   /** 开发者选项：生成并持久化 100 个随机测试令牌 */
@@ -459,6 +460,8 @@ export struct SheetCoordinator {
       .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
     }
     .clip(false)
+    // 与令牌列表使用相同的页签栏末端避让，确保最后一组可滚动至 HdsTabs 上方
+    .contentEndOffset(80 + this.bottomAvoidHeight)
     .chainAnimation(this.token_preference.app_appearance_chain_animation_enable)
     .width('100%')
     .height('100%')

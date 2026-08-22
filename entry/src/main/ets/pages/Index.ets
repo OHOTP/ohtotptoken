@@ -784,6 +784,7 @@ struct Index {
       tokens: this.CurrentTokens,
       scrollEffectType: this.currentScrollEffectType,
       scroller: this.settingEntryScroller,
+      bottomAvoidHeight: this.window.AvoidBottomHeight,
       backupReload: async (conf) => {
         await this.updateTokenConfigs(conf);
         tkStore.sortTokens();
