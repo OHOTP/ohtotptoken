@@ -204,24 +204,25 @@ export struct AddTotpTokenPage {
             ListItem() {
               MaterialSurface({ radius: ADD_TOKEN_SECTION_RADIUS, applyShadow: true }) {
                 Column({ space: 16 }) {
-                  Column({ space: 8 }) {
+                  Row({ space: 12 }) {
                     Text($r('app.string.add_token_type'))
                       .fontSize(13).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_secondary'))
+                      .layoutWeight(1)
                     Select([
                       { value: 'TOTP' },
                       { value: 'HOTP' }
                     ])
                       .selected(this.tokenType === otpType.HOTP ? 1 : 0)
                       .value(this.tokenType === otpType.HOTP ? 'HOTP' : 'TOTP')
-                      .width('100%')
                       .onSelect((index: number) => this.tokenType = index === 1 ? otpType.HOTP : otpType.TOTP)
                   }
                   .width('100%')
-                  .alignItems(HorizontalAlign.Start)
+                  .alignItems(VerticalAlign.Center)
                   Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
-                  Column({ space: 8 }) {
+                  Row({ space: 12 }) {
                     Text($r('app.string.dialog_cfg_tk_alg'))
                       .fontSize(13).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_secondary'))
+                      .layoutWeight(1)
                     Select([
                       { value: 'SHA1' },
                       { value: 'SHA224' },
@@ -233,15 +234,15 @@ export struct AddTotpTokenPage {
                     ])
                       .selected(this.algorithms.indexOf(this.algorithm))
                       .value(this.algorithm)
-                      .width('100%')
                       .onSelect((_: number, value: string) => this.algorithm = value as HMACAlgorithm)
                   }
                   .width('100%')
-                  .alignItems(HorizontalAlign.Start)
+                  .alignItems(VerticalAlign.Center)
                   Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
-                  Column({ space: 8 }) {
+                  Row({ space: 12 }) {
                     Text($r('app.string.dialog_cfg_tk_digits'))
                       .fontSize(13).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_secondary'))
+                      .layoutWeight(1)
                     Select([
                       { value: '4' },
                       { value: '6' },
@@ -249,11 +250,10 @@ export struct AddTotpTokenPage {
                     ])
                       .selected(this.digits === 4 ? 0 : this.digits === 8 ? 2 : 1)
                       .value(this.digits.toString())
-                      .width('100%')
                       .onSelect((_: number, value: string) => this.digits = Number.parseInt(value))
                   }
                   .width('100%')
-                  .alignItems(HorizontalAlign.Start)
+                  .alignItems(VerticalAlign.Center)
                   Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
                   if (this.tokenType === otpType.TOTP) {
                     Column({ space: 8 }) {
