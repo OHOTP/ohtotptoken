@@ -107,6 +107,7 @@ struct Index {
   @Local appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
   @Local tokenListScroller: Scroller = new Scroller();
   @Local settingEntryScroller: Scroller = new Scroller();
+  @Local currentHomeTabIndex: number = 0;
   @Local CurrentTokensCount: number = 0;
   @Local scrollEffectVersion: number = 0;
   @Local bottomTabsTypeVersion: number = 0;
@@ -785,15 +786,16 @@ struct Index {
     HomeTabs({
       tokens: this.CurrentTokens,
       window: this.window,
-      scrollEffectType: this.currentScrollEffectType,
       bottomTabsType: this.currentBottomTabsType,
+      currentTabIndex: this.currentHomeTabIndex,
       pageInfos: this.pageInfos,
       updateTokenConfig: (conf: TokenConfig, toast?: boolean) => this.updateTokenConfig(conf, toast),
       updateTokenConfigs: (tokens: Array<TokenConfig>) => this.updateTokenConfigs(tokens),
-      openAddTokenMenu: () => this.openAddTokenMenu(),
-      addTokenMenuTargetId: this.addTokenMenuTargetId,
       tokenListScroller: this.tokenListScroller,
       settingEntryScroller: this.settingEntryScroller,
+      onTabChange: (index: number) => {
+        this.currentHomeTabIndex = index;
+      },
       settingEntryContent: this.SettingEntryContentBuilder,
     })
   }
@@ -806,6 +808,11 @@ struct Index {
         blurFlag: this.background_blur_flag as boolean,
         applockVisible: this.isAppLockOverlayVisible,
         scrollEffectType: this.currentScrollEffectType,
+        currentHomeTabIndex: this.currentHomeTabIndex,
+        tokenListScroller: this.tokenListScroller,
+        settingEntryScroller: this.settingEntryScroller,
+        openAddTokenMenu: () => this.openAddTokenMenu(),
+        addTokenMenuTargetId: this.addTokenMenuTargetId,
         onDropFile: () => {
           this.DropFilesDialogIsOpen = false;
           this.DropFilesDialogController?.close();

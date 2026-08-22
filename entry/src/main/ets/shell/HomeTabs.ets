@@ -4,9 +4,8 @@ import { MaterialPolicy } from '../utils/MaterialPolicy';
 import { TokenListPage } from '../pages/TokenListPage';
 import { AppWindowInfo } from 'common';
 import { PageScaffold } from '../components/PageScaffold';
-import { ROUTE_NAMES } from 'common';
 import { SymbolGlyphModifier } from '@kit.ArkUI';
-import { HdsNavigation, HdsNavigationTitleMode, HdsTabs, ScrollEffectType, hdsMaterial } from '@kit.UIDesignKit';
+import { HdsTabs, hdsMaterial } from '@kit.UIDesignKit';
 
 @Builder
 function EmptyBuilder() {
@@ -24,20 +23,18 @@ function EmptyBuilder() {
 export struct HomeTabs {
   @Require @Param tokens: TokenConfig[] = [];
   @Require @Param window: AppWindowInfo = new AppWindowInfo();
-  @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   /** 底部页签类型（悬浮/平铺），由 Index 监听 BOTTOM_TABS_TYPE_CHANGED 事件驱动更新 */
   @Require @Param bottomTabsType: SettingBottomTabsType = SettingBottomTabsType.SUSPENSION;
+  @Require @Param currentTabIndex: number = 0;
   @Require @Param pageInfos: NavPathStack = new NavPathStack();
   @Require @Param updateTokenConfig: (conf: TokenConfig, toast?: boolean) => Promise<boolean> =
     async (conf: TokenConfig, toast?: boolean) => false;
   @Require @Param updateTokenConfigs: (tokens: Array<TokenConfig>) => Promise<boolean> =
     async (tokens: Array<TokenConfig>) => false;
-  @Require @Param openAddTokenMenu: () => void = () => {};
-  @Require @Param addTokenMenuTargetId: string = '';
   @Require @Param tokenListScroller: Scroller = new Scroller();
   @Require @Param settingEntryScroller: Scroller = new Scroller();
+  @Event onTabChange: (index: number) => void = () => {};
 
-  @Local tab_bar_index: number = 0;
   // [冷启动优化] Setting Tab 懒加载标志,仅在用户首次切换到"我的"Tab 时构建组件树
   @Local settingTabInitialized: boolean = false;
 
@@ -64,80 +61,21 @@ export struct HomeTabs {
       }
     } else {
       Column() {
-        HdsTabs({ index: this.tab_bar_index }) {
+        HdsTabs({ index: this.currentTabIndex }) {
           TabContent() {
-            HdsNavigation() {
-              TokenListPage({
-                Tokens: this.tokens,
-                TabBarVisible: true,
-                appBottomAvoidHeight: this.window.AvoidBottomHeight,
-                appTopAvoidHeight: this.window.AvoidTopHeight,
-                appWindowSize: this.window.Size,
-                pageInfos: this.pageInfos,
-                updateTokenConfig: this.updateTokenConfig,
-                updateTokenConfigs: this.updateTokenConfigs,
-                listScroller: this.tokenListScroller,
-              })
-            }
-            .mode(NavigationMode.Stack)
-            .bindToScrollable([this.tokenListScroller])
-            .titleMode(HdsNavigationTitleMode.MINI)
-            .hideBackButton(true) // 设置mini类型隐藏后退按钮
-            .titleBar({
-              avoidLayoutSafeArea: true, // 状态栏安全区沉浸
-              enableComponentSafeArea: true,
-              style: {
-                originalStyle: {
-                  contentStyle: {
-                    titleStyle: {
-                      mainTitleColor: $r('sys.color.font_primary'),
-                    },
-                    menuStyle: {
-                      iconColor: $r('sys.color.icon_primary')
-                    },
-                  }
-                },
-                scrollEffectOpts: {
-                  enableScrollEffect: true,
-                  scrollEffectType: this.scrollEffectType // 渐变模糊
-                },
-                systemMaterialEffect: {
-                  materialType: hdsMaterial.MaterialType.ADAPTIVE,
-                  materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
-                }
-              },
-              content: {
-                title: {
-                  mainTitle: $r('app.string.EntryAbility_label'),
-                },
-                menu: {
-                  value: [
-                    {
-                      content: {
-                        label: $r('app.string.app_ua_search_token'),
-                        icon: $r('sys.symbol.magnifyingglass'),
-                        isEnabled: true,
-                        action: () => {
-                          this.pageInfos.pushPathByName(ROUTE_NAMES.TokenSearchPage, null);
-                        }
-                      }
-                    },
-                    {
-                      content: {
-                        label: $r('app.string.app_ua_add_token'),
-                        icon: $r('sys.symbol.plus'),
-                        isEnabled: true,
-                        componentId: this.addTokenMenuTargetId,
-                        action: () => {
-                          this.openAddTokenMenu();
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
+            TokenListPage({
+              Tokens: this.tokens,
+              TabBarVisible: true,
+              appBottomAvoidHeight: this.window.AvoidBottomHeight,
+              appTopAvoidHeight: this.window.AvoidTopHeight,
+              appWindowSize: this.window.Size,
+              pageInfos: this.pageInfos,
+              updateTokenConfig: this.updateTokenConfig,
+              updateTokenConfigs: this.updateTokenConfigs,
+              listScroller: this.tokenListScroller,
             })
           }
+          .clip(false)
           .backgroundColor($r('app.color.window_background'))
           .tabBar(BottomTabBarStyle.of(
             {
@@ -159,50 +97,11 @@ export struct HomeTabs {
           TabContent() {
             // [冷启动优化] Setting Tab 懒加载:仅在用户首次切换到"我的"Tab 时构建组件树,
             // 避免冷启动时一次性构建两个 TabContent 导致首帧 build 耗时增加
-            if (this.settingTabInitialized) {
-              HdsNavigation() {
-                if (this.settingEntryContent) {
-                  this.settingEntryContent();
-                }
-              }
-              .mode(NavigationMode.Stack)
-              .bindToScrollable([this.settingEntryScroller])
-              .titleMode(HdsNavigationTitleMode.MINI)
-              .hideBackButton(true)
-              .titleBar({
-                avoidLayoutSafeArea: true,
-                enableComponentSafeArea: true,
-                style: {
-                  originalStyle: {
-                    contentStyle: {
-                      titleStyle: {
-                        mainTitleColor: $r('sys.color.font_primary'),
-                      },
-                      menuStyle: {
-                        iconColor: $r('sys.color.icon_primary')
-                      },
-                    }
-                  },
-                  scrollEffectOpts: {
-                    enableScrollEffect: true,
-                    scrollEffectType: this.scrollEffectType,
-                  },
-                  systemMaterialEffect: {
-                    materialType: hdsMaterial.MaterialType.ADAPTIVE,
-                    materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
-                  }
-                },
-                content: {
-                  title: {
-                    mainTitle: $r('app.string.tab_me')
-                  },
-                  menu: {
-                    value: []
-                  }
-                }
-              })
+            if (this.settingTabInitialized && this.settingEntryContent) {
+              this.settingEntryContent();
             }
           }
+          .clip(false)
           .backgroundColor($r('app.color.window_background'))
           .tabBar(BottomTabBarStyle.of(
             {
@@ -221,6 +120,7 @@ export struct HomeTabs {
           )
           .tabIndex(1)
         }
+        .clip(false)
         .barBackgroundColor($r('app.color.tab_bar_bg'))
         .backgroundColor($r('app.color.window_background'))
         .layoutWeight(1)
@@ -248,7 +148,7 @@ export struct HomeTabs {
         .barMode(BarMode.Fixed)
         .animationDuration(300)
         .onChange((index) => {
-          this.tab_bar_index = index;
+          this.onTabChange(index);
           // [冷启动优化] 用户首次切换到 Setting Tab 时触发懒加载构建
           if (index === 1 && !this.settingTabInitialized) {
             this.settingTabInitialized = true;
