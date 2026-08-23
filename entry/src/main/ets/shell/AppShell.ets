@@ -175,7 +175,7 @@ export struct AppShell {
       content: {
         title: {
           mainTitle: this.currentHomeTabIndex === 0 ?
-            $r('app.string.EntryAbility_label') : $r('app.string.tab_me'),
+            $r('app.string.tab_token') : $r('app.string.tab_me'),
         },
         menu: {
           value: this.currentHomeTabIndex === 0 ? [
