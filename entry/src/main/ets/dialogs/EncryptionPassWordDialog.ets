@@ -8,11 +8,19 @@ export struct EncryptionPassWordDialog {
   private confirmTextValue: string = '';
   private inputValue: string = '';
   @State private passwordMismatch: boolean = false;
+  @State private passwordEmpty: boolean = false;
   controller?: CustomDialogController;
   cancel: () => void = () => {
   };
   confirm: (text: string) => void = (text: string) => {
   };
+
+  private resetInput(): void {
+    this.textValue = '';
+    this.confirmTextValue = '';
+    this.passwordMismatch = false;
+    this.passwordEmpty = false;
+  }
 
   build() {
     Column() {
@@ -35,6 +43,7 @@ export struct EncryptionPassWordDialog {
         .onChange((value: string) => {
           this.textValue = value
           this.passwordMismatch = false
+          this.passwordEmpty = false
         })
 
       if (this.showConfirmPassword) {
@@ -47,10 +56,12 @@ export struct EncryptionPassWordDialog {
           .maxLength(32)
           .type(InputType.Password)
           .showPasswordIcon(true)
-          .showError(this.passwordMismatch ? $r('app.string.dialog_backup_password_mismatch') : undefined)
+          .showError(this.passwordEmpty ? $r('app.string.dialog_backup_password_empty') :
+            this.passwordMismatch ? $r('app.string.dialog_backup_password_mismatch') : undefined)
           .onChange((value: string) => {
             this.confirmTextValue = value
             this.passwordMismatch = false
+            this.passwordEmpty = false
           })
       }
 
@@ -68,6 +79,7 @@ export struct EncryptionPassWordDialog {
           .onClick(() => {
             if (this.controller != undefined) {
               this.cancel()
+              this.resetInput()
               this.controller.close()
             }
           })
@@ -88,11 +100,16 @@ export struct EncryptionPassWordDialog {
           .fontWeight(FontWeight.Medium)
           .onClick(() => {
             if (this.controller != undefined) {
+              if (this.showConfirmPassword && this.textValue.length === 0) {
+                this.passwordEmpty = true
+                return
+              }
               if (this.showConfirmPassword && this.textValue !== this.confirmTextValue) {
                 this.passwordMismatch = true
                 return
               }
               this.inputValue = this.textValue
+              this.resetInput()
               this.confirm(this.inputValue)
               this.controller.close()
             }

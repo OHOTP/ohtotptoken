@@ -44,7 +44,7 @@ export default class EntryAbility extends UIAbility {
 
     try {
       const colorValue = this.context.resourceManager.getColorByNameSync('window_background');
-      const color = `#${colorValue.toString(16).padStart(8, '0').toUpperCase()}`;
+      const color = `#${(colorValue >>> 0).toString(16).padStart(8, '0').toUpperCase()}`;
       windowClass.setWindowBackgroundColor(color);
       windowClass.setWindowContainerColor(color, color);
     } catch (exception) {

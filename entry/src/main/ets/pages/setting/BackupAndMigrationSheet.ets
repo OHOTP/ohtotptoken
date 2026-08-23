@@ -112,6 +112,8 @@ export struct BackupAndMigrationSheet {
       confirm: (password: string) => {
         restoreFromBackup(this.backup_select_uri, true, password).then((backup) => {
           this.backupReload(backup.configs);
+        }).catch((reason: BusinessError) => {
+          showSnackBar(reason.message, SnackBarNotifyType.ERROR);
         });
       },
     }),
@@ -260,7 +262,9 @@ export struct BackupAndMigrationSheet {
       } else {
         restoreFromBackup(uris[0]).then((backup) => {
           this.backupReload(backup.configs);
-        })
+        }).catch((reason: BusinessError) => {
+          showSnackBar(reason.message, SnackBarNotifyType.ERROR);
+        });
       }
     });
   }
