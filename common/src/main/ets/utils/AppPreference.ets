@@ -41,6 +41,8 @@ export enum EVENT_NAMES {
   START_TOKEN_SORT = 'onStartTokenSort',
   /** 华为账号状态变更事件（登录/登出/初始化完成后由 Index 广播,SheetCoordinator 监听同步） */
   HUAWEI_ACCOUNT_STATE_CHANGED = 'onHuaweiAccountStateChanged',
+  /** DEBUG 模式变更事件（令牌项等调试 UI 监听并即时刷新） */
+  DEBUG_MODE_CHANGED = 'onDebugModeChanged',
 }
 
 /**

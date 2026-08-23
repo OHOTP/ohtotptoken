@@ -230,6 +230,8 @@ struct Index {
             this.updateTokenConfigs(backup.configs).then(() => {
               tkStore.sortTokens();
             });
+          }).catch((reason: BusinessError) => {
+            showSnackBar(reason.message, SnackBarNotifyType.ERROR);
           });
         }
         setTimeout(() => {
@@ -369,6 +371,8 @@ struct Index {
           this.updateTokenConfigs(backup.configs).then(() => {
             tkStore.sortTokens();
           });
+        }).catch((reason: BusinessError) => {
+          showSnackBar(reason.message, SnackBarNotifyType.ERROR);
         });
       },
     }),
@@ -572,6 +576,9 @@ struct Index {
   }
 
   private async addTestTokens(): Promise<boolean> {
+    if (!AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON)) {
+      return false;
+    }
     const tokens: TokenConfig[] = [];
     for (let i = 0; i < 100; i++) {
       const secret = base32Encode(util.generateRandomBinaryUUID()).substring(0, 26);
@@ -583,6 +590,32 @@ struct Index {
     hilog.info(0xFF00, 'DeveloperOptions',
       `Added ${tokens.length} test tokens, result=${success}, storeCount=${(await tkStore.getTokens()).length}`);
     return success;
+  }
+
+  private async removeTestTokens(): Promise<boolean> {
+    if (!AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON)) {
+      return false;
+    }
+    const testTokens = (await tkStore.getTokens()).filter(token => token.TokenIssuer.startsWith('Test-'));
+    if (testTokens.length === 0) {
+      showSnackBar($r('app.string.toast_no_test_tokens'), SnackBarNotifyType.INFO);
+      return true;
+    }
+
+    let failCount = 0;
+    for (const token of testTokens) {
+      try {
+        await tkStore.deleteToken(token.TokenUUID);
+      } catch (error) {
+        failCount++;
+        hilog.error(0, 'DeveloperOptions', `Failed to remove test token: ${error}`);
+      }
+    }
+    await this.refreshDisplayTokens();
+    const removedCount = testTokens.length - failCount;
+    showSnackBar($r('app.string.toast_test_tokens_removed', removedCount),
+      failCount === 0 ? SnackBarNotifyType.SUCCESS : SnackBarNotifyType.WARNING);
+    return failCount === 0;
   }
 
   async updateTokenConfigs(tokens: Array<TokenConfig>): Promise<boolean> {
@@ -789,7 +822,8 @@ struct Index {
         await this.updateTokenConfigs(conf);
         tkStore.sortTokens();
       },
-      addTestTokens: () => this.addTestTokens()
+      addTestTokens: () => this.addTestTokens(),
+      removeTestTokens: () => this.removeTestTokens()
     })
   }
 

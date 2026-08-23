@@ -37,6 +37,7 @@ export struct TokenItem {
   @Local btn_hotp_clicked: number = 0;
   @Local TokenHide: boolean = current_token_hide_map[this.Config.TokenUUID] ?? true;
   @Local previewDetailsVisible: boolean = false;
+  @Local debugModeIsOn: boolean = AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON) as boolean;
 
   @Local menu_icon_trash: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.trash')).fontSize('22vp').fontColor([Color.Red]);
   @Local menu_icon_qrcode: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.qrcode')).fontSize('22vp');
@@ -50,6 +51,7 @@ export struct TokenItem {
 
   private token_steps: number = 0;
   private onTimestampChangedHandler: (timestamp: number, force: boolean) => void = () => {};
+  private onDebugModeChangedHandler: (isOn: boolean) => void = () => {};
   // 使用 AppStorage 获取 context，避免在 aboutToAppear（build 之前）调用 getUIContext()
   private appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
 
@@ -175,12 +177,17 @@ export struct TokenItem {
     this.appCtx.eventHub?.on(EVENT_NAMES.TIMESTAMP_CHANGED, this.onTimestampChangedHandler);
     this.onNfcExternalTokensChangedHandler = (): void => this.onNfcExternalTokensChanged();
     this.appCtx.eventHub?.on(EVENT_NAMES.NFC_EXTERNAL_TOKENS_CHANGED, this.onNfcExternalTokensChangedHandler);
+    this.onDebugModeChangedHandler = (isOn: boolean): void => {
+      this.debugModeIsOn = isOn;
+    };
+    this.appCtx.eventHub?.on(EVENT_NAMES.DEBUG_MODE_CHANGED, this.onDebugModeChangedHandler);
     this.updateToken();
   }
 
   aboutToDisappear(): void {
     this.appCtx.eventHub?.off(EVENT_NAMES.TIMESTAMP_CHANGED, this.onTimestampChangedHandler);
     this.appCtx.eventHub?.off(EVENT_NAMES.NFC_EXTERNAL_TOKENS_CHANGED, this.onNfcExternalTokensChangedHandler);
+    this.appCtx.eventHub?.off(EVENT_NAMES.DEBUG_MODE_CHANGED, this.onDebugModeChangedHandler);
   }
 
   private onLongPressMenuWillAppear(): void {
@@ -294,7 +301,7 @@ export struct TokenItem {
   @Builder
   TokenCodeBuilder() {
     Column() {
-      if (AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON)) {
+      if (this.debugModeIsOn) {
         Text(this.Config.RankScore.toString())
           .textAlign(TextAlign.Center)
           .textOverflow({ overflow: TextOverflow.MARQUEE })

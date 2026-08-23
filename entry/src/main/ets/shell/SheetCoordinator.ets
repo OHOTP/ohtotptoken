@@ -39,6 +39,8 @@ export struct SheetCoordinator {
   @Require @Param backupReload: (conf: TokenConfig[]) => Promise<void> = async (conf: TokenConfig[]) => {};
   /** 开发者选项：生成并持久化 100 个随机测试令牌 */
   @Event addTestTokens: () => Promise<boolean> = async () => false;
+  /** 开发者选项：移除生成的测试令牌 */
+  @Event removeTestTokens: () => Promise<boolean> = async () => false;
 
   @Local isBackupSheetVisible: boolean = false;
   @Local isSafetySheetVisible: boolean = false;
@@ -51,6 +53,7 @@ export struct SheetCoordinator {
   @Local isAccountSheetVisible: boolean = false;
   @Local isHuaweiLoggedIn: boolean = false;
   @Local huaweiUser: HuaweiUserInfo | null = null;
+  @Local debug_mode_is_on: boolean = AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON) as boolean;
   @Local token_preference: TokenPreference = AppStorageV2.connect(TokenPreference) as TokenPreference;
 
   private appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
@@ -72,6 +75,14 @@ export struct SheetCoordinator {
   private syncHuaweiAccountState(): void {
     this.isHuaweiLoggedIn = HuaweiAccountManager.getInstance().userLogin;
     this.huaweiUser = HuaweiAccountManager.getInstance().userAccount;
+  }
+
+  private updateDebugMode(isOn: boolean): void {
+    this.debug_mode_is_on = isOn;
+    this.appCtx.eventHub?.emit(EVENT_NAMES.DEBUG_MODE_CHANGED, isOn);
+    if (!isOn) {
+      this.isDeveloperOptionsSheetVisible = false;
+    }
   }
 
   private async triggerHuaweiLogin(): Promise<void> {
@@ -163,7 +174,9 @@ export struct SheetCoordinator {
   DeveloperOptionsSheetBuilder() {
     DeveloperOptionsSheet({
       scrollEffectType: this.scrollEffectType,
-      addTestTokens: () => this.addTestTokens()
+      debugModeChanged: (isOn: boolean) => this.updateDebugMode(isOn),
+      addTestTokens: () => this.addTestTokens(),
+      removeTestTokens: () => this.removeTestTokens()
     })
       .height('100%')
   }
@@ -188,6 +201,7 @@ export struct SheetCoordinator {
   AboutSheetBuilder() {
     AboutSheet({
       scrollEffectStyle: this.scrollEffectType,
+      debugModeChanged: (isOn: boolean) => this.updateDebugMode(isOn)
     })
       .height('100%')
   }
@@ -404,17 +418,19 @@ export struct SheetCoordinator {
             .bindSheet($$this.isAppearanceSheetVisible, this.AppearanceSheetBuilder(),
               MaterialSheetStyle.options())
 
-          SubItemDivider()
+          if (this.debug_mode_is_on) {
+            SubItemDivider()
 
-          SubItemButton({
-            symbol: $r('sys.symbol.wrench_and_screwdriver'),
-            text: $r('app.string.setting_group_developer_options')
-          })
-            .onClick(() => {
-              this.isDeveloperOptionsSheetVisible = true;
+            SubItemButton({
+              symbol: $r('sys.symbol.wrench_and_screwdriver'),
+              text: $r('app.string.setting_group_developer_options')
             })
-            .bindSheet($$this.isDeveloperOptionsSheetVisible, this.DeveloperOptionsSheetBuilder(),
-              MaterialSheetStyle.options())
+              .onClick(() => {
+                this.isDeveloperOptionsSheetVisible = true;
+              })
+              .bindSheet($$this.isDeveloperOptionsSheetVisible, this.DeveloperOptionsSheetBuilder(),
+                MaterialSheetStyle.options())
+          }
         }
       }
       .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })

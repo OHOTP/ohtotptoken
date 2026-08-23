@@ -189,6 +189,10 @@
       "value": "兩次輸入的密碼不一致"
     },
     {
+      "name": "dialog_backup_password_empty",
+      "value": "密碼不能為空"
+    },
+    {
       "name": "warn_forti_dev_id_popup",
       "value": "Forti只允許你啟用一次並綁定此裝置ID"
     },
@@ -1645,6 +1649,10 @@
       "value": "開發者選項"
     },
     {
+      "name": "setting_group_token_operations",
+      "value": "令牌操作"
+    },
+    {
       "name": "developer_add_test_tokens",
       "value": "新增100個測試令牌"
     },
@@ -1659,6 +1667,30 @@
     {
       "name": "developer_add_test_tokens_confirm_message",
       "value": "將新增100個名稱和密鑰均隨機的測試令牌，是否繼續？"
+    },
+    {
+      "name": "developer_remove_test_tokens",
+      "value": "移除測試令牌"
+    },
+    {
+      "name": "developer_remove_test_tokens_description",
+      "value": "移除發行者名稱以Test-開頭的令牌。"
+    },
+    {
+      "name": "developer_remove_test_tokens_confirm_title",
+      "value": "移除測試令牌？"
+    },
+    {
+      "name": "developer_remove_test_tokens_confirm_message",
+      "value": "將移除所有發行者名稱以Test-開頭的令牌，是否繼續？"
+    },
+    {
+      "name": "toast_test_tokens_removed",
+      "value": "已移除%d個測試令牌"
+    },
+    {
+      "name": "toast_no_test_tokens",
+      "value": "沒有可移除的測試令牌"
     }
   ]
 }
