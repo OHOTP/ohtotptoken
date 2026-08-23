@@ -114,7 +114,9 @@ export struct AddSteamTokenPage {
     conf.SteamMaFile = this.steamMaFile;
     const ok = await this.saveToken(conf);
     this.isSaving = false;
-    if (ok) this.pageInfos?.pop();
+    if (ok && !(this.window.AllowSplit && this.pageParams.editConfig !== undefined)) {
+      this.pageInfos?.pop();
+    }
   }
 
   build() {

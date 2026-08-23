@@ -143,7 +143,7 @@ export struct AddTotpTokenPage {
     conf.TokenIconPath = this.iconPath;
     const ok = await this.saveToken(conf);
     this.isSaving = false;
-    if (ok) {
+    if (ok && !(this.window.AllowSplit && this.pageParams.editConfig !== undefined)) {
       this.pageInfos?.pop();
     }
   }

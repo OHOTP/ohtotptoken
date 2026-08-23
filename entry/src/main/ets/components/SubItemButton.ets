@@ -11,6 +11,8 @@ export struct SubItemButton {
   @Param descriptionColor: ResourceColor = $r('sys.color.ohos_id_color_text_secondary');
   /** 副标题最大行数，默认 2 行超出省略；传 0 表示不限制行数、完整展示全部文字 */
   @Param descriptionMaxLines: number = 2;
+  /** 宽屏设置分栏中当前详情项的选中态。 */
+  @Param selected: boolean = false;
 
   build() {
     Column() {
@@ -74,6 +76,11 @@ export struct SubItemButton {
     // PC/2in1 光标悬浮时使用系统高亮反馈，满足大屏可交互控件 UX 要求
     .hoverEffect(HoverEffect.Highlight)
     .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.95 })
+    .border({
+      width: this.selected ? 2 : 0,
+      color: $r('sys.color.interactive_active'),
+      radius: 12
+    })
     .padding(SETTING_ROW_PADDING)
     .constraintSize({ minHeight: SETTING_ROW_MIN_HEIGHT })
     .justifyContent(FlexAlign.Center)

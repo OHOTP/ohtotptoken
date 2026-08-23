@@ -45,6 +45,14 @@
       "value": "我的"
     },
     {
+      "name": "responsive_token_placeholder_title",
+      "value": "選擇一個令牌"
+    },
+    {
+      "name": "responsive_token_placeholder_description",
+      "value": "從左側列表選擇可編輯令牌，即可在此處編輯。"
+    },
+    {
       "name": "button_settings",
       "value": "設置"
     },

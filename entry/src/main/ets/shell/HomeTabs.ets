@@ -33,6 +33,8 @@ export struct HomeTabs {
     async (tokens: Array<TokenConfig>) => false;
   @Require @Param tokenListScroller: Scroller = new Scroller();
   @Require @Param settingEntryScroller: Scroller = new Scroller();
+  @Param selectedTokenUUID: string = '';
+  @Event onSelectToken: (conf: TokenConfig) => void = () => {};
   @Event onTabChange: (index: number) => void = () => {};
 
   // [冷启动优化] Setting Tab 懒加载标志,仅在用户首次切换到"我的"Tab 时构建组件树
@@ -57,6 +59,9 @@ export struct HomeTabs {
           updateTokenConfig: this.updateTokenConfig,
           updateTokenConfigs: this.updateTokenConfigs,
           listScroller: this.tokenListScroller,
+          splitSelectionMode: false,
+          selectedTokenUUID: this.selectedTokenUUID,
+          onSelectToken: (conf: TokenConfig) => this.onSelectToken(conf)
         })
       }
     } else {
@@ -65,7 +70,7 @@ export struct HomeTabs {
           TabContent() {
             TokenListPage({
               Tokens: this.tokens,
-              TabBarVisible: true,
+              TabBarVisible: !this.window.UseSideNavigation,
               appBottomAvoidHeight: this.window.AvoidBottomHeight,
               appTopAvoidHeight: this.window.AvoidTopHeight,
               appWindowSize: this.window.Size,
@@ -73,6 +78,9 @@ export struct HomeTabs {
               updateTokenConfig: this.updateTokenConfig,
               updateTokenConfigs: this.updateTokenConfigs,
               listScroller: this.tokenListScroller,
+              splitSelectionMode: this.window.AllowSplit,
+              selectedTokenUUID: this.selectedTokenUUID,
+              onSelectToken: (conf: TokenConfig) => this.onSelectToken(conf)
             })
           }
           .clip(false)
@@ -124,19 +132,17 @@ export struct HomeTabs {
         .barBackgroundColor($r('app.color.tab_bar_bg'))
         .backgroundColor($r('app.color.window_background'))
         .layoutWeight(1)
-        .barOverlap(true)
+        .barOverlap(!this.window.UseSideNavigation)
         .barBackgroundColor(Color.Transparent)
-        .barBackgroundBlurStyle(BlurStyle.Regular)
-        .barPosition(BarPosition.End)
-        // 页签栏高度：悬浮 56vp(文档默认值)；平铺 = 48vp 内容区 + 底部导航条避让区，
-        // 整体高度扩展至导航条区域，按钮热区与导航条热区互相独立(底部页签设计指南)。
-        // 窗口为全屏布局(setWindowLayoutFullScreen)，避让高度取 AppWindowInfo.AvoidBottomHeight
-        .barHeight(this.bottomTabsType === SettingBottomTabsType.SUSPENSION ?
-          56 : 48 + this.window.AvoidBottomHeight)
-        // 悬浮模式：胶囊页签栏悬浮于内容之上（沉浸光感材质）；
-        // 平铺模式：不设 barFloatingStyle，页签栏撑满底部，
-        // 由上方 barOverlap(true) + barBackgroundBlurStyle(BlurStyle.Regular) 提供模糊背板
-        .barFloatingStyle(this.bottomTabsType === SettingBottomTabsType.SUSPENSION ?
+        .barBackgroundBlurStyle(this.window.UseSideNavigation ? BlurStyle.NONE : BlurStyle.Regular)
+        .barPosition(this.window.UseSideNavigation ? BarPosition.Start : BarPosition.End)
+        .barWidth(this.window.UseSideNavigation ? 96 : '100%')
+        // 纵向 BottomTabBarStyle 使用官方默认 96vp 侧栏宽度并占满高度；
+        // 窄窗口仍使用原底部安全区与悬浮/平铺样式。
+        .barHeight(this.window.UseSideNavigation ? '100%' :
+          (this.bottomTabsType === SettingBottomTabsType.SUSPENSION ? 56 : 48 + this.window.AvoidBottomHeight))
+        .barFloatingStyle(!this.window.UseSideNavigation &&
+          this.bottomTabsType === SettingBottomTabsType.SUSPENSION ?
           {
             barBottomMargin: 28,
             systemMaterialEffect: {
@@ -144,7 +150,7 @@ export struct HomeTabs {
               materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
             }
           } : undefined)
-        .vertical(false)
+        .vertical(this.window.UseSideNavigation)
         .barMode(BarMode.Fixed)
         .animationDuration(300)
         .onChange((index) => {

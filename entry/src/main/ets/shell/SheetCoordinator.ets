@@ -20,6 +20,18 @@ import { SubItemButton } from '../components/SubItemButton';
 import { SubItemDivider } from '../components/SubItemDivider';
 import { SETTING_PAGE_INSET, SETTING_ROW_PADDING } from '../components/SettingStyle';
 
+enum SettingDetailType {
+  ACCOUNT,
+  BACKUP,
+  DATA_SYNC,
+  SECURITY,
+  APPEARANCE,
+  DEVELOPER,
+  AGREEMENT,
+  FEEDBACK,
+  ABOUT
+}
+
 /**
  * Sheet 协调器(Task 3.1)
  *
@@ -35,6 +47,7 @@ export struct SheetCoordinator {
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Require @Param scroller: Scroller = new Scroller();
   @Require @Param bottomAvoidHeight: number = 0;
+  @Require @Param wideMode: boolean = false;
   /** 备份恢复完成回调(由 Index 提供:批量更新 Token 并重新排序) */
   @Require @Param backupReload: (conf: TokenConfig[]) => Promise<void> = async (conf: TokenConfig[]) => {};
   /** 开发者选项：生成并持久化 100 个随机测试令牌 */
@@ -89,7 +102,11 @@ export struct SheetCoordinator {
     try {
       await HuaweiAccountManager.getInstance().login(this.getUIContext());
       this.syncHuaweiAccountState();
-      this.isAccountSheetVisible = true;
+      if (this.wideMode) {
+        this.selectedDetail = SettingDetailType.ACCOUNT;
+      } else {
+        this.isAccountSheetVisible = true;
+      }
     } catch (error) {
       this.syncHuaweiAccountState();
       const loginError = error as HuaweiAccountLoginError;
@@ -292,7 +309,8 @@ export struct SheetCoordinator {
     .height('100%')
   }
 
-  build() {
+  @Builder
+  SettingEntryList() {
     List({ space: 10, scroller: this.scroller }) {
       // 华为账号登录卡片：与设置子项共用 SettingItem 分组卡片表面
       ListItem() {
@@ -352,9 +370,16 @@ export struct SheetCoordinator {
           // PC/2in1 光标悬浮时提供系统高亮反馈
           .hoverEffect(HoverEffect.Highlight)
           .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.95 })
+          .border({
+            width: this.wideMode && this.selectedDetail === SettingDetailType.ACCOUNT ? 2 : 0,
+            color: $r('sys.color.interactive_active'),
+            radius: 12
+          })
           .onClick(() => {
             if (!this.isHuaweiLoggedIn) {
               this.triggerHuaweiLogin();
+            } else if (this.wideMode) {
+              this.selectedDetail = SettingDetailType.ACCOUNT;
             } else {
               this.isAccountSheetVisible = true;
             }
@@ -370,10 +395,15 @@ export struct SheetCoordinator {
         SettingItem({ title: $r('app.string.setting_group_data_management') }) {
           SubItemButton({
             symbol: $r('sys.symbol.save'),
-            text: $r('app.string.setting_backup')
+            text: $r('app.string.setting_backup'),
+            selected: this.wideMode && this.selectedDetail === SettingDetailType.BACKUP
           })
             .onClick(() => {
-              this.isBackupSheetVisible = true;
+              if (this.wideMode) {
+                this.selectedDetail = SettingDetailType.BACKUP;
+              } else {
+                this.isBackupSheetVisible = true;
+              }
             })
             .bindSheet($$this.isBackupSheetVisible, this.BackupAndMigrationSheetBuilder(),
               MaterialSheetStyle.options())
@@ -382,10 +412,15 @@ export struct SheetCoordinator {
 
           SubItemButton({
             symbol: $r('sys.symbol.link'),
-            text: $r('app.string.data_sync')
+            text: $r('app.string.data_sync'),
+            selected: this.wideMode && this.selectedDetail === SettingDetailType.DATA_SYNC
           })
             .onClick(() => {
-              this.isDataSyncSheetVisible = true;
+              if (this.wideMode) {
+                this.selectedDetail = SettingDetailType.DATA_SYNC;
+              } else {
+                this.isDataSyncSheetVisible = true;
+              }
             })
             .bindSheet($$this.isDataSyncSheetVisible, this.DataSyncSheetBuilder(),
               MaterialSheetStyle.options())
@@ -398,10 +433,15 @@ export struct SheetCoordinator {
         SettingItem({ title: $r('app.string.setting_group_app_settings') }) {
           SubItemButton({
             symbol: $r('sys.symbol.staroflife_rectangle'),
-            text: $r('app.string.setting_safety')
+            text: $r('app.string.setting_safety'),
+            selected: this.wideMode && this.selectedDetail === SettingDetailType.SECURITY
           })
             .onClick(() => {
-              this.isSafetySheetVisible = true;
+              if (this.wideMode) {
+                this.selectedDetail = SettingDetailType.SECURITY;
+              } else {
+                this.isSafetySheetVisible = true;
+              }
             })
             .bindSheet($$this.isSafetySheetVisible, this.SecuritySheetBuilder(),
               MaterialSheetStyle.options())
@@ -410,10 +450,15 @@ export struct SheetCoordinator {
 
           SubItemButton({
             symbol: $r('sys.symbol.chevron_up_2_circle'),
-            text: $r('app.string.app_appearance')
+            text: $r('app.string.app_appearance'),
+            selected: this.wideMode && this.selectedDetail === SettingDetailType.APPEARANCE
           })
             .onClick(() => {
-              this.isAppearanceSheetVisible = true;
+              if (this.wideMode) {
+                this.selectedDetail = SettingDetailType.APPEARANCE;
+              } else {
+                this.isAppearanceSheetVisible = true;
+              }
             })
             .bindSheet($$this.isAppearanceSheetVisible, this.AppearanceSheetBuilder(),
               MaterialSheetStyle.options())
@@ -440,10 +485,15 @@ export struct SheetCoordinator {
         SettingItem({ title: $r('app.string.setting_group_support_about') }) {
           SubItemButton({
             symbol: $r('sys.symbol.person_shield'),
-            text: $r('app.string.setting_agreement_statement')
+            text: $r('app.string.setting_agreement_statement'),
+            selected: this.wideMode && this.selectedDetail === SettingDetailType.AGREEMENT
           })
             .onClick(() => {
-              this.isAgreementSheetVisible = true;
+              if (this.wideMode) {
+                this.selectedDetail = SettingDetailType.AGREEMENT;
+              } else {
+                this.isAgreementSheetVisible = true;
+              }
             })
             .bindSheet($$this.isAgreementSheetVisible, this.AgreementSheetBuilder(),
               MaterialSheetStyle.options())
@@ -452,10 +502,15 @@ export struct SheetCoordinator {
 
           SubItemButton({
             symbol: $r('sys.symbol.envelope'),
-            text: $r('app.string.setting_feedback')
+            text: $r('app.string.setting_feedback'),
+            selected: this.wideMode && this.selectedDetail === SettingDetailType.FEEDBACK
           })
             .onClick(() => {
-              this.isFeedbackSheetVisible = true;
+              if (this.wideMode) {
+                this.selectedDetail = SettingDetailType.FEEDBACK;
+              } else {
+                this.isFeedbackSheetVisible = true;
+              }
             })
             .bindSheet($$this.isFeedbackSheetVisible, this.FeedbackSheetBuilder(),
               MaterialSheetStyle.options())
@@ -464,10 +519,15 @@ export struct SheetCoordinator {
 
           SubItemButton({
             symbol: $r('sys.symbol.info_circle'),
-            text: $r('app.string.setting_about')
+            text: $r('app.string.setting_about'),
+            selected: this.wideMode && this.selectedDetail === SettingDetailType.ABOUT
           })
             .onClick(() => {
-              this.isAboutSheetVisible = true;
+              if (this.wideMode) {
+                this.selectedDetail = SettingDetailType.ABOUT;
+              } else {
+                this.isAboutSheetVisible = true;
+              }
             })
             .bindSheet($$this.isAboutSheetVisible, this.AboutSheetBuilder(),
               MaterialSheetStyle.options())
@@ -476,13 +536,64 @@ export struct SheetCoordinator {
       .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
     }
     .clip(false)
-    // 与令牌列表使用相同的页签栏末端避让，确保最后一组可滚动至 HdsTabs 上方
-    .contentEndOffset(80 + this.bottomAvoidHeight)
+    // 宽屏使用侧边页签，无需再为底部 HdsTabs 预留 80vp。
+    .contentEndOffset((this.wideMode ? 16 : 80) + this.bottomAvoidHeight)
     .chainAnimation(this.token_preference.app_appearance_chain_animation_enable)
     .width('100%')
     .height('100%')
     .scrollBar(BarState.Off)
     .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     .backgroundColor($r('app.color.window_background'))
+  }
+
+  @Builder
+  SettingDetail() {
+    if (this.selectedDetail === SettingDetailType.ACCOUNT) {
+      this.AccountSheetBuilder()
+    } else if (this.selectedDetail === SettingDetailType.BACKUP) {
+      this.BackupAndMigrationSheetBuilder()
+    } else if (this.selectedDetail === SettingDetailType.DATA_SYNC) {
+      this.DataSyncSheetBuilder()
+    } else if (this.selectedDetail === SettingDetailType.SECURITY) {
+      this.SecuritySheetBuilder()
+    } else if (this.selectedDetail === SettingDetailType.APPEARANCE) {
+      this.AppearanceSheetBuilder()
+    } else if (this.selectedDetail === SettingDetailType.DEVELOPER) {
+      this.DeveloperOptionsSheetBuilder()
+    } else if (this.selectedDetail === SettingDetailType.AGREEMENT) {
+      this.AgreementSheetBuilder()
+    } else if (this.selectedDetail === SettingDetailType.FEEDBACK) {
+      this.FeedbackSheetBuilder()
+    } else {
+      this.AboutSheetBuilder()
+    }
+  }
+
+  build() {
+    if (this.wideMode) {
+      Row() {
+        Column() {
+          this.SettingEntryList()
+        }
+        .width('40%')
+        .height('100%')
+
+        Divider()
+          .vertical(true)
+          .strokeWidth(0.5)
+          .color($r('sys.color.comp_divider'))
+
+        Column() {
+          this.SettingDetail()
+        }
+        .layoutWeight(1)
+        .height('100%')
+      }
+      .width('100%')
+      .height('100%')
+      .backgroundColor($r('app.color.window_background'))
+    } else {
+      this.SettingEntryList()
+    }
   }
 }

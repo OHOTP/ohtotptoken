@@ -25,7 +25,10 @@ export struct TokenItem {
   @Require @Param Config: TokenConfig = new TokenConfig();
   @Event Update: (conf: TokenConfig) => Promise<boolean> = async () => false;
   @Event Edit: (conf: TokenConfig) => void = () => {};
+  @Event Select: (conf: TokenConfig) => void = () => {};
   @Param sortMode: boolean = false;
+  @Param selectionMode: boolean = false;
+  @Param selected: boolean = false;
 
   @Local token_preference: TokenPreference = AppStorageV2.connect(TokenPreference) as TokenPreference;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
@@ -435,7 +438,16 @@ export struct TokenItem {
         left: this.token_preference.app_appearance_token_list_item_prefix_padding,
         right: this.token_preference.app_appearance_token_list_item_suffix_padding
       })
+      .border({
+        width: this.selectionMode && this.selected ? 2 : 0,
+        color: $r('sys.color.interactive_active'),
+        radius: this.token_preference.app_appearance_item_radius
+      })
       .onClick(() => {
+        if (this.selectionMode) {
+          this.Select(this.Config);
+          return;
+        }
         if (this.TokenHide && this.token_preference.app_safety_hide_token_enable) {
           this.TokenHide = !this.TokenHide;
           current_token_hide_map[this.Config.TokenUUID] = false;

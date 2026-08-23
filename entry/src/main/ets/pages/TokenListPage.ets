@@ -2,7 +2,7 @@ import { TokenItem } from "../components/TokenItem";
 import { MaterialSurface } from "../components/MaterialSurface";
 import { MaterialTheme, MaterialThickness } from "../components/MaterialTheme";
 import { QRCodeDialog } from 'uikit';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES, dialogSystemMaterial } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, dialogSystemMaterial } from 'common';
 import { otpType, TokenConfig, TokenConfigVM } from 'common';
 import { TokenStore } from 'common';
 import { convertToken2URI } from 'common';
@@ -14,7 +14,6 @@ import { common } from "@kit.AbilityKit";
 import { NfcSessionTokens } from "../oath/NfcSessionTokens";
 import { hilog } from "@kit.PerformanceAnalysisKit";
 import { HdsListItem } from '@kit.UIDesignKit';
-import { AddTokenPageParams } from '../components/AddTokenForm';
 
 let tkStore = TokenStore.getInstance();
 
@@ -33,6 +32,9 @@ export struct TokenListPage {
   @Require @Param pageInfos: NavPathStack = new NavPathStack();
   @Require @Param TabBarVisible: boolean = true;
   @Param listScroller: Scroller = new Scroller();
+  @Param splitSelectionMode: boolean = false;
+  @Param selectedTokenUUID: string = '';
+  @Event onSelectToken: (conf: TokenConfig) => void = () => {};
   @Event updateTokenConfig: (conf: TokenConfig, toast: boolean) => Promise<boolean> = async () => false;
   @Event updateTokenConfigs: (tokens: Array<TokenConfig>) => void = () => {};
 
@@ -161,13 +163,7 @@ export struct TokenListPage {
   }
 
   private openEditPage(conf: TokenConfig): void {
-    if (conf.TokenType === otpType.TOTP || conf.TokenType === otpType.HOTP || conf.TokenType === undefined) {
-      this.pageInfos.pushPathByName(ROUTE_NAMES.AddTotpTokenPage, new AddTokenPageParams('', conf));
-    } else if (conf.TokenType === otpType.Forti) {
-      this.pageInfos.pushPathByName(ROUTE_NAMES.AddFortiTokenPage, new AddTokenPageParams('', conf));
-    } else if (conf.TokenType === otpType.Steam) {
-      this.pageInfos.pushPathByName(ROUTE_NAMES.AddSteamTokenPage, new AddTokenPageParams('', conf));
-    }
+    this.onSelectToken(conf);
   }
 
   /**
@@ -180,6 +176,9 @@ export struct TokenListPage {
   TokenItemContentBuilder(vm: TokenConfigVM) {
     TokenItem({
       Config: vm.config,
+      selectionMode: this.splitSelectionMode,
+      selected: vm.config.TokenUUID === this.selectedTokenUUID,
+      Select: (conf: TokenConfig) => this.onSelectToken(conf),
       Edit: (conf: TokenConfig) => this.openEditPage(conf),
       Update: async (conf_new): Promise<boolean> => {
         return await this.updateSingleToken(conf_new, false);

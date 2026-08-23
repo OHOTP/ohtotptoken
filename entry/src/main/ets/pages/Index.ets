@@ -36,6 +36,7 @@ import lazy { HuaweiAccountManager } from 'common';
 import lazy { IconPackCloudBackup } from 'common';
 import { DlpAntiPeepManager } from 'common';
 import { AppShell } from '../shell/AppShell';
+import { AddTokenPageParams } from '../components/AddTokenForm';
 import { HomeTabs } from '../shell/HomeTabs';
 // [冷启动优化] SheetCoordinator("我的"页签 + 8 个 Sheet)仅在用户切换到"我的"Tab 时触发模块评估
 import lazy { SheetCoordinator } from '../shell/SheetCoordinator';
@@ -108,6 +109,8 @@ struct Index {
   @Local tokenListScroller: Scroller = new Scroller();
   @Local settingEntryScroller: Scroller = new Scroller();
   @Local currentHomeTabIndex: number = 0;
+  @Local selectedTokenUUID: string = '';
+  @Local businessSplitEnabled: boolean = true;
   @Local CurrentTokensCount: number = 0;
   @Local scrollEffectVersion: number = 0;
   @Local bottomTabsTypeVersion: number = 0;
@@ -214,10 +217,10 @@ struct Index {
         this.start_quick_scan();
       });
       this.appCtx.eventHub.on(EVENT_NAMES.START_CARD_CONFIG, () => {
-        this.pageInfos.pushPathByName(ROUTE_NAMES.TokenCardConfigPage, null);
+        this.openFullScreenRoute(ROUTE_NAMES.TokenCardConfigPage, null);
       });
       this.appCtx.eventHub.on(EVENT_NAMES.START_TOKEN_SORT, () => {
-        this.pageInfos.pushPathByName(ROUTE_NAMES.TokenSortPage, null);
+        this.openFullScreenRoute(ROUTE_NAMES.TokenSortPage, null);
       });
       // NFC 外部令牌变更事件：合并刷新（本地令牌 + 会话级 NFC 令牌）
       this.appCtx.eventHub.on(EVENT_NAMES.NFC_EXTERNAL_TOKENS_CHANGED, () => this.refreshDisplayTokens());
@@ -498,6 +501,8 @@ struct Index {
     const cardConfigFormId = AppStorage.get<string>('card_config_formId') ?? '';
     if (!needShowLock && cardConfigFormId === '') {
       this.pageInfos.clear();
+      this.selectedTokenUUID = '';
+      this.businessSplitEnabled = true;
     }
     if (needShowLock && AppPreference.getPreference(PREF_KEYS.SAFETY_LOCK_ENABLE)) {
       this.isAppLockOverlayVisible = true;
@@ -534,7 +539,7 @@ struct Index {
     if (cardConfigFormId !== '') {
       const allPaths = this.pageInfos.getAllPathName();
       if (!allPaths.includes(ROUTE_NAMES.TokenCardConfigPage)) {
-        this.pageInfos.pushPathByName(ROUTE_NAMES.TokenCardConfigPage, null);
+        this.openFullScreenRoute(ROUTE_NAMES.TokenCardConfigPage, null);
       }
     }
   }
@@ -573,6 +578,50 @@ struct Index {
       hilog.error(0, 'Index', `updateTokenConfig failed: ${e}`);
       return false;
     }
+  }
+
+  @Monitor('CurrentTokens')
+  onCurrentTokensChanged(): void {
+    if (this.selectedTokenUUID !== '' &&
+      !this.CurrentTokens.some((token: TokenConfig) => token.TokenUUID === this.selectedTokenUUID)) {
+      this.selectedTokenUUID = '';
+      this.pageInfos.clear();
+    }
+  }
+
+  private tokenEditRoute(conf: TokenConfig): ROUTE_NAMES | undefined {
+    if (conf.TokenType === otpType.Forti) {
+      return ROUTE_NAMES.AddFortiTokenPage;
+    }
+    if (conf.TokenType === otpType.Steam) {
+      return ROUTE_NAMES.AddSteamTokenPage;
+    }
+    if (conf.TokenType === otpType.NFC_external) {
+      return undefined;
+    }
+    return ROUTE_NAMES.AddTotpTokenPage;
+  }
+
+  private selectTokenForResponsiveEdit(conf: TokenConfig): void {
+    const route = this.tokenEditRoute(conf);
+    if (route === undefined) {
+      this.selectedTokenUUID = '';
+      this.pageInfos.clear();
+      return;
+    }
+    this.selectedTokenUUID = conf.TokenUUID;
+    this.businessSplitEnabled = true;
+    const params = new AddTokenPageParams('', conf);
+    if (this.pageInfos.getAllPathName().length === 0) {
+      this.pageInfos.pushPathByName(route, params, false);
+    } else {
+      this.pageInfos.replacePathByName(route, params, false);
+    }
+  }
+
+  private openFullScreenRoute(name: ROUTE_NAMES, param: Object | null): void {
+    this.pageInfos.pushPathByName(name, param);
+    this.businessSplitEnabled = false;
   }
 
   private async addTestTokens(): Promise<boolean> {
@@ -691,7 +740,7 @@ struct Index {
           this.updateTokenConfigs(confs);
         });
       } else if (code.startsWith('otpauth://')) {
-        this.pageInfos.pushPathByName(ROUTE_NAMES.AddTotpTokenPage, new AddTotpRouteParams(code));
+        this.openFullScreenRoute(ROUTE_NAMES.AddTotpTokenPage, new AddTotpRouteParams(code));
       }
     }).catch((err: BusinessError) => {
       // 1000500002: 用户取消扫码, 静默处理
@@ -704,15 +753,15 @@ struct Index {
   }
 
   openTotpAddPage(): void {
-    this.pageInfos.pushPathByName(ROUTE_NAMES.AddTotpTokenPage, new AddTotpRouteParams(''));
+    this.openFullScreenRoute(ROUTE_NAMES.AddTotpTokenPage, new AddTotpRouteParams(''));
   }
 
   openFortiAddPage(): void {
-    this.pageInfos.pushPathByName(ROUTE_NAMES.AddFortiTokenPage, new AddTotpRouteParams(''));
+    this.openFullScreenRoute(ROUTE_NAMES.AddFortiTokenPage, new AddTotpRouteParams(''));
   }
 
   openSteamAddPage(): void {
-    this.pageInfos.pushPathByName(ROUTE_NAMES.AddSteamTokenPage, new AddTotpRouteParams(''));
+    this.openFullScreenRoute(ROUTE_NAMES.AddSteamTokenPage, new AddTotpRouteParams(''));
   }
 
   openNfcReadDialog(): void {
@@ -818,6 +867,7 @@ struct Index {
       scrollEffectType: this.currentScrollEffectType,
       scroller: this.settingEntryScroller,
       bottomAvoidHeight: this.window.AvoidBottomHeight,
+      wideMode: this.window.AllowSplit,
       backupReload: async (conf) => {
         await this.updateTokenConfigs(conf);
         tkStore.sortTokens();
@@ -843,8 +893,14 @@ struct Index {
       updateTokenConfigs: (tokens: Array<TokenConfig>) => this.updateTokenConfigs(tokens),
       tokenListScroller: this.tokenListScroller,
       settingEntryScroller: this.settingEntryScroller,
+      selectedTokenUUID: this.selectedTokenUUID,
+      onSelectToken: (conf: TokenConfig) => this.selectTokenForResponsiveEdit(conf),
       onTabChange: (index: number) => {
         this.currentHomeTabIndex = index;
+        if (index === 1) {
+          this.selectedTokenUUID = '';
+          this.pageInfos.clear();
+        }
       },
       settingEntryContent: this.SettingEntryContentBuilder,
     })
@@ -859,10 +915,18 @@ struct Index {
         applockVisible: this.isAppLockOverlayVisible,
         scrollEffectType: this.currentScrollEffectType,
         currentHomeTabIndex: this.currentHomeTabIndex,
+        window: this.window,
+        businessSplitEnabled: this.businessSplitEnabled,
         tokenListScroller: this.tokenListScroller,
         settingEntryScroller: this.settingEntryScroller,
         openAddTokenMenu: () => this.openAddTokenMenu(),
         addTokenMenuTargetId: this.addTokenMenuTargetId,
+        onOpenFullScreenRoute: (name: ROUTE_NAMES, param: Object | null) => this.openFullScreenRoute(name, param),
+        onNavBarVisible: () => {
+          if (this.currentHomeTabIndex === 0) {
+            this.businessSplitEnabled = true;
+          }
+        },
         onDropFile: () => {
           this.DropFilesDialogIsOpen = false;
           this.DropFilesDialogController?.close();

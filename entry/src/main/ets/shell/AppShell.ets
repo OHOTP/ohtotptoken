@@ -1,6 +1,6 @@
 import { uniformTypeDescriptor } from '@kit.ArkData';
 import { HdsNavigation, HdsNavigationTitleMode, ScrollEffectType, hdsMaterial } from '@kit.UIDesignKit';
-import { ROUTE_NAMES } from 'common';
+import { AppWindowInfo, ROUTE_NAMES } from 'common';
 import { MaterialPolicy } from '../utils/MaterialPolicy';
 // [冷启动优化] 以下 NavDestination 页面仅在用户导航时触发评估
 import lazy { TokenCardConfigPage } from '../pages/TokenCardConfigPage'
@@ -18,9 +18,33 @@ import lazy { AddSteamTokenPage } from '../pages/AddSteamTokenPage';
 import lazy { IconPickerPage, IconPickerPageParams } from '../pages/IconPickerPage';
 import { AddTokenPageParams } from '../components/AddTokenForm';
 import { TokenConfig } from 'common';
+import { ComponentContent } from '@kit.ArkUI';
 
 @Builder
 function EmptyBuilder() {
+}
+
+@Builder
+function TokenSplitPlaceholder() {
+  Column({ space: 12 }) {
+    SymbolGlyph($r('sys.symbol.square_and_pencil'))
+      .fontSize(52)
+      .fontColor([$r('sys.color.icon_secondary')])
+    Text($r('app.string.responsive_token_placeholder_title'))
+      .fontSize(22)
+      .fontWeight(FontWeight.Medium)
+      .fontColor($r('sys.color.font_primary'))
+      .textAlign(TextAlign.Center)
+    Text($r('app.string.responsive_token_placeholder_description'))
+      .fontSize(14)
+      .fontColor($r('sys.color.font_secondary'))
+      .textAlign(TextAlign.Center)
+  }
+  .padding(32)
+  .width('100%')
+  .height('100%')
+  .justifyContent(FlexAlign.Center)
+  .backgroundColor($r('app.color.window_background'))
 }
 
 /**
@@ -42,10 +66,14 @@ export struct AppShell {
   /** 顶部滚动效果类型(传递给各 NavDestination 页面并配置主页标题栏) */
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Require @Param currentHomeTabIndex: number = 0;
+  @Require @Param window: AppWindowInfo = new AppWindowInfo();
+  @Require @Param businessSplitEnabled: boolean = true;
   @Require @Param tokenListScroller: Scroller = new Scroller();
   @Require @Param settingEntryScroller: Scroller = new Scroller();
   @Require @Param openAddTokenMenu: () => void = () => {};
   @Require @Param addTokenMenuTargetId: string = '';
+  @Event onOpenFullScreenRoute: (name: ROUTE_NAMES, param: Object | null) => void = () => {};
+  @Event onNavBarVisible: () => void = () => {};
   /** 文件拖放回调(由 Index 提供,控制 DropFilesDialog) */
   @Require @Param onDropFile: () => void = () => {};
   @Require @Param onDragEnterFile: () => void = () => {};
@@ -55,6 +83,9 @@ export struct AppShell {
 
   @BuilderParam appLockContent?: CustomBuilder = EmptyBuilder;
   @BuilderParam homeContent?: CustomBuilder = EmptyBuilder;
+
+  private splitPlaceholder: ComponentContent<Object> =
+    new ComponentContent(this.getUIContext(), wrapBuilder(TokenSplitPlaceholder));
 
   @LocalBuilder
   navDestinationBuilder(name: string, param: Object) {
@@ -142,7 +173,18 @@ export struct AppShell {
     }
     .backgroundColor($r('app.color.window_background'))
     .hideTitleBar(this.isLoading)
-    .mode(NavigationMode.Stack)
+    .mode(this.window.AllowSplit && this.currentHomeTabIndex === 0 && this.businessSplitEnabled ?
+      NavigationMode.Split : NavigationMode.Stack)
+    .navBarWidth(this.window.WidthVp < 840 ? '50%' : '36%')
+    .navBarWidthRange({ minWidth: 320, maxWidth: 560 })
+    .minContentWidth(300)
+    .enableDragBar(this.window.AllowSplit && this.currentHomeTabIndex === 0 && this.businessSplitEnabled)
+    .splitPlaceholder(this.splitPlaceholder)
+    .onNavBarStateChange((isVisible: boolean) => {
+      if (isVisible) {
+        this.onNavBarVisible();
+      }
+    })
     .navDestination(this.navDestinationBuilder)
     .bindToScrollable([
       this.currentHomeTabIndex === 0 ? this.tokenListScroller : this.settingEntryScroller
@@ -185,7 +227,7 @@ export struct AppShell {
                 icon: $r('sys.symbol.magnifyingglass'),
                 isEnabled: true,
                 action: () => {
-                  this.pageInfos.pushPathByName(ROUTE_NAMES.TokenSearchPage, null);
+                  this.onOpenFullScreenRoute(ROUTE_NAMES.TokenSearchPage, null);
                 }
               }
             },
