@@ -36,7 +36,8 @@ export struct TokenItem {
   @Local TokenLeftPeriod: number = 0;
   @Local btn_hotp_clicked: number = 0;
   @Local TokenHide: boolean = current_token_hide_map[this.Config.TokenUUID] ?? true;
-  @Local isLongPressMenuShown: boolean = false;
+  @Local previewDetailsVisible: boolean = false;
+  @Local debugModeIsOn: boolean = AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON) as boolean;
 
   @Local menu_icon_trash: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.trash')).fontSize('22vp').fontColor([Color.Red]);
   @Local menu_icon_qrcode: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.qrcode')).fontSize('22vp');
@@ -45,9 +46,12 @@ export struct TokenItem {
   @Local menu_icon_sort: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.list_bullet')).fontSize('22vp');
 
   private dialog_qrcode?: CustomDialogController;
+  private isLongPressMenuActive: boolean = false;
+  private pendingSortNavigation: boolean = false;
 
   private token_steps: number = 0;
   private onTimestampChangedHandler: (timestamp: number, force: boolean) => void = () => {};
+  private onDebugModeChangedHandler: (isOn: boolean) => void = () => {};
   // 使用 AppStorage 获取 context，避免在 aboutToAppear（build 之前）调用 getUIContext()
   private appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
 
@@ -173,12 +177,73 @@ export struct TokenItem {
     this.appCtx.eventHub?.on(EVENT_NAMES.TIMESTAMP_CHANGED, this.onTimestampChangedHandler);
     this.onNfcExternalTokensChangedHandler = (): void => this.onNfcExternalTokensChanged();
     this.appCtx.eventHub?.on(EVENT_NAMES.NFC_EXTERNAL_TOKENS_CHANGED, this.onNfcExternalTokensChangedHandler);
+    this.onDebugModeChangedHandler = (isOn: boolean): void => {
+      this.debugModeIsOn = isOn;
+    };
+    this.appCtx.eventHub?.on(EVENT_NAMES.DEBUG_MODE_CHANGED, this.onDebugModeChangedHandler);
     this.updateToken();
   }
 
   aboutToDisappear(): void {
     this.appCtx.eventHub?.off(EVENT_NAMES.TIMESTAMP_CHANGED, this.onTimestampChangedHandler);
     this.appCtx.eventHub?.off(EVENT_NAMES.NFC_EXTERNAL_TOKENS_CHANGED, this.onNfcExternalTokensChangedHandler);
+    this.appCtx.eventHub?.off(EVENT_NAMES.DEBUG_MODE_CHANGED, this.onDebugModeChangedHandler);
+  }
+
+  private onLongPressMenuWillAppear(): void {
+    this.isLongPressMenuActive = true;
+    this.pendingSortNavigation = false;
+    this.previewDetailsVisible = false;
+  }
+
+  private onLongPressMenuDidAppear(): void {
+    // 共享容器扩展完成后再淡入元数据，避免内容先于容器尺寸变化出现。
+    this.getUIContext().animateTo({ duration: 160, curve: Curve.EaseOut }, () => {
+      this.previewDetailsVisible = true;
+    });
+  }
+
+  private onLongPressMenuWillDisappear(): void {
+    this.getUIContext().animateTo({ duration: 100, curve: Curve.EaseIn }, () => {
+      this.previewDetailsVisible = false;
+    });
+  }
+
+  private requestTokenSort(): void {
+    // 右键菜单没有长按预览，保持原有的直接跳转行为。
+    if (!this.isLongPressMenuActive) {
+      this.appCtx.eventHub?.emit(EVENT_NAMES.START_TOKEN_SORT);
+      return;
+    }
+    this.pendingSortNavigation = true;
+    this.previewDetailsVisible = false;
+    // 主动关闭菜单，触发 CustomBuilder 预览到原组件截图的反向一镜到底动效。
+    this.getUIContext().getContextMenuController().close();
+  }
+
+  private onLongPressMenuDidDisappear(): void {
+    this.isLongPressMenuActive = false;
+    if (!this.pendingSortNavigation) {
+      return;
+    }
+    this.pendingSortNavigation = false;
+    this.appCtx.eventHub?.emit(EVENT_NAMES.START_TOKEN_SORT);
+  }
+
+  private tokenTypeName(): string {
+    if (this.Config.TokenType === otpType.HOTP) {
+      return 'HOTP';
+    }
+    if (this.Config.TokenType === otpType.Forti) {
+      return 'FortiToken';
+    }
+    if (this.Config.TokenType === otpType.Steam) {
+      return 'Steam';
+    }
+    if (this.Config.TokenType === otpType.NFC_external) {
+      return 'NFC OATH';
+    }
+    return 'TOTP';
   }
 
   onTimestampChanged(timestamp: number, force: boolean): void {
@@ -236,7 +301,7 @@ export struct TokenItem {
   @Builder
   TokenCodeBuilder() {
     Column() {
-      if (AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON)) {
+      if (this.debugModeIsOn) {
         Text(this.Config.RankScore.toString())
           .textAlign(TextAlign.Center)
           .textOverflow({ overflow: TextOverflow.MARQUEE })
@@ -379,22 +444,24 @@ export struct TokenItem {
           current_token_hide_map[this.Config.TokenUUID] = true;
         }
       })
-      .gesture(
-        LongPressGesture({ duration: this.token_preference.app_appearance_long_press_duration })
-          .onAction(() => {
-            this.isLongPressMenuShown = true;
-          })
-      )
-      .bindContextMenu(this.isLongPressMenuShown, this.TokenRightCtxMenu, {
-        // 预览走 CustomBuilder 自绘实体卡片，而非 MenuPreviewMode.IMAGE 组件截图：
-        // 沉浸材质由 materialFilter 在合成时采样窗口背景实现，不属于组件自身像素，
-        // 截图对效果类属性官方明确"可能产生非用户预期的结果"（材质层丢失只剩透明
-        // 背景+图标文字）；实体模式下截图即为所见，仍用 IMAGE
-        preview: MaterialTheme.isTokenItemMaterialEffective() ? this.TokenMenuPreview : MenuPreviewMode.IMAGE,
+      .bindContextMenu(this.TokenRightCtxMenu, ResponseType.LongPress, {
+        // 官方 hoverScale 仅在 LongPress + CustomBuilder 预览中提供原组件截图到
+        // 扩展预览的一镜到底变形；isShown 方式只会直接展示目标尺寸。
+        preview: this.TokenMenuPreview,
+        previewAnimationOptions: { hoverScale: [1.0, 1.0] },
         previewBorderRadius: this.token_preference.app_appearance_item_radius,
         hapticFeedbackMode: HapticFeedbackMode.AUTO,
-        onDisappear: () => {
-          this.isLongPressMenuShown = false;
+        onWillAppear: () => {
+          this.onLongPressMenuWillAppear();
+        },
+        onDidAppear: () => {
+          this.onLongPressMenuDidAppear();
+        },
+        onWillDisappear: () => {
+          this.onLongPressMenuWillDisappear();
+        },
+        onDidDisappear: () => {
+          this.onLongPressMenuDidDisappear();
         }
       })
       .bindContextMenu(this.TokenRightCtxMenu, ResponseType.RightClick, { enableArrow: true })
@@ -437,22 +504,64 @@ export struct TokenItem {
       .padding({ left: $r('sys.float.ohos_id_text_overlay_menu_button_padding_left'), right: $r('sys.float.ohos_id_text_overlay_menu_button_padding_right') })
   }
 
+  @Builder
+  TokenPreviewMetadata(label: ResourceStr, value: string) {
+    Column({ space: 2 }) {
+      Text(label)
+        .fontSize(11)
+        .fontColor($r('sys.color.font_secondary'))
+        .maxLines(1)
+      Text(value)
+        .fontSize(14)
+        .fontWeight(FontWeight.Medium)
+        .fontColor($r('app.color.str_main'))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .layoutWeight(1)
+    .alignItems(HorizontalAlign.Start)
+  }
+
   /**
-   * 长按菜单的自定义预览（材质模式专用，替代 MenuPreviewMode.IMAGE 截图）。
-   * 自绘实体卡片：内容复用 TokenRowContent，背景用与 solid 档位一致的
-   * item_bg + 卡片圆角；材质列表项浮起后呈现实体卡是长按预览的标准观感。
-   * 预览可布局区域默认扣除左右各 16vp（layoutRegionMargin 默认值），
-   * width('100%') 与列表卡片视觉宽度基本一致。
+   * 长按菜单的扩展预览。卡片先随 ContextMenu 预览动效扩大，元数据随后淡入；
+   * 关闭菜单时系统反向缩回原位。统一自绘也避免沉浸材质截图丢失。
    * 必须 @LocalBuilder：preview 是 CustomBuilder 参数，普通 @Builder 以
-   * this.TokenMenuPreview 传入时 this 被重绑定，菜单弹出即崩
-   * （TypeError: observeComponentCreation2 of undefined，已真机踩坑）
+   * this.TokenMenuPreview 传入时 this 被重绑定，菜单弹出即崩。
    */
   @LocalBuilder
   TokenMenuPreview() {
     Column() {
       this.TokenRowContent(false)
+      Divider()
+        .color($r('sys.color.comp_divider'))
+        .strokeWidth(0.5)
+        .margin({ left: 16, right: 16 })
+      Column({ space: 10 }) {
+        Row({ space: 12 }) {
+          this.TokenPreviewMetadata($r('app.string.add_token_type'), this.tokenTypeName())
+          if (this.Config.TokenType !== otpType.NFC_external) {
+            this.TokenPreviewMetadata($r('app.string.dialog_cfg_tk_alg'), this.Config.TokenAlgorithm)
+          }
+        }
+        .width('100%')
+        if (this.Config.TokenType !== otpType.NFC_external) {
+          Row({ space: 12 }) {
+            this.TokenPreviewMetadata($r('app.string.dialog_cfg_tk_digits'), this.Config.TokenDigits.toString())
+            this.TokenPreviewMetadata(
+              this.Config.TokenType === otpType.HOTP ?
+                $r('app.string.dialog_cfg_tk_counter') : $r('app.string.dialog_cfg_tk_timeout'),
+              this.Config.TokenType === otpType.HOTP ?
+                this.Config.TokenCounter.toString() : `${this.Config.TokenPeriod}s`)
+          }
+          .width('100%')
+        }
+      }
+      .padding({ left: 16, right: 16, top: 10, bottom: 14 })
+      .opacity(this.previewDetailsVisible ? 1 : 0)
+      .translate({ y: this.previewDetailsVisible ? 0 : 8 })
     }
     .width('100%')
+    .clip(true)
     .borderRadius(this.token_preference.app_appearance_item_radius)
     .backgroundColor($r('app.color.item_bg'))
   }
@@ -464,9 +573,7 @@ export struct TokenItem {
       if (this.Config.TokenType !== otpType.NFC_external) {
         MenuItem({ symbolStartIcon: this.menu_icon_sort, content: $r('app.string.token_right_menu_sort') })
           .onClick(() => {
-            if (this.appCtx.eventHub != undefined) {
-              this.appCtx.eventHub.emit(EVENT_NAMES.START_TOKEN_SORT);
-            }
+            this.requestTokenSort();
           })
           .accessibilityText($r('app.string.token_right_menu_sort'))
       }

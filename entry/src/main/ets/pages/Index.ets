@@ -1,5 +1,5 @@
 import { bundleManager,common } from '@kit.AbilityKit';
-import { TokenConfig, dialogSystemMaterial } from 'common';
+import { base32Encode, otpType, TokenConfig, dialogSystemMaterial } from 'common';
 import { util, url } from '@kit.ArkTS';
 // [冷启动优化] 文件 I/O 仅在 deferredInit 中使用
 import lazy { fileIo as fs } from '@kit.CoreFileKit';
@@ -107,6 +107,7 @@ struct Index {
   @Local appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
   @Local tokenListScroller: Scroller = new Scroller();
   @Local settingEntryScroller: Scroller = new Scroller();
+  @Local currentHomeTabIndex: number = 0;
   @Local CurrentTokensCount: number = 0;
   @Local scrollEffectVersion: number = 0;
   @Local bottomTabsTypeVersion: number = 0;
@@ -229,6 +230,8 @@ struct Index {
             this.updateTokenConfigs(backup.configs).then(() => {
               tkStore.sortTokens();
             });
+          }).catch((reason: BusinessError) => {
+            showSnackBar(reason.message, SnackBarNotifyType.ERROR);
           });
         }
         setTimeout(() => {
@@ -368,6 +371,8 @@ struct Index {
           this.updateTokenConfigs(backup.configs).then(() => {
             tkStore.sortTokens();
           });
+        }).catch((reason: BusinessError) => {
+          showSnackBar(reason.message, SnackBarNotifyType.ERROR);
         });
       },
     }),
@@ -570,6 +575,49 @@ struct Index {
     }
   }
 
+  private async addTestTokens(): Promise<boolean> {
+    if (!AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON)) {
+      return false;
+    }
+    const tokens: TokenConfig[] = [];
+    for (let i = 0; i < 100; i++) {
+      const secret = base32Encode(util.generateRandomBinaryUUID()).substring(0, 26);
+      const issuer = `Test-${util.generateRandomUUID().substring(0, 8)}`;
+      const name = `User-${util.generateRandomUUID().substring(0, 8)}`;
+      tokens.push(new TokenConfig(secret, otpType.TOTP, issuer, name));
+    }
+    const success = await this.updateTokenConfigs(tokens);
+    hilog.info(0xFF00, 'DeveloperOptions',
+      `Added ${tokens.length} test tokens, result=${success}, storeCount=${(await tkStore.getTokens()).length}`);
+    return success;
+  }
+
+  private async removeTestTokens(): Promise<boolean> {
+    if (!AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON)) {
+      return false;
+    }
+    const testTokens = (await tkStore.getTokens()).filter(token => token.TokenIssuer.startsWith('Test-'));
+    if (testTokens.length === 0) {
+      showSnackBar($r('app.string.toast_no_test_tokens'), SnackBarNotifyType.INFO);
+      return true;
+    }
+
+    let failCount = 0;
+    for (const token of testTokens) {
+      try {
+        await tkStore.deleteToken(token.TokenUUID);
+      } catch (error) {
+        failCount++;
+        hilog.error(0, 'DeveloperOptions', `Failed to remove test token: ${error}`);
+      }
+    }
+    await this.refreshDisplayTokens();
+    const removedCount = testTokens.length - failCount;
+    showSnackBar($r('app.string.toast_test_tokens_removed', removedCount),
+      failCount === 0 ? SnackBarNotifyType.SUCCESS : SnackBarNotifyType.WARNING);
+    return failCount === 0;
+  }
+
   async updateTokenConfigs(tokens: Array<TokenConfig>): Promise<boolean> {
     let failCount = 0;
     let hasNew = false;
@@ -769,31 +817,35 @@ struct Index {
       tokens: this.CurrentTokens,
       scrollEffectType: this.currentScrollEffectType,
       scroller: this.settingEntryScroller,
+      bottomAvoidHeight: this.window.AvoidBottomHeight,
       backupReload: async (conf) => {
         await this.updateTokenConfigs(conf);
         tkStore.sortTokens();
-      }
+      },
+      addTestTokens: () => this.addTestTokens(),
+      removeTestTokens: () => this.removeTestTokens()
     })
   }
 
   /**
-   * 首页内容(Task 3.1):断点 lanes + 双页签,由 HomeTabs 承载
-   * [@LocalBuilder] 作为 @BuilderParam 传给 AppShell 时保持 this 指向 Index
+   * 首页内容(Task 3.1):断点 lanes + 双页签,由 HomeTabs 承载。
+   * 通过箭头函数传给 AppShell，使 @Builder 保持 Index 的 this 与状态刷新能力。
    */
-  @LocalBuilder
+  @Builder
   HomeContentBuilder() {
     HomeTabs({
       tokens: this.CurrentTokens,
       window: this.window,
-      scrollEffectType: this.currentScrollEffectType,
       bottomTabsType: this.currentBottomTabsType,
+      currentTabIndex: this.currentHomeTabIndex,
       pageInfos: this.pageInfos,
       updateTokenConfig: (conf: TokenConfig, toast?: boolean) => this.updateTokenConfig(conf, toast),
       updateTokenConfigs: (tokens: Array<TokenConfig>) => this.updateTokenConfigs(tokens),
-      openAddTokenMenu: () => this.openAddTokenMenu(),
-      addTokenMenuTargetId: this.addTokenMenuTargetId,
       tokenListScroller: this.tokenListScroller,
       settingEntryScroller: this.settingEntryScroller,
+      onTabChange: (index: number) => {
+        this.currentHomeTabIndex = index;
+      },
       settingEntryContent: this.SettingEntryContentBuilder,
     })
   }
@@ -806,6 +858,11 @@ struct Index {
         blurFlag: this.background_blur_flag as boolean,
         applockVisible: this.isAppLockOverlayVisible,
         scrollEffectType: this.currentScrollEffectType,
+        currentHomeTabIndex: this.currentHomeTabIndex,
+        tokenListScroller: this.tokenListScroller,
+        settingEntryScroller: this.settingEntryScroller,
+        openAddTokenMenu: () => this.openAddTokenMenu(),
+        addTokenMenuTargetId: this.addTokenMenuTargetId,
         onDropFile: () => {
           this.DropFilesDialogIsOpen = false;
           this.DropFilesDialogController?.close();
@@ -822,7 +879,9 @@ struct Index {
         },
         saveToken: (conf: TokenConfig) => this.updateTokenConfig(conf, true),
         appLockContent: this.AppLockOverlayBuilder,
-        homeContent: this.HomeContentBuilder,
+        homeContent: () => {
+          this.HomeContentBuilder();
+        },
       })
     }
   }

@@ -1,6 +1,7 @@
 import { uniformTypeDescriptor } from '@kit.ArkData';
-import { HdsNavigation, ScrollEffectType } from '@kit.UIDesignKit';
+import { HdsNavigation, HdsNavigationTitleMode, ScrollEffectType, hdsMaterial } from '@kit.UIDesignKit';
 import { ROUTE_NAMES } from 'common';
+import { MaterialPolicy } from '../utils/MaterialPolicy';
 // [冷启动优化] 以下 NavDestination 页面仅在用户导航时触发评估
 import lazy { TokenCardConfigPage } from '../pages/TokenCardConfigPage'
 import lazy { TokenSortPage } from '../pages/TokenSortPage'
@@ -38,8 +39,13 @@ export struct AppShell {
   @Require @Param blurFlag: boolean = false;
   /** 应用锁覆盖层是否可见(单向即可,关闭由覆盖层 onUnlock 回调驱动) */
   @Require @Param applockVisible: boolean = false;
-  /** 顶部滚动效果类型(传递给各 NavDestination 页面) */
+  /** 顶部滚动效果类型(传递给各 NavDestination 页面并配置主页标题栏) */
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
+  @Require @Param currentHomeTabIndex: number = 0;
+  @Require @Param tokenListScroller: Scroller = new Scroller();
+  @Require @Param settingEntryScroller: Scroller = new Scroller();
+  @Require @Param openAddTokenMenu: () => void = () => {};
+  @Require @Param addTokenMenuTargetId: string = '';
   /** 文件拖放回调(由 Index 提供,控制 DropFilesDialog) */
   @Require @Param onDropFile: () => void = () => {};
   @Require @Param onDragEnterFile: () => void = () => {};
@@ -118,6 +124,7 @@ export struct AppShell {
       }
       .width('100%')
       .height('100%')
+      .clip(false)
       .allowDrop([uniformTypeDescriptor.UniformDataType.FILE])
       .onDrop(() => {
         this.onDropFile();
@@ -133,9 +140,70 @@ export struct AppShell {
         adaptiveColor: AdaptiveColor.DEFAULT
       })
     }
-    .hideTitleBar(true)
+    .backgroundColor($r('app.color.window_background'))
+    .hideTitleBar(this.isLoading)
     .mode(NavigationMode.Stack)
     .navDestination(this.navDestinationBuilder)
+    .bindToScrollable([
+      this.currentHomeTabIndex === 0 ? this.tokenListScroller : this.settingEntryScroller
+    ])
+    .titleMode(HdsNavigationTitleMode.MINI)
+    .hideBackButton(true)
+    .titleBar({
+      avoidLayoutSafeArea: true,
+      enableComponentSafeArea: true,
+      style: {
+        originalStyle: {
+          contentStyle: {
+            titleStyle: {
+              mainTitleColor: $r('sys.color.font_primary'),
+            },
+            menuStyle: {
+              iconColor: $r('sys.color.icon_primary')
+            },
+          }
+        },
+        scrollEffectOpts: {
+          enableScrollEffect: true,
+          scrollEffectType: this.scrollEffectType
+        },
+        systemMaterialEffect: {
+          materialType: hdsMaterial.MaterialType.ADAPTIVE,
+          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+        }
+      },
+      content: {
+        title: {
+          mainTitle: this.currentHomeTabIndex === 0 ?
+            $r('app.string.tab_token') : $r('app.string.tab_me'),
+        },
+        menu: {
+          value: this.currentHomeTabIndex === 0 ? [
+            {
+              content: {
+                label: $r('app.string.app_ua_search_token'),
+                icon: $r('sys.symbol.magnifyingglass'),
+                isEnabled: true,
+                action: () => {
+                  this.pageInfos.pushPathByName(ROUTE_NAMES.TokenSearchPage, null);
+                }
+              }
+            },
+            {
+              content: {
+                label: $r('app.string.app_ua_add_token'),
+                icon: $r('sys.symbol.plus'),
+                isEnabled: true,
+                componentId: this.addTokenMenuTargetId,
+                action: () => {
+                  this.openAddTokenMenu();
+                }
+              }
+            }
+          ] : []
+        }
+      }
+    })
     .bindContentCover(this.applockVisible, this.appLockContent ? this.appLockContent() : null, {
       modalTransition: ModalTransition.NONE,
       onWillDismiss: (dismissContentCoverAction: DismissContentCoverAction) => {

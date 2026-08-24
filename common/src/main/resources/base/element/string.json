@@ -181,6 +181,18 @@
       "value": "input your password..."
     },
     {
+      "name": "dialog_backup_password_confirm_placeholder",
+      "value": "Confirm backup password..."
+    },
+    {
+      "name": "dialog_backup_password_mismatch",
+      "value": "Passwords do not match"
+    },
+    {
+      "name": "dialog_backup_password_empty",
+      "value": "Password cannot be empty"
+    },
+    {
       "name": "warn_forti_dev_id_popup",
       "value": "FortiToken allows you to register a token only once with this device id"
     },
@@ -1133,6 +1145,18 @@
       "value": "Immersive Material"
     },
     {
+      "name": "setting_group_data_management",
+      "value": "Data Management"
+    },
+    {
+      "name": "setting_group_app_settings",
+      "value": "App Settings"
+    },
+    {
+      "name": "setting_group_support_about",
+      "value": "Support & About"
+    },
+    {
       "name": "setting_token_item_material",
       "value": "List Item Material"
     },
@@ -1619,6 +1643,54 @@
     {
       "name": "card_config_no_token",
       "value": "No tokens available"
+    },
+    {
+      "name": "setting_group_developer_options",
+      "value": "Developer Options"
+    },
+    {
+      "name": "setting_group_token_operations",
+      "value": "Token Operations"
+    },
+    {
+      "name": "developer_add_test_tokens",
+      "value": "Add 100 Test Tokens"
+    },
+    {
+      "name": "developer_add_test_tokens_description",
+      "value": "Generate random token names and secrets for development and debugging."
+    },
+    {
+      "name": "developer_add_test_tokens_confirm_title",
+      "value": "Add Test Tokens?"
+    },
+    {
+      "name": "developer_add_test_tokens_confirm_message",
+      "value": "This will add 100 test tokens with random names and secrets. Continue?"
+    },
+    {
+      "name": "developer_remove_test_tokens",
+      "value": "Remove Test Tokens"
+    },
+    {
+      "name": "developer_remove_test_tokens_description",
+      "value": "Remove tokens whose issuer starts with Test-."
+    },
+    {
+      "name": "developer_remove_test_tokens_confirm_title",
+      "value": "Remove Test Tokens?"
+    },
+    {
+      "name": "developer_remove_test_tokens_confirm_message",
+      "value": "This will remove all tokens whose issuer starts with Test-. Continue?"
+    },
+    {
+      "name": "toast_test_tokens_removed",
+      "value": "%d test token(s) removed"
+    },
+    {
+      "name": "toast_no_test_tokens",
+      "value": "No test tokens to remove"
     }
   ]
 }

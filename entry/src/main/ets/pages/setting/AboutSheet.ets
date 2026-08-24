@@ -48,6 +48,7 @@ struct AboutInfoRow {
 @ComponentV2
 export struct AboutSheet {
   @Require @Param scrollEffectStyle: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
+  @Event debugModeChanged: (isOn: boolean) => void = () => {};
   @Local debug_mode_is_on: boolean = AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON) as boolean;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   private sheetScroller: Scroller = new Scroller();
@@ -117,7 +118,8 @@ export struct AboutSheet {
                     if (this.debug_mode_counter > 7) {
                       this.window.uiContext?.animateTo({ curve: curves.springMotion() }, () => {
                         this.debug_mode_is_on = true;
-                        AppPreference.setPreference('app_debug_mode_on', true);
+                        AppPreference.setPreference(PREF_KEYS.DEBUG_MODE_ON, true);
+                        this.debugModeChanged(true);
                         showSnackBar('DEBUG MODE ON', SnackBarNotifyType.INFO);
                       })
 

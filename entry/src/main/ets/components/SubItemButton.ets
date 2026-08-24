@@ -71,6 +71,8 @@ export struct SubItemButton {
       .alignItems(VerticalAlign.Top)
       .justifyContent(FlexAlign.Start)
     }
+    // PC/2in1 光标悬浮时使用系统高亮反馈，满足大屏可交互控件 UX 要求
+    .hoverEffect(HoverEffect.Highlight)
     .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.95 })
     .padding(SETTING_ROW_PADDING)
     .constraintSize({ minHeight: SETTING_ROW_MIN_HEIGHT })

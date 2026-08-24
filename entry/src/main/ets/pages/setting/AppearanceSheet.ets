@@ -3,7 +3,7 @@ import { MaterialPolicy } from '../../utils/MaterialPolicy';
 
 import { showSnackBar, SnackBarNotifyType } from 'common';
 import { SubItemToggle } from '../../components/SubItemToggle'
-import { AppStorageV2, curves } from '@kit.ArkUI';
+import { AppStorageV2 } from '@kit.ArkUI';
 import { AppPreference, SettingColorMode, SettingTopEffectType, SettingBottomTabsType, TokenPreference, MaterialPreference, AVAILABLE_TOP_EFFECT_TYPES, AVAILABLE_BOTTOM_TABS_TYPES, AVAILABLE_MATERIAL_MODES, AVAILABLE_IMMERSIVE_STYLES, AVAILABLE_TOKEN_ITEM_MATERIALS, AVAILABLE_LIGHT_EFFECT_MODES, SettingMaterialMode, SettingImmersiveStyle, SettingTokenItemMaterial, SettingLightEffectMode, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES } from 'common';
 import { SubItemButton } from '../../components/SubItemButton';
 import { SettingItem } from '../../components/SettingItem';
@@ -24,7 +24,6 @@ import { MaterialTheme } from '../../components/MaterialTheme';
 export struct AppearanceSheet {
   pageInfos: NavPathStack = new NavPathStack();
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
-  @Local debug_mode_is_on: boolean = AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON) as boolean;
   @Local token_preference: TokenPreference = AppStorageV2.connect(TokenPreference) as TokenPreference;
   @Local material_preference: MaterialPreference = AppStorageV2.connect(MaterialPreference) as MaterialPreference;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
@@ -105,22 +104,6 @@ export struct AppearanceSheet {
                   }
                 })
 
-                if (this.debug_mode_is_on) {
-                  SubItemDivider()
-
-                  SubItemToggle({
-                    icon: $r('sys.symbol.gearshape'),
-                    title: $r('app.string.debug_mode'),
-                    isOn: AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON) as boolean,
-                    description: $r('app.string.debug_mode_des'),
-                    onChange: (IsOn: boolean) => {
-                      this.window.uiContext?.animateTo({ curve: curves.springMotion() }, () => {
-                        this.debug_mode_is_on = IsOn;
-                      })
-                      AppPreference.setPreference(PREF_KEYS.DEBUG_MODE_ON, IsOn);
-                    }
-                  })
-                }
               }
             }
             .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
