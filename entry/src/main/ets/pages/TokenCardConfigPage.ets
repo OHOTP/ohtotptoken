@@ -1,5 +1,6 @@
 import { TokenConfig } from 'common';
 import { TokenStore } from 'common';
+import { GenericDataSource } from 'common';
 import { TokenCardStore, CardConfig } from 'common';
 import { formProvider, formBindingData } from '@kit.FormKit';
 import { BusinessError } from '@kit.BasicServicesKit';
@@ -23,6 +24,7 @@ export struct TokenCardConfigPage {
   pathStack: NavPathStack = new NavPathStack();
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   @Local tokens: TokenConfig[] = [];
+  @Local dataSource: GenericDataSource<TokenConfig> = new GenericDataSource([]);
   @Local selectedUUIDs: string[] = [];
   @Local formId: string = '';
   @Local formName: string = 'tokenCard_1x2';
@@ -39,6 +41,7 @@ export struct TokenCardConfigPage {
     tkStore.initTokenStore().then(() => {
       tkStore.getTokens().then((tokens: TokenConfig[]) => {
         this.tokens = tokens;
+        this.dataSource.updateData(tokens);
       });
     });
 
@@ -102,7 +105,7 @@ export struct TokenCardConfigPage {
           .justifyContent(FlexAlign.Center)
         } else {
           List({ space: 4, scroller: this.tokenListScroller }) {
-            ForEach(this.tokens, (token: TokenConfig) => {
+            LazyForEach(this.dataSource, (token: TokenConfig) => {
               ListItem() {
                 this.TokenItemBuilder(token)
               }
@@ -110,6 +113,8 @@ export struct TokenCardConfigPage {
           }
           .width('100%')
           .height('100%')
+          .clip(false)
+          .cachedCount({ minCount: 5, maxCount: 10 }, true)
           .contentEndOffset(this.window.AvoidBottomHeight)
           .scrollBar(BarState.Off)
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
