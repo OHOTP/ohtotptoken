@@ -136,7 +136,6 @@ export struct HomeTabs {
         .barBackgroundColor(Color.Transparent)
         .barBackgroundBlurStyle(this.window.UseSideNavigation ? BlurStyle.NONE : BlurStyle.Regular)
         .barPosition(this.window.UseSideNavigation ? BarPosition.Start : BarPosition.End)
-        .barWidth(this.window.UseSideNavigation ? 96 : '100%')
         // 纵向 BottomTabBarStyle 使用官方默认 96vp 侧栏宽度并占满高度；
         // 窄窗口仍使用原底部安全区与悬浮/平铺样式。
         .barHeight(this.window.UseSideNavigation ? '100%' :

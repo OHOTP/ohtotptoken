@@ -100,7 +100,7 @@ export struct AppShell {
     } else if (name === ROUTE_NAMES.WebPage) {
       WebPage({ scrollEffectType: this.scrollEffectType, pageParams: param as WebPageParams })
     } else if (name === ROUTE_NAMES.TokenCardConfigPage) {
-      TokenCardConfigPage()
+      TokenCardConfigPage({ scrollEffectType: this.scrollEffectType })
     } else if (name === ROUTE_NAMES.TokenSortPage) {
       TokenSortPage({ scrollEffectType: this.scrollEffectType })
     } else if (name === ROUTE_NAMES.TokenSearchPage) {

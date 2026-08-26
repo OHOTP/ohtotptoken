@@ -68,6 +68,7 @@ export struct SheetCoordinator {
   @Local huaweiUser: HuaweiUserInfo | null = null;
   @Local debug_mode_is_on: boolean = AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON) as boolean;
   @Local token_preference: TokenPreference = AppStorageV2.connect(TokenPreference) as TokenPreference;
+  @Local selectedDetail: SettingDetailType = SettingDetailType.ABOUT;
 
   private appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
   private onAccountStateChanged: () => void = () => {};
