@@ -347,10 +347,11 @@ export struct SheetCoordinator {
     .clip(false)
     .backgroundColor($r('app.color.window_background'))
     .mode(NavigationMode.Stack)
-    .hideTitleBar(true)
     .hideBackButton(true)
     .titleMode(HdsNavigationTitleMode.MINI)
     .titleBar({
+      avoidLayoutSafeArea: true,
+      enableComponentSafeArea: true,
       content: {
         title: {
           mainTitle: $r('app.string.huawei_account_current')

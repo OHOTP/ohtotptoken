@@ -232,10 +232,10 @@ export struct AboutSheet {
         MaterialTheme.surfaceBackground($r('app.color.window_background')))
       .mode(NavigationMode.Stack)
       .bindToScrollable([this.sheetScroller])
-      .hideTitleBar(this.embedded)
       .hideBackButton(this.embedded)
       .titleMode(this.embedded ? HdsNavigationTitleMode.MINI : HdsNavigationTitleMode.MODAL)
       .titleBar({
+        avoidLayoutSafeArea: this.embedded,
         enableComponentSafeArea: true,
         style: {
           originalStyle: {

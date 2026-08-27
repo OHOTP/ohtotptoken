@@ -309,7 +309,6 @@ export struct AddTotpTokenPage {
       }
     }
     .backgroundColor($r('app.color.window_background'))
-    .hideTitleBar(this.window.AllowSplit && this.pageParams.editConfig !== undefined)
     .hideBackButton(this.window.AllowSplit && this.pageParams.editConfig !== undefined)
     .titleMode(HdsNavDestinationTitleMode.MODAL)
     .titleBar({

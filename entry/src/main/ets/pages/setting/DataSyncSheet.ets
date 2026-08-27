@@ -108,10 +108,10 @@ export struct DataSyncSheet {
       .mode(NavigationMode.Stack)
       .navDestination(this.navDestinationBuilder)
       .bindToScrollable([this.sheetScroller])
-      .hideTitleBar(this.embedded)
       .hideBackButton(this.embedded)
       .titleMode(this.embedded ? HdsNavigationTitleMode.MINI : HdsNavigationTitleMode.MODAL)
       .titleBar({
+        avoidLayoutSafeArea: this.embedded,
         enableComponentSafeArea: true,
         style: {
           originalStyle: {
