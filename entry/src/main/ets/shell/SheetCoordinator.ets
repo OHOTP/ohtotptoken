@@ -321,6 +321,7 @@ export struct SheetCoordinator {
         this.AboutSheetBuilder(true)
       }
     }
+    .clip(false)
     .hideTitleBar(true)
     .backgroundColor($r('app.color.window_background'))
   }
