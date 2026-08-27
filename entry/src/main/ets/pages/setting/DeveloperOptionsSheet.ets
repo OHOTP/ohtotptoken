@@ -127,6 +127,8 @@ export struct DeveloperOptionsSheet {
         .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
         .layoutWeight(1)
       }
+      .backgroundColor(this.embedded ? $r('app.color.window_background') :
+        MaterialTheme.surfaceBackground($r('app.color.window_background')))
       .mode(NavigationMode.Stack)
       .bindToScrollable([this.sheetScroller])
       .hideBackButton(this.embedded)

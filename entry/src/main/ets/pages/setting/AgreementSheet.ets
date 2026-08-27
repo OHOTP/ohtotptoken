@@ -77,8 +77,9 @@ export struct AgreementSheet {
       }
       .width('100%')
       .height('100%')
-      // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
-      .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
+      // 嵌入分栏时与左侧设置列表同底色；半模态场景继续按材质策略透出背板。
+      .backgroundColor(this.embedded ? $r('app.color.window_background') :
+        MaterialTheme.surfaceBackground($r('app.color.window_background')))
       .mode(NavigationMode.Stack)
       .navDestination(this.navDestinationBuilder)
       .bindToScrollable([this.sheetScroller])

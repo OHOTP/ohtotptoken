@@ -197,7 +197,8 @@ export default class EntryAbility extends UIAbility {
         win.WindowClass = windowClass;
         this.applyWindowColors(windowClass);
 
-        windowClass.setWindowLayoutFullScreen(true)
+        windowClass.setWindowLayoutFullScreen(true);
+        windowClass.setWindowDecorVisible(false);
 
         const avoidAreaTop = windowClass.getWindowAvoidArea(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR);
         const avoidAreaBottom = windowClass.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);

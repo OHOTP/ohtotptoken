@@ -149,6 +149,8 @@ export struct HomeTabs {
             }
           } : undefined)
         .vertical(this.window.UseSideNavigation)
+        // 侧边一级导航仅允许点击页签，避免在内容空白区上下拖动时误切换页面。
+        .scrollable(!this.window.UseSideNavigation)
         .barMode(BarMode.Fixed)
         // HDS 的 BottomTabBarStyle 在侧边一级导航下默认不使用内容切换动效，
         // 避免宽屏主内容切换时出现整页缩放/翻页感；窄屏暂时保持现有体验。

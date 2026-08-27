@@ -322,6 +322,7 @@ export struct SheetCoordinator {
       }
     }
     .hideTitleBar(true)
+    .backgroundColor($r('app.color.window_background'))
   }
 
   @Builder
@@ -407,6 +408,7 @@ export struct SheetCoordinator {
     HdsNavigation() {
       this.AccountSheetBuilder()
     }
+    .backgroundColor($r('app.color.window_background'))
     .mode(NavigationMode.Stack)
     .hideBackButton(true)
     .titleMode(HdsNavigationTitleMode.MINI)
