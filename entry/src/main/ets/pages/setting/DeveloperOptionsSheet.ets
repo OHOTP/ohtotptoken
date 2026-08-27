@@ -13,6 +13,7 @@ import { SETTING_PAGE_INSET } from '../../components/SettingStyle';
 @ComponentV2
 export struct DeveloperOptionsSheet {
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
+  @Param embedded: boolean = false;
   @Event debugModeChanged: (isOn: boolean) => void = () => {};
   @Event addTestTokens: () => Promise<boolean> = async () => false;
   @Event removeTestTokens: () => Promise<boolean> = async () => false;
@@ -128,7 +129,8 @@ export struct DeveloperOptionsSheet {
       }
       .mode(NavigationMode.Stack)
       .bindToScrollable([this.sheetScroller])
-      .titleMode(HdsNavigationTitleMode.MODAL)
+      .hideBackButton(this.embedded)
+      .titleMode(this.embedded ? HdsNavigationTitleMode.MINI : HdsNavigationTitleMode.MODAL)
       .titleBar({
         enableComponentSafeArea: true,
         style: {

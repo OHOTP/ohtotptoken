@@ -129,7 +129,6 @@ export struct HomeTabs {
           .tabIndex(1)
         }
         .clip(false)
-        .barBackgroundColor($r('app.color.tab_bar_bg'))
         .backgroundColor($r('app.color.window_background'))
         .layoutWeight(1)
         .barOverlap(!this.window.UseSideNavigation)

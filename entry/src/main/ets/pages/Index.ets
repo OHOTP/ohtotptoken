@@ -619,6 +619,27 @@ struct Index {
     }
   }
 
+  /**
+   * 单双栏变化时修复令牌选中态与详情栈之间的对应关系。
+   * 正常切换会保留现有路径；仅在路径意外为空时按稳定 UUID 恢复详情。
+   */
+  private reconcileTokenRouteForNavigationMode(mode: NavigationMode): void {
+    if (this.currentHomeTabIndex !== 0 || !this.businessSplitEnabled || this.selectedTokenUUID === '') {
+      return;
+    }
+    const selectedToken = this.CurrentTokens.find((token: TokenConfig) =>
+      token.TokenUUID === this.selectedTokenUUID);
+    if (selectedToken === undefined || this.tokenEditRoute(selectedToken) === undefined) {
+      this.selectedTokenUUID = '';
+      this.pageInfos.clear();
+      return;
+    }
+    if ((mode === NavigationMode.Split || mode === NavigationMode.Stack) &&
+      this.pageInfos.getAllPathName().length === 0) {
+      this.selectTokenForResponsiveEdit(selectedToken);
+    }
+  }
+
   private openFullScreenRoute(name: ROUTE_NAMES, param: Object | null): void {
     this.pageInfos.pushPathByName(name, param);
     this.businessSplitEnabled = false;
@@ -926,6 +947,9 @@ struct Index {
           if (this.currentHomeTabIndex === 0) {
             this.businessSplitEnabled = true;
           }
+        },
+        onNavigationModeChange: (mode: NavigationMode) => {
+          this.reconcileTokenRouteForNavigationMode(mode);
         },
         onDropFile: () => {
           this.DropFilesDialogIsOpen = false;

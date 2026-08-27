@@ -43,7 +43,6 @@ export default class EntryAbility extends UIAbility {
     win.HeightToWidthRatio = layout.heightToWidthRatio;
     win.UseSideNavigation = layout.useSideNavigation;
     win.AllowSplit = layout.allowSplit;
-    win.RootNavigationMode = layout.navigationMode;
   }
 
   private selectPage: string = '';

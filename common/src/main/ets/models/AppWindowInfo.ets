@@ -13,7 +13,6 @@ export class AppWindowInfo {
   @Trace HeightToWidthRatio: number = 0;
   @Trace UseSideNavigation: boolean = false;
   @Trace AllowSplit: boolean = false;
-  @Trace RootNavigationMode: NavigationMode = NavigationMode.Stack;
   @Trace ColorMode: ConfigurationConstant.ColorMode = -1;
   @Trace Context?: common.UIAbilityContext;
   @Trace uiContext?: UIContext;

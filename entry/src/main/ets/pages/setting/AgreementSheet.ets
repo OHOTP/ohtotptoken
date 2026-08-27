@@ -17,6 +17,7 @@ import { AppStorageV2 } from '@kit.ArkUI';
 export struct AgreementSheet {
   pageInfos: NavPathStack = new NavPathStack();
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
+  @Param embedded: boolean = false;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   private sheetScroller: Scroller = new Scroller();
 
@@ -81,7 +82,8 @@ export struct AgreementSheet {
       .mode(NavigationMode.Stack)
       .navDestination(this.navDestinationBuilder)
       .bindToScrollable([this.sheetScroller])
-      .titleMode(HdsNavigationTitleMode.MODAL)
+      .hideBackButton(this.embedded)
+      .titleMode(this.embedded ? HdsNavigationTitleMode.MINI : HdsNavigationTitleMode.MODAL)
       .titleBar({
         enableComponentSafeArea: true,
         style: {

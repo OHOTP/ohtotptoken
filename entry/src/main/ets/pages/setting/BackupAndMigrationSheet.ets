@@ -32,6 +32,7 @@ export struct BackupAndMigrationSheet {
   pageInfos: NavPathStack = new NavPathStack();
   @Require @Param Tokens: Array<TokenConfig> = [];
   @Require @Param scrollEffectStyle: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
+  @Param embedded: boolean = false;
   @Event backupReload: (conf: Array<TokenConfig>) => void = () => {};
 
   @Local versionCode?: number;
@@ -434,7 +435,8 @@ export struct BackupAndMigrationSheet {
       .mode(NavigationMode.Stack)
       .navDestination(this.navDestinationBuilder)
       .bindToScrollable([this.sheetScroller])
-      .titleMode(HdsNavigationTitleMode.MODAL)
+      .hideBackButton(this.embedded)
+      .titleMode(this.embedded ? HdsNavigationTitleMode.MINI : HdsNavigationTitleMode.MODAL)
       .titleBar({
         enableComponentSafeArea: true,
         style: {

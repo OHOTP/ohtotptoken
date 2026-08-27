@@ -50,7 +50,7 @@ function TokenSplitPlaceholder() {
 /**
  * 应用外壳(Task 3.1)
  *
- * 根 HdsNavigation 骨架:窗口级导航(强制 Stack)、NavDestination 路由注册、
+ * 根 HdsNavigation 骨架:窗口与业务场景驱动的 Stack/Split、NavDestination 路由注册、
  * 全局 Loading 遮罩、文件拖入导入(allowDrop/onDragEnter)、
  * 安全模糊(后台模糊 + 应用锁)与 AppLockOverlay 全屏覆盖。
  * 主页内容通过 homeContent 注入(HomeTabs),应用锁覆盖层通过 appLockContent 注入。
@@ -74,6 +74,7 @@ export struct AppShell {
   @Require @Param addTokenMenuTargetId: string = '';
   @Event onOpenFullScreenRoute: (name: ROUTE_NAMES, param: Object | null) => void = () => {};
   @Event onNavBarVisible: () => void = () => {};
+  @Event onNavigationModeChange: (mode: NavigationMode) => void = () => {};
   /** 文件拖放回调(由 Index 提供,控制 DropFilesDialog) */
   @Require @Param onDropFile: () => void = () => {};
   @Require @Param onDragEnterFile: () => void = () => {};
@@ -175,7 +176,8 @@ export struct AppShell {
     .hideTitleBar(this.isLoading)
     .mode(this.window.AllowSplit && this.currentHomeTabIndex === 0 && this.businessSplitEnabled ?
       NavigationMode.Split : NavigationMode.Stack)
-    .navBarWidth(this.window.WidthVp < 840 ? '50%' : '36%')
+    // lg 的三段式布局先保证主列表可用宽度，超宽窗口再收敛为约 1:2。
+    .navBarWidth(this.window.WidthVp < 1200 ? '50%' : '36%')
     .navBarWidthRange({ minWidth: 320, maxWidth: 560 })
     .minContentWidth(300)
     .enableDragBar(this.window.AllowSplit && this.currentHomeTabIndex === 0 && this.businessSplitEnabled)
@@ -184,6 +186,9 @@ export struct AppShell {
       if (isVisible) {
         this.onNavBarVisible();
       }
+    })
+    .onNavigationModeChange((mode: NavigationMode) => {
+      this.onNavigationModeChange(mode);
     })
     .navDestination(this.navDestinationBuilder)
     .bindToScrollable([

@@ -12,7 +12,7 @@ import lazy { FeedbackSheet } from '../pages/setting/FeedbackSheet'
 import { showSnackBar, SnackBarNotifyType } from 'common';
 import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
 import { AppStorageV2 } from '@kit.ArkUI';
-import { ScrollEffectType } from '@kit.UIDesignKit';
+import { HdsNavDestination, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import lazy { HuaweiAccountManager, HuaweiUserInfo, HuaweiAccountLoginError } from 'common';
 import { MaterialSheetStyle } from '../components/MaterialSheetStyle';
 import { SettingItem } from '../components/SettingItem';
@@ -31,6 +31,16 @@ enum SettingDetailType {
   FEEDBACK,
   ABOUT
 }
+
+const SETTING_ROUTE_ACCOUNT: string = 'setting/account';
+const SETTING_ROUTE_BACKUP: string = 'setting/backup';
+const SETTING_ROUTE_DATA_SYNC: string = 'setting/data-sync';
+const SETTING_ROUTE_SECURITY: string = 'setting/security';
+const SETTING_ROUTE_APPEARANCE: string = 'setting/appearance';
+const SETTING_ROUTE_DEVELOPER: string = 'setting/developer';
+const SETTING_ROUTE_AGREEMENT: string = 'setting/agreement';
+const SETTING_ROUTE_FEEDBACK: string = 'setting/feedback';
+const SETTING_ROUTE_ABOUT: string = 'setting/about';
 
 /**
  * Sheet 协调器(Task 3.1)
@@ -70,6 +80,7 @@ export struct SheetCoordinator {
   @Local token_preference: TokenPreference = AppStorageV2.connect(TokenPreference) as TokenPreference;
   @Local selectedDetail: SettingDetailType = SettingDetailType.ABOUT;
 
+  private settingPageInfos: NavPathStack = new NavPathStack();
   private appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
   private onAccountStateChanged: () => void = () => {};
 
@@ -80,6 +91,19 @@ export struct SheetCoordinator {
       this.syncHuaweiAccountState();
     };
     this.appCtx.eventHub?.on(EVENT_NAMES.HUAWEI_ACCOUNT_STATE_CHANGED, this.onAccountStateChanged);
+    if (this.wideMode) {
+      this.openSettingDetail(this.selectedDetail);
+    }
+  }
+
+  @Monitor('wideMode')
+  onWideModeChanged(monitor: IMonitor): void {
+    const isWide = monitor.value()?.now as boolean;
+    if (isWide) {
+      this.openSettingDetail(this.selectedDetail);
+    } else {
+      this.settingPageInfos.clear();
+    }
   }
 
   aboutToDisappear(): void {
@@ -96,6 +120,40 @@ export struct SheetCoordinator {
     this.appCtx.eventHub?.emit(EVENT_NAMES.DEBUG_MODE_CHANGED, isOn);
     if (!isOn) {
       this.isDeveloperOptionsSheetVisible = false;
+      if (this.wideMode && this.selectedDetail === SettingDetailType.DEVELOPER) {
+        this.openSettingDetail(SettingDetailType.ABOUT);
+      }
+    }
+  }
+
+  private settingDetailRoute(detail: SettingDetailType): string {
+    if (detail === SettingDetailType.ACCOUNT) {
+      return SETTING_ROUTE_ACCOUNT;
+    } else if (detail === SettingDetailType.BACKUP) {
+      return SETTING_ROUTE_BACKUP;
+    } else if (detail === SettingDetailType.DATA_SYNC) {
+      return SETTING_ROUTE_DATA_SYNC;
+    } else if (detail === SettingDetailType.SECURITY) {
+      return SETTING_ROUTE_SECURITY;
+    } else if (detail === SettingDetailType.APPEARANCE) {
+      return SETTING_ROUTE_APPEARANCE;
+    } else if (detail === SettingDetailType.DEVELOPER) {
+      return SETTING_ROUTE_DEVELOPER;
+    } else if (detail === SettingDetailType.AGREEMENT) {
+      return SETTING_ROUTE_AGREEMENT;
+    } else if (detail === SettingDetailType.FEEDBACK) {
+      return SETTING_ROUTE_FEEDBACK;
+    }
+    return SETTING_ROUTE_ABOUT;
+  }
+
+  private openSettingDetail(detail: SettingDetailType): void {
+    this.selectedDetail = detail;
+    const route = this.settingDetailRoute(detail);
+    if (this.settingPageInfos.getAllPathName().length === 0) {
+      this.settingPageInfos.pushPathByName(route, null, false);
+    } else {
+      this.settingPageInfos.replacePathByName(route, null, false);
     }
   }
 
@@ -104,7 +162,7 @@ export struct SheetCoordinator {
       await HuaweiAccountManager.getInstance().login(this.getUIContext());
       this.syncHuaweiAccountState();
       if (this.wideMode) {
-        this.selectedDetail = SettingDetailType.ACCOUNT;
+        this.openSettingDetail(SettingDetailType.ACCOUNT);
       } else {
         this.isAccountSheetVisible = true;
       }
@@ -163,35 +221,39 @@ export struct SheetCoordinator {
   }
 
   @Builder
-  BackupAndMigrationSheetBuilder() {
+  BackupAndMigrationSheetBuilder(embedded: boolean) {
     BackupAndMigrationSheet({
       Tokens: this.tokens,
       scrollEffectStyle: this.scrollEffectType,
+      embedded: embedded,
       backupReload: this.backupReload
     })
       .height('100%')
   }
 
   @Builder
-  SecuritySheetBuilder() {
+  SecuritySheetBuilder(embedded: boolean) {
     SecuritySheet({
       scrollEffectStyle: this.scrollEffectType,
+      embedded: embedded
     })
       .height('100%')
   }
 
   @Builder
-  AppearanceSheetBuilder() {
+  AppearanceSheetBuilder(embedded: boolean) {
     AppearanceSheet({
       scrollEffectType: this.scrollEffectType,
+      embedded: embedded
     })
       .height('100%')
   }
 
   @Builder
-  DeveloperOptionsSheetBuilder() {
+  DeveloperOptionsSheetBuilder(embedded: boolean) {
     DeveloperOptionsSheet({
       scrollEffectType: this.scrollEffectType,
+      embedded: embedded,
       debugModeChanged: (isOn: boolean) => this.updateDebugMode(isOn),
       addTestTokens: () => this.addTestTokens(),
       removeTestTokens: () => this.removeTestTokens()
@@ -200,36 +262,66 @@ export struct SheetCoordinator {
   }
 
   @Builder
-  DataSyncSheetBuilder() {
+  DataSyncSheetBuilder(embedded: boolean) {
     DataSyncSheet({
       scrollEffectType: this.scrollEffectType,
+      embedded: embedded
     })
       .height('100%')
   }
 
   @Builder
-  AgreementSheetBuilder() {
+  AgreementSheetBuilder(embedded: boolean) {
     AgreementSheet({
       scrollEffectType: this.scrollEffectType,
+      embedded: embedded
     })
       .height('100%')
   }
 
   @Builder
-  AboutSheetBuilder() {
+  AboutSheetBuilder(embedded: boolean) {
     AboutSheet({
       scrollEffectStyle: this.scrollEffectType,
+      embedded: embedded,
       debugModeChanged: (isOn: boolean) => this.updateDebugMode(isOn)
     })
       .height('100%')
   }
 
   @Builder
-  FeedbackSheetBuilder() {
+  FeedbackSheetBuilder(embedded: boolean) {
     FeedbackSheet({
       scrollEffectType: this.scrollEffectType,
+      embedded: embedded
     })
       .height('100%')
+  }
+
+  @LocalBuilder
+  settingNavDestinationBuilder(name: string, param: Object) {
+    HdsNavDestination() {
+      if (name === SETTING_ROUTE_ACCOUNT) {
+        this.AccountDetailBuilder()
+      } else if (name === SETTING_ROUTE_BACKUP) {
+        this.BackupAndMigrationSheetBuilder(true)
+      } else if (name === SETTING_ROUTE_DATA_SYNC) {
+        this.DataSyncSheetBuilder(true)
+      } else if (name === SETTING_ROUTE_SECURITY) {
+        this.SecuritySheetBuilder(true)
+      } else if (name === SETTING_ROUTE_APPEARANCE) {
+        this.AppearanceSheetBuilder(true)
+      } else if (name === SETTING_ROUTE_DEVELOPER) {
+        this.DeveloperOptionsSheetBuilder(true)
+      } else if (name === SETTING_ROUTE_AGREEMENT) {
+        this.AgreementSheetBuilder(true)
+      } else if (name === SETTING_ROUTE_FEEDBACK) {
+        this.FeedbackSheetBuilder(true)
+      } else if (name === SETTING_ROUTE_ABOUT) {
+        this.AboutSheetBuilder(true)
+      }
+    }
+    .hideTitleBar(true)
   }
 
   @Builder
@@ -311,6 +403,23 @@ export struct SheetCoordinator {
   }
 
   @Builder
+  AccountDetailBuilder() {
+    HdsNavigation() {
+      this.AccountSheetBuilder()
+    }
+    .mode(NavigationMode.Stack)
+    .hideBackButton(true)
+    .titleMode(HdsNavigationTitleMode.MINI)
+    .titleBar({
+      content: {
+        title: {
+          mainTitle: $r('app.string.huawei_account_current')
+        }
+      }
+    })
+  }
+
+  @Builder
   SettingEntryList() {
     List({ space: 10, scroller: this.scroller }) {
       // 华为账号登录卡片：与设置子项共用 SettingItem 分组卡片表面
@@ -380,7 +489,7 @@ export struct SheetCoordinator {
             if (!this.isHuaweiLoggedIn) {
               this.triggerHuaweiLogin();
             } else if (this.wideMode) {
-              this.selectedDetail = SettingDetailType.ACCOUNT;
+              this.openSettingDetail(SettingDetailType.ACCOUNT);
             } else {
               this.isAccountSheetVisible = true;
             }
@@ -401,12 +510,12 @@ export struct SheetCoordinator {
           })
             .onClick(() => {
               if (this.wideMode) {
-                this.selectedDetail = SettingDetailType.BACKUP;
+                this.openSettingDetail(SettingDetailType.BACKUP);
               } else {
                 this.isBackupSheetVisible = true;
               }
             })
-            .bindSheet($$this.isBackupSheetVisible, this.BackupAndMigrationSheetBuilder(),
+            .bindSheet($$this.isBackupSheetVisible, this.BackupAndMigrationSheetBuilder(false),
               MaterialSheetStyle.options())
 
           SubItemDivider()
@@ -418,12 +527,12 @@ export struct SheetCoordinator {
           })
             .onClick(() => {
               if (this.wideMode) {
-                this.selectedDetail = SettingDetailType.DATA_SYNC;
+                this.openSettingDetail(SettingDetailType.DATA_SYNC);
               } else {
                 this.isDataSyncSheetVisible = true;
               }
             })
-            .bindSheet($$this.isDataSyncSheetVisible, this.DataSyncSheetBuilder(),
+            .bindSheet($$this.isDataSyncSheetVisible, this.DataSyncSheetBuilder(false),
               MaterialSheetStyle.options())
         }
       }
@@ -439,12 +548,12 @@ export struct SheetCoordinator {
           })
             .onClick(() => {
               if (this.wideMode) {
-                this.selectedDetail = SettingDetailType.SECURITY;
+                this.openSettingDetail(SettingDetailType.SECURITY);
               } else {
                 this.isSafetySheetVisible = true;
               }
             })
-            .bindSheet($$this.isSafetySheetVisible, this.SecuritySheetBuilder(),
+            .bindSheet($$this.isSafetySheetVisible, this.SecuritySheetBuilder(false),
               MaterialSheetStyle.options())
 
           SubItemDivider()
@@ -456,12 +565,12 @@ export struct SheetCoordinator {
           })
             .onClick(() => {
               if (this.wideMode) {
-                this.selectedDetail = SettingDetailType.APPEARANCE;
+                this.openSettingDetail(SettingDetailType.APPEARANCE);
               } else {
                 this.isAppearanceSheetVisible = true;
               }
             })
-            .bindSheet($$this.isAppearanceSheetVisible, this.AppearanceSheetBuilder(),
+            .bindSheet($$this.isAppearanceSheetVisible, this.AppearanceSheetBuilder(false),
               MaterialSheetStyle.options())
 
           if (this.debug_mode_is_on) {
@@ -469,12 +578,17 @@ export struct SheetCoordinator {
 
             SubItemButton({
               symbol: $r('sys.symbol.wrench_and_screwdriver'),
-              text: $r('app.string.setting_group_developer_options')
+              text: $r('app.string.setting_group_developer_options'),
+              selected: this.wideMode && this.selectedDetail === SettingDetailType.DEVELOPER
             })
               .onClick(() => {
-                this.isDeveloperOptionsSheetVisible = true;
+                if (this.wideMode) {
+                  this.openSettingDetail(SettingDetailType.DEVELOPER);
+                } else {
+                  this.isDeveloperOptionsSheetVisible = true;
+                }
               })
-              .bindSheet($$this.isDeveloperOptionsSheetVisible, this.DeveloperOptionsSheetBuilder(),
+              .bindSheet($$this.isDeveloperOptionsSheetVisible, this.DeveloperOptionsSheetBuilder(false),
                 MaterialSheetStyle.options())
           }
         }
@@ -491,12 +605,12 @@ export struct SheetCoordinator {
           })
             .onClick(() => {
               if (this.wideMode) {
-                this.selectedDetail = SettingDetailType.AGREEMENT;
+                this.openSettingDetail(SettingDetailType.AGREEMENT);
               } else {
                 this.isAgreementSheetVisible = true;
               }
             })
-            .bindSheet($$this.isAgreementSheetVisible, this.AgreementSheetBuilder(),
+            .bindSheet($$this.isAgreementSheetVisible, this.AgreementSheetBuilder(false),
               MaterialSheetStyle.options())
 
           SubItemDivider()
@@ -508,12 +622,12 @@ export struct SheetCoordinator {
           })
             .onClick(() => {
               if (this.wideMode) {
-                this.selectedDetail = SettingDetailType.FEEDBACK;
+                this.openSettingDetail(SettingDetailType.FEEDBACK);
               } else {
                 this.isFeedbackSheetVisible = true;
               }
             })
-            .bindSheet($$this.isFeedbackSheetVisible, this.FeedbackSheetBuilder(),
+            .bindSheet($$this.isFeedbackSheetVisible, this.FeedbackSheetBuilder(false),
               MaterialSheetStyle.options())
 
           SubItemDivider()
@@ -525,12 +639,12 @@ export struct SheetCoordinator {
           })
             .onClick(() => {
               if (this.wideMode) {
-                this.selectedDetail = SettingDetailType.ABOUT;
+                this.openSettingDetail(SettingDetailType.ABOUT);
               } else {
                 this.isAboutSheetVisible = true;
               }
             })
-            .bindSheet($$this.isAboutSheetVisible, this.AboutSheetBuilder(),
+            .bindSheet($$this.isAboutSheetVisible, this.AboutSheetBuilder(false),
               MaterialSheetStyle.options())
         }
       }
@@ -547,52 +661,27 @@ export struct SheetCoordinator {
     .backgroundColor($r('app.color.window_background'))
   }
 
-  @Builder
-  SettingDetail() {
-    if (this.selectedDetail === SettingDetailType.ACCOUNT) {
-      this.AccountSheetBuilder()
-    } else if (this.selectedDetail === SettingDetailType.BACKUP) {
-      this.BackupAndMigrationSheetBuilder()
-    } else if (this.selectedDetail === SettingDetailType.DATA_SYNC) {
-      this.DataSyncSheetBuilder()
-    } else if (this.selectedDetail === SettingDetailType.SECURITY) {
-      this.SecuritySheetBuilder()
-    } else if (this.selectedDetail === SettingDetailType.APPEARANCE) {
-      this.AppearanceSheetBuilder()
-    } else if (this.selectedDetail === SettingDetailType.DEVELOPER) {
-      this.DeveloperOptionsSheetBuilder()
-    } else if (this.selectedDetail === SettingDetailType.AGREEMENT) {
-      this.AgreementSheetBuilder()
-    } else if (this.selectedDetail === SettingDetailType.FEEDBACK) {
-      this.FeedbackSheetBuilder()
-    } else {
-      this.AboutSheetBuilder()
-    }
-  }
-
   build() {
     if (this.wideMode) {
-      Row() {
-        Column() {
-          this.SettingEntryList()
-        }
-        .width('40%')
-        .height('100%')
-
-        Divider()
-          .vertical(true)
-          .strokeWidth(0.5)
-          .color($r('sys.color.comp_divider'))
-
-        Column() {
-          this.SettingDetail()
-        }
-        .layoutWeight(1)
-        .height('100%')
+      HdsNavigation(this.settingPageInfos) {
+        this.SettingEntryList()
       }
       .width('100%')
       .height('100%')
       .backgroundColor($r('app.color.window_background'))
+      .mode(NavigationMode.Split)
+      .hideTitleBar(true)
+      .hideBackButton(true)
+      .navBarWidth('40%')
+      .navBarWidthRange({ minWidth: 280, maxWidth: 480 })
+      .minContentWidth(360)
+      .enableDragBar(true)
+      .onNavigationModeChange((mode: NavigationMode) => {
+        if (mode === NavigationMode.Split && this.settingPageInfos.getAllPathName().length === 0) {
+          this.openSettingDetail(this.selectedDetail);
+        }
+      })
+      .navDestination(this.settingNavDestinationBuilder)
     } else {
       this.SettingEntryList()
     }
