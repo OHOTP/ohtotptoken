@@ -419,6 +419,10 @@ export struct TokenItem {
         left: this.token_preference.app_appearance_token_list_item_prefix_padding,
         right: this.token_preference.app_appearance_token_list_item_suffix_padding
       })
+      // 侧滑时 customItemBuilder 内容会平移，圆角必须跟随内容层移动；
+      // 仅裁剪外层 ListItem 会让平移后新暴露的边缘呈直角。
+      .borderRadius(this.token_preference.app_appearance_item_radius)
+      .clip(this.hdsCardMode)
     } else {
       Column() {
         if (this.hdsCardMode) {
@@ -455,6 +459,9 @@ export struct TokenItem {
         left: this.token_preference.app_appearance_token_list_item_prefix_padding,
         right: this.token_preference.app_appearance_token_list_item_suffix_padding
       })
+      // 外层系统列表项负责固定选中背板圆角，内容层圆角则随侧滑位移。
+      .borderRadius(this.token_preference.app_appearance_item_radius)
+      .clip(this.hdsCardMode)
       .onClick(() => {
         if (this.selectionMode) {
           this.Select(this.Config);
