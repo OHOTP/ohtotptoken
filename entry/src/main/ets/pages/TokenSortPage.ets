@@ -24,6 +24,7 @@ let tkStore = TokenStore.getInstance();
 @ComponentV2
 export struct TokenSortPage {
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
+  @Event onExitFullScreen: () => void = () => {};
   @Local token_preference: TokenPreference = AppStorageV2.connect(TokenPreference) as TokenPreference;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   @Local tokens: TokenConfig[] = [];
@@ -120,5 +121,6 @@ export struct TokenSortPage {
       }
     })
     .bindToScrollable([this.sortListScroller])
+    .onWillDisappear(() => this.onExitFullScreen())
   }
 }

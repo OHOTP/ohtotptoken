@@ -122,6 +122,7 @@ export struct TokenListPage {
           LazyForEach(this.dataSource, (vm: TokenConfigVM) => {
             HdsListItem({
               customItemBuilder: (): void => { this.TokenItemContentBuilder(vm) },
+              isSelected: this.splitSelectionMode && vm.config.TokenUUID === this.selectedTokenUUID,
               swipeActionOptions: {
                 end: {
                   builder: (): void => {
@@ -177,7 +178,6 @@ export struct TokenListPage {
     TokenItem({
       Config: vm.config,
       selectionMode: this.splitSelectionMode,
-      selected: vm.config.TokenUUID === this.selectedTokenUUID,
       Select: (conf: TokenConfig) => this.onSelectToken(conf),
       Edit: (conf: TokenConfig) => this.openEditPage(conf),
       Update: async (conf_new): Promise<boolean> => {

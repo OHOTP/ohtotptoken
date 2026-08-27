@@ -78,6 +78,7 @@ export struct AppShell {
   @Require @Param openAddTokenMenu: () => void = () => {};
   @Require @Param addTokenMenuTargetId: string = '';
   @Event onOpenFullScreenRoute: (name: ROUTE_NAMES, param: Object | null) => void = () => {};
+  @Event onExitFullScreenRoute: () => void = () => {};
   @Event onNavBarVisible: () => void = () => {};
   @Event onNavigationModeChange: (mode: NavigationMode) => void = () => {};
   /** 文件拖放回调(由 Index 提供,控制 DropFilesDialog) */
@@ -108,9 +109,15 @@ export struct AppShell {
     } else if (name === ROUTE_NAMES.TokenCardConfigPage) {
       TokenCardConfigPage({ scrollEffectType: this.scrollEffectType })
     } else if (name === ROUTE_NAMES.TokenSortPage) {
-      TokenSortPage({ scrollEffectType: this.scrollEffectType })
+      TokenSortPage({
+        scrollEffectType: this.scrollEffectType,
+        onExitFullScreen: () => this.onExitFullScreenRoute()
+      })
     } else if (name === ROUTE_NAMES.TokenSearchPage) {
-      TokenSearchPage({ scrollEffectType: this.scrollEffectType })
+      TokenSearchPage({
+        scrollEffectType: this.scrollEffectType,
+        onExitFullScreen: () => this.onExitFullScreenRoute()
+      })
     } else if (name === ROUTE_NAMES.AddTotpTokenPage) {
       AddTotpTokenPage({
         scrollEffectType: this.scrollEffectType,

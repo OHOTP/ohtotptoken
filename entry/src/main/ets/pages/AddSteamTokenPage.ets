@@ -198,6 +198,7 @@ export struct AddSteamTokenPage {
       }
     }
     .backgroundColor($r('app.color.window_background'))
+    .hideBackButton(this.window.AllowSplit && this.pageParams.editConfig !== undefined)
     .titleMode(HdsNavDestinationTitleMode.MODAL)
     .titleBar({
       avoidLayoutSafeArea: true,

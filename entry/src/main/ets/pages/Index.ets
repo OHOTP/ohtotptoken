@@ -943,6 +943,11 @@ struct Index {
         openAddTokenMenu: () => this.openAddTokenMenu(),
         addTokenMenuTargetId: this.addTokenMenuTargetId,
         onOpenFullScreenRoute: (name: ROUTE_NAMES, param: Object | null) => this.openFullScreenRoute(name, param),
+        onExitFullScreenRoute: () => {
+          if (this.currentHomeTabIndex === 0) {
+            this.businessSplitEnabled = true;
+          }
+        },
         onNavBarVisible: () => {
           if (this.currentHomeTabIndex === 0) {
             this.businessSplitEnabled = true;
