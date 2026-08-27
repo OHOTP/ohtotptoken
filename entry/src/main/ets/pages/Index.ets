@@ -110,6 +110,7 @@ struct Index {
   @Local settingEntryScroller: Scroller = new Scroller();
   @Local currentHomeTabIndex: number = 0;
   @Local selectedTokenUUID: string = '';
+  @Local selectedSettingRoute: ROUTE_NAMES = ROUTE_NAMES.SettingAbout;
   @Local businessSplitEnabled: boolean = true;
   @Local CurrentTokensCount: number = 0;
   @Local scrollEffectVersion: number = 0;
@@ -889,6 +890,12 @@ struct Index {
       scroller: this.settingEntryScroller,
       bottomAvoidHeight: this.window.AvoidBottomHeight,
       wideMode: this.window.AllowSplit,
+      active: this.currentHomeTabIndex === 1,
+      pageInfos: this.pageInfos,
+      selectedRoute: this.selectedSettingRoute,
+      onSelectRoute: (route: ROUTE_NAMES) => {
+        this.selectedSettingRoute = route;
+      },
       backupReload: async (conf) => {
         await this.updateTokenConfigs(conf);
         tkStore.sortTokens();
@@ -918,9 +925,12 @@ struct Index {
       onSelectToken: (conf: TokenConfig) => this.selectTokenForResponsiveEdit(conf),
       onTabChange: (index: number) => {
         this.currentHomeTabIndex = index;
+        this.pageInfos.clear();
         if (index === 1) {
           this.selectedTokenUUID = '';
-          this.pageInfos.clear();
+          if (this.window.AllowSplit) {
+            this.pageInfos.pushPathByName(this.selectedSettingRoute, null, false);
+          }
         }
       },
       settingEntryContent: this.SettingEntryContentBuilder,
@@ -971,6 +981,13 @@ struct Index {
           this.DropFilesDialogController?.close();
         },
         saveToken: (conf: TokenConfig) => this.updateTokenConfig(conf, true),
+        tokens: this.CurrentTokens,
+        backupReload: async (conf: TokenConfig[]) => {
+          await this.updateTokenConfigs(conf);
+          tkStore.sortTokens();
+        },
+        addTestTokens: () => this.addTestTokens(),
+        removeTestTokens: () => this.removeTestTokens(),
         appLockContent: this.AppLockOverlayBuilder,
         homeContent: () => {
           this.HomeContentBuilder();

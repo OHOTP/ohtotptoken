@@ -127,10 +127,12 @@ export struct DeveloperOptionsSheet {
         .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
         .layoutWeight(1)
       }
+      .clip(false)
       .backgroundColor(this.embedded ? $r('app.color.window_background') :
         MaterialTheme.surfaceBackground($r('app.color.window_background')))
       .mode(NavigationMode.Stack)
       .bindToScrollable([this.sheetScroller])
+      .hideTitleBar(this.embedded)
       .hideBackButton(this.embedded)
       .titleMode(this.embedded ? HdsNavigationTitleMode.MINI : HdsNavigationTitleMode.MODAL)
       .titleBar({

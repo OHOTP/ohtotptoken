@@ -455,6 +455,24 @@ export enum ROUTE_NAMES {
   AddSteamTokenPage = 'AddSteamTokenPage',
   /** 添加/编辑令牌时使用的独立图标选择页面 */
   IconPickerPage = 'IconPickerPage',
+  /** “我的”页华为账号详情 */
+  SettingAccount = 'setting/account',
+  /** “我的”页备份与迁移详情 */
+  SettingBackup = 'setting/backup',
+  /** “我的”页数据同步详情 */
+  SettingDataSync = 'setting/data-sync',
+  /** “我的”页安全详情 */
+  SettingSecurity = 'setting/security',
+  /** “我的”页外观详情 */
+  SettingAppearance = 'setting/appearance',
+  /** “我的”页开发者选项详情 */
+  SettingDeveloper = 'setting/developer',
+  /** “我的”页协议详情 */
+  SettingAgreement = 'setting/agreement',
+  /** “我的”页反馈详情 */
+  SettingFeedback = 'setting/feedback',
+  /** “我的”页关于详情 */
+  SettingAbout = 'setting/about',
   /** App首页 */
   IndexPage = 'pages/Index',
 }

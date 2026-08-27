@@ -1,5 +1,5 @@
 import { uniformTypeDescriptor } from '@kit.ArkData';
-import { HdsNavigation, HdsNavigationTitleMode, ScrollEffectType, hdsMaterial } from '@kit.UIDesignKit';
+import { HdsNavDestination, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType, hdsMaterial } from '@kit.UIDesignKit';
 import { AppWindowInfo, ROUTE_NAMES } from 'common';
 import { MaterialPolicy } from '../utils/MaterialPolicy';
 // [冷启动优化] 以下 NavDestination 页面仅在用户导航时触发评估
@@ -16,6 +16,7 @@ import lazy { AddTotpTokenPage } from '../pages/AddTotpTokenPage';
 import lazy { AddFortiTokenPage } from '../pages/AddFortiTokenPage';
 import lazy { AddSteamTokenPage } from '../pages/AddSteamTokenPage';
 import lazy { IconPickerPage, IconPickerPageParams } from '../pages/IconPickerPage';
+import lazy { SheetCoordinator } from './SheetCoordinator';
 import { AddTokenPageParams } from '../components/AddTokenForm';
 import { TokenConfig } from 'common';
 import { ComponentContent } from '@kit.ArkUI';
@@ -87,6 +88,10 @@ export struct AppShell {
   @Require @Param onDragLeaveFile: () => void = () => {};
   /** 独立添加令牌页面共用的持久化入口，由 Index 注入 */
   @Require @Param saveToken: (conf: TokenConfig) => Promise<boolean> = async () => false;
+  @Require @Param tokens: TokenConfig[] = [];
+  @Require @Param backupReload: (conf: TokenConfig[]) => Promise<void> = async () => {};
+  @Event addTestTokens: () => Promise<boolean> = async () => false;
+  @Event removeTestTokens: () => Promise<boolean> = async () => false;
 
   @BuilderParam appLockContent?: CustomBuilder = EmptyBuilder;
   @BuilderParam homeContent?: CustomBuilder = EmptyBuilder;
@@ -141,6 +146,26 @@ export struct AppShell {
         scrollEffectType: this.scrollEffectType,
         pageParams: param as IconPickerPageParams
       })
+    } else if (name.startsWith('setting/')) {
+      HdsNavDestination() {
+        SheetCoordinator({
+          tokens: this.tokens,
+          scrollEffectType: this.scrollEffectType,
+          scroller: this.settingEntryScroller,
+          bottomAvoidHeight: this.window.AvoidBottomHeight,
+          wideMode: this.window.AllowSplit,
+          active: true,
+          pageInfos: this.pageInfos,
+          selectedRoute: name as ROUTE_NAMES,
+          detailOnlyRoute: name,
+          backupReload: this.backupReload,
+          addTestTokens: () => this.addTestTokens(),
+          removeTestTokens: () => this.removeTestTokens()
+        })
+      }
+      .clip(false)
+      .hideTitleBar(true)
+      .backgroundColor($r('app.color.window_background'))
     }
   }
 
@@ -186,14 +211,14 @@ export struct AppShell {
     }
     .backgroundColor($r('app.color.window_background'))
     .hideTitleBar(this.isLoading)
-    .mode(this.window.AllowSplit && this.currentHomeTabIndex === 0 && this.businessSplitEnabled ?
+    .mode(this.window.AllowSplit && (this.currentHomeTabIndex === 1 || this.businessSplitEnabled) ?
       NavigationMode.Split : NavigationMode.Stack)
     // lg 的三段式布局先保证主列表可用宽度，超宽窗口再收敛为约 1:2。
     .navBarWidth(this.window.WidthVp < 1200 ? '50%' : '36%')
     // NavBar 同时包含 96vp 纵向页签与令牌列表，最小值需为两者之和。
     .navBarWidthRange({ minWidth: HOME_SIDE_TAB_WIDTH + TOKEN_LIST_MIN_CONTENT_WIDTH, maxWidth: 560 })
     .minContentWidth(300)
-    .enableDragBar(this.window.AllowSplit && this.currentHomeTabIndex === 0 && this.businessSplitEnabled)
+    .enableDragBar(this.window.AllowSplit && (this.currentHomeTabIndex === 1 || this.businessSplitEnabled))
     .splitPlaceholder(this.splitPlaceholder)
     .onNavBarStateChange((isVisible: boolean) => {
       if (isVisible) {

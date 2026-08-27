@@ -10,37 +10,15 @@ import lazy { AgreementSheet } from '../pages/setting/AgreementSheet'
 import lazy { AboutSheet } from '../pages/setting/AboutSheet'
 import lazy { FeedbackSheet } from '../pages/setting/FeedbackSheet'
 import { showSnackBar, SnackBarNotifyType } from 'common';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES } from 'common';
 import { AppStorageV2 } from '@kit.ArkUI';
-import { HdsNavDestination, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
+import { HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import lazy { HuaweiAccountManager, HuaweiUserInfo, HuaweiAccountLoginError } from 'common';
 import { MaterialSheetStyle } from '../components/MaterialSheetStyle';
 import { SettingItem } from '../components/SettingItem';
 import { SubItemButton } from '../components/SubItemButton';
 import { SubItemDivider } from '../components/SubItemDivider';
 import { SETTING_PAGE_INSET, SETTING_ROW_PADDING } from '../components/SettingStyle';
-
-enum SettingDetailType {
-  ACCOUNT,
-  BACKUP,
-  DATA_SYNC,
-  SECURITY,
-  APPEARANCE,
-  DEVELOPER,
-  AGREEMENT,
-  FEEDBACK,
-  ABOUT
-}
-
-const SETTING_ROUTE_ACCOUNT: string = 'setting/account';
-const SETTING_ROUTE_BACKUP: string = 'setting/backup';
-const SETTING_ROUTE_DATA_SYNC: string = 'setting/data-sync';
-const SETTING_ROUTE_SECURITY: string = 'setting/security';
-const SETTING_ROUTE_APPEARANCE: string = 'setting/appearance';
-const SETTING_ROUTE_DEVELOPER: string = 'setting/developer';
-const SETTING_ROUTE_AGREEMENT: string = 'setting/agreement';
-const SETTING_ROUTE_FEEDBACK: string = 'setting/feedback';
-const SETTING_ROUTE_ABOUT: string = 'setting/about';
 
 /**
  * Sheet 协调器(Task 3.1)
@@ -58,6 +36,11 @@ export struct SheetCoordinator {
   @Require @Param scroller: Scroller = new Scroller();
   @Require @Param bottomAvoidHeight: number = 0;
   @Require @Param wideMode: boolean = false;
+  @Require @Param active: boolean = false;
+  @Require @Param pageInfos: NavPathStack = new NavPathStack();
+  @Param selectedRoute: ROUTE_NAMES = ROUTE_NAMES.SettingAbout;
+  @Param detailOnlyRoute: string = '';
+  @Event onSelectRoute: (route: ROUTE_NAMES) => void = () => {};
   /** 备份恢复完成回调(由 Index 提供:批量更新 Token 并重新排序) */
   @Require @Param backupReload: (conf: TokenConfig[]) => Promise<void> = async (conf: TokenConfig[]) => {};
   /** 开发者选项：生成并持久化 100 个随机测试令牌 */
@@ -78,9 +61,7 @@ export struct SheetCoordinator {
   @Local huaweiUser: HuaweiUserInfo | null = null;
   @Local debug_mode_is_on: boolean = AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON) as boolean;
   @Local token_preference: TokenPreference = AppStorageV2.connect(TokenPreference) as TokenPreference;
-  @Local selectedDetail: SettingDetailType = SettingDetailType.ABOUT;
 
-  private settingPageInfos: NavPathStack = new NavPathStack();
   private appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
   private onAccountStateChanged: () => void = () => {};
 
@@ -91,18 +72,21 @@ export struct SheetCoordinator {
       this.syncHuaweiAccountState();
     };
     this.appCtx.eventHub?.on(EVENT_NAMES.HUAWEI_ACCOUNT_STATE_CHANGED, this.onAccountStateChanged);
-    if (this.wideMode) {
-      this.openSettingDetail(this.selectedDetail);
+    if (this.detailOnlyRoute === '' && this.active && this.wideMode) {
+      this.openSettingDetail(this.selectedRoute);
     }
   }
 
   @Monitor('wideMode')
   onWideModeChanged(monitor: IMonitor): void {
     const isWide = monitor.value()?.now as boolean;
+    if (this.detailOnlyRoute !== '' || !this.active) {
+      return;
+    }
     if (isWide) {
-      this.openSettingDetail(this.selectedDetail);
+      this.openSettingDetail(this.selectedRoute);
     } else {
-      this.settingPageInfos.clear();
+      this.pageInfos.clear();
     }
   }
 
@@ -120,40 +104,19 @@ export struct SheetCoordinator {
     this.appCtx.eventHub?.emit(EVENT_NAMES.DEBUG_MODE_CHANGED, isOn);
     if (!isOn) {
       this.isDeveloperOptionsSheetVisible = false;
-      if (this.wideMode && this.selectedDetail === SettingDetailType.DEVELOPER) {
-        this.openSettingDetail(SettingDetailType.ABOUT);
+      if (this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingDeveloper) {
+        this.openSettingDetail(ROUTE_NAMES.SettingAbout);
       }
     }
   }
 
-  private settingDetailRoute(detail: SettingDetailType): string {
-    if (detail === SettingDetailType.ACCOUNT) {
-      return SETTING_ROUTE_ACCOUNT;
-    } else if (detail === SettingDetailType.BACKUP) {
-      return SETTING_ROUTE_BACKUP;
-    } else if (detail === SettingDetailType.DATA_SYNC) {
-      return SETTING_ROUTE_DATA_SYNC;
-    } else if (detail === SettingDetailType.SECURITY) {
-      return SETTING_ROUTE_SECURITY;
-    } else if (detail === SettingDetailType.APPEARANCE) {
-      return SETTING_ROUTE_APPEARANCE;
-    } else if (detail === SettingDetailType.DEVELOPER) {
-      return SETTING_ROUTE_DEVELOPER;
-    } else if (detail === SettingDetailType.AGREEMENT) {
-      return SETTING_ROUTE_AGREEMENT;
-    } else if (detail === SettingDetailType.FEEDBACK) {
-      return SETTING_ROUTE_FEEDBACK;
-    }
-    return SETTING_ROUTE_ABOUT;
-  }
-
-  private openSettingDetail(detail: SettingDetailType): void {
-    this.selectedDetail = detail;
-    const route = this.settingDetailRoute(detail);
-    if (this.settingPageInfos.getAllPathName().length === 0) {
-      this.settingPageInfos.pushPathByName(route, null, false);
-    } else {
-      this.settingPageInfos.replacePathByName(route, null, false);
+  private openSettingDetail(route: ROUTE_NAMES): void {
+    this.onSelectRoute(route);
+    const paths = this.pageInfos.getAllPathName();
+    if (paths.length === 0) {
+      this.pageInfos.pushPathByName(route, null, false);
+    } else if (paths[paths.length - 1] !== route) {
+      this.pageInfos.replacePathByName(route, null, false);
     }
   }
 
@@ -162,7 +125,7 @@ export struct SheetCoordinator {
       await HuaweiAccountManager.getInstance().login(this.getUIContext());
       this.syncHuaweiAccountState();
       if (this.wideMode) {
-        this.openSettingDetail(SettingDetailType.ACCOUNT);
+        this.openSettingDetail(ROUTE_NAMES.SettingAccount);
       } else {
         this.isAccountSheetVisible = true;
       }
@@ -298,34 +261,6 @@ export struct SheetCoordinator {
       .height('100%')
   }
 
-  @LocalBuilder
-  settingNavDestinationBuilder(name: string, param: Object) {
-    HdsNavDestination() {
-      if (name === SETTING_ROUTE_ACCOUNT) {
-        this.AccountDetailBuilder()
-      } else if (name === SETTING_ROUTE_BACKUP) {
-        this.BackupAndMigrationSheetBuilder(true)
-      } else if (name === SETTING_ROUTE_DATA_SYNC) {
-        this.DataSyncSheetBuilder(true)
-      } else if (name === SETTING_ROUTE_SECURITY) {
-        this.SecuritySheetBuilder(true)
-      } else if (name === SETTING_ROUTE_APPEARANCE) {
-        this.AppearanceSheetBuilder(true)
-      } else if (name === SETTING_ROUTE_DEVELOPER) {
-        this.DeveloperOptionsSheetBuilder(true)
-      } else if (name === SETTING_ROUTE_AGREEMENT) {
-        this.AgreementSheetBuilder(true)
-      } else if (name === SETTING_ROUTE_FEEDBACK) {
-        this.FeedbackSheetBuilder(true)
-      } else if (name === SETTING_ROUTE_ABOUT) {
-        this.AboutSheetBuilder(true)
-      }
-    }
-    .clip(false)
-    .hideTitleBar(true)
-    .backgroundColor($r('app.color.window_background'))
-  }
-
   @Builder
   AccountSheetBuilder() {
     Column() {
@@ -409,8 +344,10 @@ export struct SheetCoordinator {
     HdsNavigation() {
       this.AccountSheetBuilder()
     }
+    .clip(false)
     .backgroundColor($r('app.color.window_background'))
     .mode(NavigationMode.Stack)
+    .hideTitleBar(true)
     .hideBackButton(true)
     .titleMode(HdsNavigationTitleMode.MINI)
     .titleBar({
@@ -463,7 +400,7 @@ export struct SheetCoordinator {
                 this.huaweiUser.nickname : $r('app.string.huawei_account_login'))
                 .fontSize(18)
                 .fontWeight(FontWeight.Medium)
-                .fontColor(this.wideMode && this.selectedDetail === SettingDetailType.ACCOUNT ?
+                .fontColor(this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAccount ?
                   $r('sys.color.interactive_active') : $r('sys.color.ohos_id_color_text_primary'))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -483,15 +420,15 @@ export struct SheetCoordinator {
           .alignItems(VerticalAlign.Center)
           // 与其余设置项一致：业务选中态使用背板，系统负责按压和键盘焦点反馈。
           .hoverEffect(HoverEffect.Highlight)
-          .backgroundColor(this.wideMode && this.selectedDetail === SettingDetailType.ACCOUNT ?
+          .backgroundColor(this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAccount ?
             $r('app.color.itemActivated') : Color.Transparent)
           .borderRadius(12)
-          .accessibilitySelected(this.wideMode && this.selectedDetail === SettingDetailType.ACCOUNT)
+          .accessibilitySelected(this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAccount)
           .onClick(() => {
             if (!this.isHuaweiLoggedIn) {
               this.triggerHuaweiLogin();
             } else if (this.wideMode) {
-              this.openSettingDetail(SettingDetailType.ACCOUNT);
+              this.openSettingDetail(ROUTE_NAMES.SettingAccount);
             } else {
               this.isAccountSheetVisible = true;
             }
@@ -508,11 +445,11 @@ export struct SheetCoordinator {
           SubItemButton({
             symbol: $r('sys.symbol.save'),
             text: $r('app.string.setting_backup'),
-            selected: this.wideMode && this.selectedDetail === SettingDetailType.BACKUP
+            selected: this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingBackup
           })
             .onClick(() => {
               if (this.wideMode) {
-                this.openSettingDetail(SettingDetailType.BACKUP);
+                this.openSettingDetail(ROUTE_NAMES.SettingBackup);
               } else {
                 this.isBackupSheetVisible = true;
               }
@@ -525,11 +462,11 @@ export struct SheetCoordinator {
           SubItemButton({
             symbol: $r('sys.symbol.link'),
             text: $r('app.string.data_sync'),
-            selected: this.wideMode && this.selectedDetail === SettingDetailType.DATA_SYNC
+            selected: this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingDataSync
           })
             .onClick(() => {
               if (this.wideMode) {
-                this.openSettingDetail(SettingDetailType.DATA_SYNC);
+                this.openSettingDetail(ROUTE_NAMES.SettingDataSync);
               } else {
                 this.isDataSyncSheetVisible = true;
               }
@@ -546,11 +483,11 @@ export struct SheetCoordinator {
           SubItemButton({
             symbol: $r('sys.symbol.staroflife_rectangle'),
             text: $r('app.string.setting_safety'),
-            selected: this.wideMode && this.selectedDetail === SettingDetailType.SECURITY
+            selected: this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingSecurity
           })
             .onClick(() => {
               if (this.wideMode) {
-                this.openSettingDetail(SettingDetailType.SECURITY);
+                this.openSettingDetail(ROUTE_NAMES.SettingSecurity);
               } else {
                 this.isSafetySheetVisible = true;
               }
@@ -563,11 +500,11 @@ export struct SheetCoordinator {
           SubItemButton({
             symbol: $r('sys.symbol.chevron_up_2_circle'),
             text: $r('app.string.app_appearance'),
-            selected: this.wideMode && this.selectedDetail === SettingDetailType.APPEARANCE
+            selected: this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAppearance
           })
             .onClick(() => {
               if (this.wideMode) {
-                this.openSettingDetail(SettingDetailType.APPEARANCE);
+                this.openSettingDetail(ROUTE_NAMES.SettingAppearance);
               } else {
                 this.isAppearanceSheetVisible = true;
               }
@@ -581,11 +518,11 @@ export struct SheetCoordinator {
             SubItemButton({
               symbol: $r('sys.symbol.wrench_and_screwdriver'),
               text: $r('app.string.setting_group_developer_options'),
-              selected: this.wideMode && this.selectedDetail === SettingDetailType.DEVELOPER
+              selected: this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingDeveloper
             })
               .onClick(() => {
                 if (this.wideMode) {
-                  this.openSettingDetail(SettingDetailType.DEVELOPER);
+                  this.openSettingDetail(ROUTE_NAMES.SettingDeveloper);
                 } else {
                   this.isDeveloperOptionsSheetVisible = true;
                 }
@@ -603,11 +540,11 @@ export struct SheetCoordinator {
           SubItemButton({
             symbol: $r('sys.symbol.person_shield'),
             text: $r('app.string.setting_agreement_statement'),
-            selected: this.wideMode && this.selectedDetail === SettingDetailType.AGREEMENT
+            selected: this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAgreement
           })
             .onClick(() => {
               if (this.wideMode) {
-                this.openSettingDetail(SettingDetailType.AGREEMENT);
+                this.openSettingDetail(ROUTE_NAMES.SettingAgreement);
               } else {
                 this.isAgreementSheetVisible = true;
               }
@@ -620,11 +557,11 @@ export struct SheetCoordinator {
           SubItemButton({
             symbol: $r('sys.symbol.envelope'),
             text: $r('app.string.setting_feedback'),
-            selected: this.wideMode && this.selectedDetail === SettingDetailType.FEEDBACK
+            selected: this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingFeedback
           })
             .onClick(() => {
               if (this.wideMode) {
-                this.openSettingDetail(SettingDetailType.FEEDBACK);
+                this.openSettingDetail(ROUTE_NAMES.SettingFeedback);
               } else {
                 this.isFeedbackSheetVisible = true;
               }
@@ -637,11 +574,11 @@ export struct SheetCoordinator {
           SubItemButton({
             symbol: $r('sys.symbol.info_circle'),
             text: $r('app.string.setting_about'),
-            selected: this.wideMode && this.selectedDetail === SettingDetailType.ABOUT
+            selected: this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAbout
           })
             .onClick(() => {
               if (this.wideMode) {
-                this.openSettingDetail(SettingDetailType.ABOUT);
+                this.openSettingDetail(ROUTE_NAMES.SettingAbout);
               } else {
                 this.isAboutSheetVisible = true;
               }
@@ -664,26 +601,24 @@ export struct SheetCoordinator {
   }
 
   build() {
-    if (this.wideMode) {
-      HdsNavigation(this.settingPageInfos) {
-        this.SettingEntryList()
-      }
-      .width('100%')
-      .height('100%')
-      .backgroundColor($r('app.color.window_background'))
-      .mode(NavigationMode.Split)
-      .hideTitleBar(true)
-      .hideBackButton(true)
-      .navBarWidth('40%')
-      .navBarWidthRange({ minWidth: 280, maxWidth: 480 })
-      .minContentWidth(360)
-      .enableDragBar(true)
-      .onNavigationModeChange((mode: NavigationMode) => {
-        if (mode === NavigationMode.Split && this.settingPageInfos.getAllPathName().length === 0) {
-          this.openSettingDetail(this.selectedDetail);
-        }
-      })
-      .navDestination(this.settingNavDestinationBuilder)
+    if (this.detailOnlyRoute === ROUTE_NAMES.SettingAccount) {
+      this.AccountDetailBuilder()
+    } else if (this.detailOnlyRoute === ROUTE_NAMES.SettingBackup) {
+      this.BackupAndMigrationSheetBuilder(true)
+    } else if (this.detailOnlyRoute === ROUTE_NAMES.SettingDataSync) {
+      this.DataSyncSheetBuilder(true)
+    } else if (this.detailOnlyRoute === ROUTE_NAMES.SettingSecurity) {
+      this.SecuritySheetBuilder(true)
+    } else if (this.detailOnlyRoute === ROUTE_NAMES.SettingAppearance) {
+      this.AppearanceSheetBuilder(true)
+    } else if (this.detailOnlyRoute === ROUTE_NAMES.SettingDeveloper) {
+      this.DeveloperOptionsSheetBuilder(true)
+    } else if (this.detailOnlyRoute === ROUTE_NAMES.SettingAgreement) {
+      this.AgreementSheetBuilder(true)
+    } else if (this.detailOnlyRoute === ROUTE_NAMES.SettingFeedback) {
+      this.FeedbackSheetBuilder(true)
+    } else if (this.detailOnlyRoute === ROUTE_NAMES.SettingAbout) {
+      this.AboutSheetBuilder(true)
     } else {
       this.SettingEntryList()
     }
