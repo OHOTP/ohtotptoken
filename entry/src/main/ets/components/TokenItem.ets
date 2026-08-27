@@ -303,6 +303,11 @@ export struct TokenItem {
   TokenIconBuilder() {
     TokenIcon({ issuer: this.Config.TokenIssuer, icon_path: this.Config.TokenIconPath })
       .padding({ left: $r('sys.float.ohos_id_text_overlay_menu_button_padding_left'), right: $r('sys.float.ohos_id_text_overlay_menu_button_padding_right') })
+      .onClick(() => {
+        if (this.selectionMode) {
+          this.Select(this.Config);
+        }
+      })
   }
 
   @Builder
@@ -384,6 +389,12 @@ export struct TokenItem {
     }
     .alignItems(HorizontalAlign.End)
     .padding({ left: $r('sys.float.ohos_id_text_overlay_menu_button_padding_left'), right: $r('sys.float.ohos_id_text_overlay_menu_button_padding_right') })
+    .onClick(() => {
+      if (this.token_preference.app_safety_hide_token_enable) {
+        this.TokenHide = !this.TokenHide;
+        current_token_hide_map[this.Config.TokenUUID] = this.TokenHide;
+      }
+    })
   }
 
   build() {
@@ -462,19 +473,6 @@ export struct TokenItem {
       // 外层系统列表项负责固定选中背板圆角，内容层圆角则随侧滑位移。
       .borderRadius(this.token_preference.app_appearance_item_radius)
       .clip(this.hdsCardMode)
-      .onClick(() => {
-        if (this.selectionMode) {
-          this.Select(this.Config);
-          return;
-        }
-        if (this.TokenHide && this.token_preference.app_safety_hide_token_enable) {
-          this.TokenHide = !this.TokenHide;
-          current_token_hide_map[this.Config.TokenUUID] = false;
-        } else if (this.token_preference.app_safety_hide_token_enable) {
-          this.TokenHide = !this.TokenHide;
-          current_token_hide_map[this.Config.TokenUUID] = true;
-        }
-      })
       .bindContextMenu(this.TokenRightCtxMenu, ResponseType.LongPress, {
         // 官方 hoverScale 仅在 LongPress + CustomBuilder 预览中提供原组件截图到
         // 扩展预览的一镜到底变形；isShown 方式只会直接展示目标尺寸。
@@ -514,6 +512,11 @@ export struct TokenItem {
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
+      .onClick(() => {
+        if (this.selectionMode) {
+          this.Select(this.Config);
+        }
+      })
 
       if (sort) {
         this.TokenSortIconBuilder()
