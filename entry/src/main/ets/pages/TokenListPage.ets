@@ -6,7 +6,7 @@ import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, dialogSystemMat
 import { otpType, TokenConfig, TokenConfigVM } from 'common';
 import { TokenStore } from 'common';
 import { convertToken2URI } from 'common';
-import { AppStorageV2, window } from "@kit.ArkUI";
+import { AppStorageV2, ListItemModifier, window } from "@kit.ArkUI";
 import { AppWindowInfo } from 'common';
 import { GenericDataSource } from 'common';
 import { showSnackBar, SnackBarNotifyType } from 'common';
@@ -20,6 +20,16 @@ let tkStore = TokenStore.getInstance();
 /** 将纯数据 TokenConfig[] 转为带刷新标识的 ViewModel 数组，供 LazyForEach 消费 */
 function toVMs(tokens: TokenConfig[]): TokenConfigVM[] {
   return tokens.map(t => new TokenConfigVM(t));
+}
+
+/** 让 HdsListItem 的系统选中背板与令牌卡片使用同一边距、圆角和裁剪区域。 */
+class TokenListItemModifier extends ListItemModifier {
+  constructor(left: number, right: number, radius: number) {
+    super();
+    this.margin({ left: left, right: right });
+    this.borderRadius(radius);
+    this.clip(true);
+  }
 }
 
 @Preview
@@ -122,6 +132,10 @@ export struct TokenListPage {
           LazyForEach(this.dataSource, (vm: TokenConfigVM) => {
             HdsListItem({
               customItemBuilder: (): void => { this.TokenItemContentBuilder(vm) },
+              listItemModifier: new TokenListItemModifier(
+                this.token_preference.app_appearance_token_list_item_prefix_padding,
+                this.token_preference.app_appearance_token_list_item_suffix_padding,
+                this.token_preference.app_appearance_item_radius),
               isSelected: this.splitSelectionMode && vm.config.TokenUUID === this.selectedTokenUUID,
               swipeActionOptions: {
                 end: {
@@ -178,6 +192,8 @@ export struct TokenListPage {
     TokenItem({
       Config: vm.config,
       selectionMode: this.splitSelectionMode,
+      selected: vm.config.TokenUUID === this.selectedTokenUUID,
+      hdsCardMode: true,
       Select: (conf: TokenConfig) => this.onSelectToken(conf),
       Edit: (conf: TokenConfig) => this.openEditPage(conf),
       Update: async (conf_new): Promise<boolean> => {

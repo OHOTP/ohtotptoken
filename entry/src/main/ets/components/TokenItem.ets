@@ -28,6 +28,8 @@ export struct TokenItem {
   @Event Select: (conf: TokenConfig) => void = () => {};
   @Param sortMode: boolean = false;
   @Param selectionMode: boolean = false;
+  @Param selected: boolean = false;
+  @Param hdsCardMode: boolean = false;
 
   @Local token_preference: TokenPreference = AppStorageV2.connect(TokenPreference) as TokenPreference;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
@@ -411,7 +413,21 @@ export struct TokenItem {
       })
     } else {
       Column() {
-        if (MaterialTheme.isTokenItemMaterialEffective()) {
+        if (this.hdsCardMode) {
+          // 选中背板由外层 HdsListItem 以系统默认样式绘制；选中时内容层透明，
+          // 让系统背板完整透出。未选中时仍保留实体或用户显式启用的光感表面。
+          if (MaterialTheme.isTokenItemMaterialEffective() && !this.selected) {
+            MaterialSurface({ radius: this.token_preference.app_appearance_item_radius }) {
+              this.TokenRowContent(false)
+            }
+          } else {
+            Column() {
+              this.TokenRowContent(false)
+            }
+            .width('100%')
+            .backgroundColor(this.selected ? Color.Transparent : $r('app.color.item_bg'))
+          }
+        } else if (MaterialTheme.isTokenItemMaterialEffective()) {
           // 列表项光感材质：用户在设置中显式开启（官方不建议滚动列表逐项
           // 材质，开启前已经 Dialog 二次确认）；内容背景透明透出材质层
           MaterialSurface({ radius: this.token_preference.app_appearance_item_radius }) {
@@ -426,9 +442,8 @@ export struct TokenItem {
           .backgroundColor($r('app.color.item_bg'))
         }
       }
-      // 卡片左右边距跟随设置中的「左侧边距/右侧边距」，实体与光感两种模式等宽；
-      // 卡片内部内容边距固定为 0（见 TokenRowContent）
-      .margin({
+      // HdsListItem 模式的边距由外层系统列表项承担；其余场景继续使用自绘卡片边距。
+      .margin(this.hdsCardMode ? 0 : {
         left: this.token_preference.app_appearance_token_list_item_prefix_padding,
         right: this.token_preference.app_appearance_token_list_item_suffix_padding
       })
