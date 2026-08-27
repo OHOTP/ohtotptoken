@@ -391,7 +391,16 @@ export struct TokenItem {
       // 排序模式：禁用上下文菜单和长按手势，Suffix 显示排序图标；
       // 材质与主列表一致跟随设置（逐项光感为用户显式开启项，开启前经 Dialog 二次确认）
       Column() {
-        if (MaterialTheme.isTokenItemMaterialEffective()) {
+        if (this.hdsCardMode) {
+          // 排序页由外层 HdsListItem 承担实体卡片背景、圆角和边距。
+          if (MaterialTheme.isTokenItemMaterialEffective()) {
+            MaterialSurface({ radius: this.token_preference.app_appearance_item_radius }) {
+              this.TokenRowContent(true)
+            }
+          } else {
+            this.TokenRowContent(true)
+          }
+        } else if (MaterialTheme.isTokenItemMaterialEffective()) {
           // 内容背景透明透出材质层（不透明背景会盖住 ImmersiveMaterial）
           MaterialSurface({ radius: this.token_preference.app_appearance_item_radius }) {
             this.TokenRowContent(true)
@@ -405,9 +414,8 @@ export struct TokenItem {
           .backgroundColor($r('app.color.item_bg'))
         }
       }
-      // 外层只带 margin 不设 width：width('100%')+margin 会把卡片撑出列表右边界；
-      // 与下方非排序分支结构一致，margin 由外层承担，宽度交给 ListItem 约束
-      .margin({
+      // HdsListItem 模式的边距由外层系统列表项承担；其余场景继续使用自绘卡片边距。
+      .margin(this.hdsCardMode ? 0 : {
         left: this.token_preference.app_appearance_token_list_item_prefix_padding,
         right: this.token_preference.app_appearance_token_list_item_suffix_padding
       })
