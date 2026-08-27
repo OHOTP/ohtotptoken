@@ -150,7 +150,9 @@ export struct HomeTabs {
           } : undefined)
         .vertical(this.window.UseSideNavigation)
         .barMode(BarMode.Fixed)
-        .animationDuration(300)
+        // HDS 的 BottomTabBarStyle 在侧边一级导航下默认不使用内容切换动效，
+        // 避免宽屏主内容切换时出现整页缩放/翻页感；窄屏暂时保持现有体验。
+        .animationDuration(this.window.UseSideNavigation ? 0 : 300)
         .onChange((index) => {
           this.onTabChange(index);
           // [冷启动优化] 用户首次切换到 Setting Tab 时触发懒加载构建

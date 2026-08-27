@@ -20,6 +20,11 @@ import { AddTokenPageParams } from '../components/AddTokenForm';
 import { TokenConfig } from 'common';
 import { ComponentContent } from '@kit.ArkUI';
 
+/** 宽屏主页纵向页签使用 HdsTabs 默认的 96vp 宽度。 */
+const HOME_SIDE_TAB_WIDTH: number = 96;
+/** 分栏模式下令牌列表内容需要保留的最低可用宽度。 */
+const TOKEN_LIST_MIN_CONTENT_WIDTH: number = 320;
+
 @Builder
 function EmptyBuilder() {
 }
@@ -178,7 +183,8 @@ export struct AppShell {
       NavigationMode.Split : NavigationMode.Stack)
     // lg 的三段式布局先保证主列表可用宽度，超宽窗口再收敛为约 1:2。
     .navBarWidth(this.window.WidthVp < 1200 ? '50%' : '36%')
-    .navBarWidthRange({ minWidth: 320, maxWidth: 560 })
+    // NavBar 同时包含 96vp 纵向页签与令牌列表，最小值需为两者之和。
+    .navBarWidthRange({ minWidth: HOME_SIDE_TAB_WIDTH + TOKEN_LIST_MIN_CONTENT_WIDTH, maxWidth: 560 })
     .minContentWidth(300)
     .enableDragBar(this.window.AllowSplit && this.currentHomeTabIndex === 0 && this.businessSplitEnabled)
     .splitPlaceholder(this.splitPlaceholder)

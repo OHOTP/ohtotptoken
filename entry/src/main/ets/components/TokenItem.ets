@@ -128,7 +128,10 @@ export struct TokenItem {
   @Builder
   TextContentBuilder() {
     Column() {
-      Text(this.token_preference.app_appearance_swap_host_user_enable ? this.Config.TokenName : this.Config.TokenIssuer)
+      // DEBUG 排名并入首行，避免在固定高度卡片的验证码区新增一行并挤出计时环。
+      Text(this.debugModeIsOn ?
+        `${this.Config.RankScore} · ${this.token_preference.app_appearance_swap_host_user_enable ? this.Config.TokenName : this.Config.TokenIssuer}` :
+        (this.token_preference.app_appearance_swap_host_user_enable ? this.Config.TokenName : this.Config.TokenIssuer))
         .fontSize(this.token_preference.app_appearance_issuer_font_size)
         .fontWeight(this.token_preference.app_appearance_issuer_font_weight)
         .fontColor($r('app.color.str_main'))
@@ -304,14 +307,6 @@ export struct TokenItem {
   @Builder
   TokenCodeBuilder() {
     Column() {
-      if (this.debugModeIsOn) {
-        Text(this.Config.RankScore.toString())
-          .textAlign(TextAlign.Center)
-          .textOverflow({ overflow: TextOverflow.MARQUEE })
-          .maxLines(1)
-          .fontSize(30)
-      }
-
       if (this.TokenHide && this.token_preference.app_safety_hide_token_enable) {
         Text() {
           Span("●●●●")

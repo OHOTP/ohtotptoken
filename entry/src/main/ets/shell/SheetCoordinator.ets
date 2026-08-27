@@ -460,7 +460,8 @@ export struct SheetCoordinator {
                 this.huaweiUser.nickname : $r('app.string.huawei_account_login'))
                 .fontSize(18)
                 .fontWeight(FontWeight.Medium)
-                .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                .fontColor(this.wideMode && this.selectedDetail === SettingDetailType.ACCOUNT ?
+                  $r('sys.color.interactive_active') : $r('sys.color.ohos_id_color_text_primary'))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -477,14 +478,12 @@ export struct SheetCoordinator {
           .width('100%')
           .padding(SETTING_ROW_PADDING)
           .alignItems(VerticalAlign.Center)
-          // PC/2in1 光标悬浮时提供系统高亮反馈
+          // 与其余设置项一致：业务选中态使用背板，系统负责按压和键盘焦点反馈。
           .hoverEffect(HoverEffect.Highlight)
-          .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.95 })
-          .border({
-            width: this.wideMode && this.selectedDetail === SettingDetailType.ACCOUNT ? 2 : 0,
-            color: $r('sys.color.interactive_active'),
-            radius: 12
-          })
+          .backgroundColor(this.wideMode && this.selectedDetail === SettingDetailType.ACCOUNT ?
+            $r('app.color.itemActivated') : Color.Transparent)
+          .borderRadius(12)
+          .accessibilitySelected(this.wideMode && this.selectedDetail === SettingDetailType.ACCOUNT)
           .onClick(() => {
             if (!this.isHuaweiLoggedIn) {
               this.triggerHuaweiLogin();
