@@ -284,14 +284,14 @@ export struct SheetCoordinator {
               .draggable(false)
               .width(85)
               .height(85)
-              .borderRadius(42.5)
+              .borderRadius('50%')
               .margin({ top: 40 })
           } else if (this.huaweiUser.nickname !== '') {
             Text(this.huaweiUser.nickname.length > 0 ?
               this.huaweiUser.nickname.substring(this.huaweiUser.nickname.length - 1) : '')
               .width(85)
               .height(85)
-              .borderRadius(42.5)
+              .borderRadius('50%')
               .backgroundColor($r('sys.color.ohos_id_color_tertiary'))
               .linearGradient({
                 colors: [
@@ -372,13 +372,13 @@ export struct SheetCoordinator {
                 .draggable(false)
                 .width(48)
                 .height(48)
-                .borderRadius(24)
+                .borderRadius($r('sys.float.corner_radius_level12'))
             } else if (this.isHuaweiLoggedIn && this.huaweiUser && this.huaweiUser.nickname !== '') {
               Text(this.huaweiUser.nickname.length > 0 ?
                 this.huaweiUser.nickname.substring(this.huaweiUser.nickname.length - 1) : '')
                 .width(48)
                 .height(48)
-                .borderRadius(24)
+                .borderRadius($r('sys.float.corner_radius_level12'))
                 .backgroundColor($r('sys.color.ohos_id_color_tertiary'))
                 .linearGradient({
                   colors: [
@@ -419,11 +419,22 @@ export struct SheetCoordinator {
           .width('100%')
           .padding(SETTING_ROW_PADDING)
           .alignItems(VerticalAlign.Center)
-          // 与其余设置项一致：业务选中态使用背板，系统负责按压和键盘焦点反馈。
+          // 与其余设置项一致：业务选中态使用背板，触屏按下立即回弹，鼠标悬浮高亮。
+          .clickEffect({ level: ClickEffectLevel.MIDDLE, scale: 0.98 })
           .hoverEffect(HoverEffect.Highlight)
-          .backgroundColor(this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAccount ?
-            $r('app.color.itemActivated') : Color.Transparent)
-          .borderRadius(12)
+          .stateStyles({
+            normal: {
+              .backgroundColor(this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAccount ?
+                $r('app.color.itemActivated') : Color.Transparent)
+            },
+            pressed: {
+              .backgroundColor($r('sys.color.interactive_pressed'))
+            },
+            clicked: {
+              .backgroundColor($r('sys.color.interactive_pressed'))
+            }
+          })
+          .borderRadius($r('sys.float.corner_radius_level8'))
           .accessibilitySelected(this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAccount)
           .onClick(() => {
             if (!this.isHuaweiLoggedIn) {

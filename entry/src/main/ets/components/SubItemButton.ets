@@ -77,10 +77,21 @@ export struct SubItemButton {
       .justifyContent(FlexAlign.Start)
     }
     // 业务选中态使用低强调背板和前景强调色，避免与键盘焦点蓝色闭合框混淆。
-    // 按压与焦点反馈沿用系统默认行为，不再对整行应用自定义缩放。
+    // 触屏按下立即提供轻量回弹，鼠标场景继续使用系统悬浮高亮。
+    .clickEffect({ level: ClickEffectLevel.MIDDLE, scale: 0.98 })
     .hoverEffect(HoverEffect.Highlight)
-    .backgroundColor(this.selected ? $r('app.color.itemActivated') : Color.Transparent)
-    .borderRadius(12)
+    .stateStyles({
+      normal: {
+        .backgroundColor(this.selected ? $r('app.color.itemActivated') : Color.Transparent)
+      },
+      pressed: {
+        .backgroundColor($r('sys.color.interactive_pressed'))
+      },
+      clicked: {
+        .backgroundColor($r('sys.color.interactive_pressed'))
+      }
+    })
+    .borderRadius($r('sys.float.corner_radius_level8'))
     .accessibilitySelected(this.selected)
     .padding(SETTING_ROW_PADDING)
     .constraintSize({ minHeight: SETTING_ROW_MIN_HEIGHT })

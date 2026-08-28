@@ -26,7 +26,7 @@ export enum MaterialThickness {
  *   （SOLID 强制实体背景；AUTO/IMMERSIVE 尽力而为，按设备能力三级回退）
  * - 材质模式下表面背景必须为透明（不透明背景会盖住材质层，官方 FAQ 明确）；
  *   solid 模式下的原实体背景色映射由调用方传入（如 SettingItem 的 item_bg）
- * - 圆角档位：接管 SettingStyle 数值（RADIUS_GROUP 即 SETTING_GROUP_RADIUS，
+ * - 圆角档位：接管 SettingStyle 系统资源（RADIUS_GROUP 即 SETTING_GROUP_RADIUS，
  *   单一数据源，SettingStyle 中预留的对接点注释对应本类）
  * - 边框规则：材质化表面不设 border（材质自带高光描边；borderWidth 会被
  *   systemMaterial 重置为无边框，官方明确）
@@ -45,7 +45,7 @@ export class MaterialTheme {
   static readonly MATERIAL_SURFACE_BG: ResourceColor = Color.Transparent;
 
   /** 分组卡片圆角档位（接管 SettingStyle.ets 数值，单一数据源） */
-  static readonly RADIUS_GROUP: number = SETTING_GROUP_RADIUS;
+  static readonly RADIUS_GROUP: Length = SETTING_GROUP_RADIUS;
 
   /**
    * 获取全局共享的材质偏好实例（AppStorageV2 单例）。

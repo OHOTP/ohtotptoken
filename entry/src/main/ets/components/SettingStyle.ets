@@ -1,7 +1,7 @@
 /**
  * SettingStyle — 设置分组列表的统一设计规范
  *
- * 统一分组列表的设计数值：分组圆角 12、行内边距 16/14、0.5px 系统分隔线
+ * 统一分组列表的设计数值：普通卡片圆角使用系统 16vp Token、行内边距 16/14、0.5px 系统分隔线
  * （左缩进 16 与文字对齐）、页面级左右留白 16。
  * SettingItem 与 SubItem* 系列统一从这里取值，避免数值散落各处。
  *
@@ -11,7 +11,7 @@
  * - 分组卡片不使用阴影，阴影与材质表面视觉冲突
  * - 后续 MaterialTheme 将接管本文件的数值，并补充材质模式下的背景/边框映射
  */
-export const SETTING_GROUP_RADIUS: number = 12;
+export const SETTING_GROUP_RADIUS: Length = $r('sys.float.corner_radius_level8');
 
 export const SETTING_ROW_PADDING: Padding = { left: 16, right: 16, top: 14, bottom: 14 };
 

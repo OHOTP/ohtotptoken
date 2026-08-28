@@ -91,7 +91,7 @@ export struct SubItemColor {
                 .backgroundColor(color.color)
                 .textAlign(TextAlign.Center)
                 .textShadow({ color: Color.White, radius: 10 })
-                .borderRadius(5)
+                .borderRadius($r('sys.float.corner_radius_level2'))
                 .height(30)
                 .fontSize($r('sys.float.Subtitle_M'))
                 .fontColor(Color.Black)
