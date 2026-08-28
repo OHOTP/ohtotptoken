@@ -11,6 +11,8 @@ export class AppWindowInfo {
   @Trace WidthVp: number = 0;
   @Trace HeightVp: number = 0;
   @Trace HeightToWidthRatio: number = 0;
+  @Trace IsPc: boolean = false;
+  @Trace IsPcOrTablet: boolean = false;
   @Trace UseSideNavigation: boolean = false;
   @Trace AllowSplit: boolean = false;
   @Trace ColorMode: ConfigurationConstant.ColorMode = -1;

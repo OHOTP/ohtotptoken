@@ -105,7 +105,8 @@ export struct TokenSortPage {
         }
         .clip(false)
         .alignListItem(ListItemAlign.Center)
-        .lanes({ minLength: 400, maxLength: this.token_preference.app_appearance_item_max_width })
+        .lanes(this.window.IsPc ?
+          { minLength: 400, maxLength: this.token_preference.app_appearance_item_max_width } : 1)
         .layoutWeight(1)
         .width('100%')
         .height('100%')

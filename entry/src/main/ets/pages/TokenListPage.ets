@@ -17,6 +17,9 @@ import { HdsListItem } from '@kit.UIDesignKit';
 
 let tkStore = TokenStore.getInstance();
 
+/** PC 主令牌列表最多容纳 3 个 400vp 的 lane。 */
+const PC_TOKEN_LIST_MAX_WIDTH: number = 1200;
+
 /** 将纯数据 TokenConfig[] 转为带刷新标识的 ViewModel 数组，供 LazyForEach 消费 */
 function toVMs(tokens: TokenConfig[]): TokenConfigVM[] {
   return tokens.map(t => new TokenConfigVM(t));
@@ -149,11 +152,19 @@ export struct TokenListPage {
         }
         .contentEndOffset(this.TabBarVisible ? (80 + this.appBottomAvoidHeight) : (20 + this.appBottomAvoidHeight))
         .alignListItem(ListItemAlign.Center)
-        .lanes({ minLength: 400, maxLength: this.token_preference.app_appearance_item_max_width })
+        // ArkUI 链式动效要求显式单列且不能使用自动 lanes；仅 PC 保持自适应多列。
+        .lanes(this.window.IsPc ?
+          { minLength: 400, maxLength: this.token_preference.app_appearance_item_max_width } : 1)
         .layoutWeight(1)
         .width('100%')
+        .constraintSize({
+          // 平板恢复使用原令牌项最大宽度；PC 保持最多 3 列，手机占满可用宽度。
+          maxWidth: this.window.IsPc ? PC_TOKEN_LIST_MAX_WIDTH :
+            (this.window.IsPcOrTablet ? this.token_preference.app_appearance_item_max_width : '100%')
+        })
         .height('100%')
-        .chainAnimation(this.token_preference.app_appearance_chain_animation_enable)
+        .chainAnimation(!this.window.IsPc &&
+          this.token_preference.app_appearance_chain_animation_enable)
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
         .clip(false)

@@ -215,6 +215,22 @@ export class DeviceInfoHelper {
   }
 
   /**
+   * 当前设备是否为 PC/2in1。
+   */
+  isPc(): boolean {
+    return this.getDeviceInfo().deviceType === deviceInfo.DeviceTypes.TYPE_2IN1;
+  }
+
+  /**
+   * 当前设备是否为 PC/2in1 或平板。
+   */
+  isPcOrTablet(): boolean {
+    const deviceType = this.getDeviceInfo().deviceType;
+    return deviceType === deviceInfo.DeviceTypes.TYPE_2IN1 ||
+      deviceType === deviceInfo.DeviceTypes.TYPE_TABLET;
+  }
+
+  /**
    * 检查是否已初始化
    * 
    * @returns 是否已初始化

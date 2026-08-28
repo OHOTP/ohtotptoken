@@ -169,6 +169,8 @@ export default class EntryAbility extends UIAbility {
 
       win.ColorMode = this.context.config.colorMode ?? -1;
       win.Context = this.context;
+      win.IsPc = DeviceInfoHelper.getInstance().isPc();
+      win.IsPcOrTablet = DeviceInfoHelper.getInstance().isPcOrTablet();
 
       hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
 

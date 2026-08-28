@@ -105,6 +105,20 @@ export struct AppearanceSheet {
                   }
                 })
 
+                if (!this.window.IsPc) {
+                  SubItemDivider()
+
+                  SubItemToggle({
+                    icon: $r('sys.symbol.rectangle_stack'),
+                    title: $r('app.string.chain_animation'),
+                    isOn: this.token_preference.app_appearance_chain_animation_enable,
+                    description: $r('app.string.chain_animation_des'),
+                    onChange: (IsOn: boolean) => {
+                      AppPreference.setPreference(PREF_KEYS.APPEARANCE_CHAIN_ANIMATION_ENABLE, IsOn);
+                      this.token_preference.app_appearance_chain_animation_enable = IsOn;
+                    }
+                  })
+                }
               }
             }
             .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
@@ -150,22 +164,24 @@ export struct AppearanceSheet {
 
                 SubItemDivider()
 
-                SubItemEnumSelect({
-                  icon: $r('sys.symbol.blur_bar'),
-                  title: $r('app.string.setting_bottom_tabs_type'),
-                  options: AVAILABLE_BOTTOM_TABS_TYPES,
-                  description: $r('app.string.setting_bottom_tabs_type_desc'),
-                  selected: AppPreference.getPreference(PREF_KEYS.APPEARANCE_BOTTOM_TABS_TYPE) as number ??
-                    SettingBottomTabsType.SUSPENSION,
-                  onChange: (value: number) => {
-                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_BOTTOM_TABS_TYPE, value);
-                    if (this.appCtx.eventHub != undefined) {
-                      this.appCtx.eventHub.emit(EVENT_NAMES.BOTTOM_TABS_TYPE_CHANGED);
+                if (!this.window.IsPcOrTablet) {
+                  SubItemEnumSelect({
+                    icon: $r('sys.symbol.blur_bar'),
+                    title: $r('app.string.setting_bottom_tabs_type'),
+                    options: AVAILABLE_BOTTOM_TABS_TYPES,
+                    description: $r('app.string.setting_bottom_tabs_type_desc'),
+                    selected: AppPreference.getPreference(PREF_KEYS.APPEARANCE_BOTTOM_TABS_TYPE) as number ??
+                      SettingBottomTabsType.SUSPENSION,
+                    onChange: (value: number) => {
+                      AppPreference.setPreference(PREF_KEYS.APPEARANCE_BOTTOM_TABS_TYPE, value);
+                      if (this.appCtx.eventHub != undefined) {
+                        this.appCtx.eventHub.emit(EVENT_NAMES.BOTTOM_TABS_TYPE_CHANGED);
+                      }
                     }
-                  }
-                })
+                  })
 
-                SubItemDivider()
+                  SubItemDivider()
+                }
 
                 SubItemIconManager()
 

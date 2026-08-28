@@ -42,6 +42,12 @@ export struct HomeTabs {
 
   @BuilderParam settingEntryContent?: CustomBuilder = EmptyBuilder;
 
+  /** PC/2in1 与平板不允许用户偏好切换为平铺式。 */
+  @Computed
+  get effectiveBottomTabsType(): SettingBottomTabsType {
+    return this.window.IsPcOrTablet ? SettingBottomTabsType.SUSPENSION : this.bottomTabsType;
+  }
+
   build() {
     if (
       (this.window.HeightBreakpoint === HeightBreakpoint.HEIGHT_MD ||
@@ -94,9 +100,9 @@ export struct HomeTabs {
             // 悬浮：56vp 胶囊内居中；平铺：内容区顶对齐 + 4vp 顶部安全间距
             // (设计指南平铺式上下安全间距 4vp)，按钮热区落在 48vp 内容区内，
             // 整体高度向下扩展避让导航条(下方 barHeight)
-            .verticalAlign(this.bottomTabsType === SettingBottomTabsType.SUSPENSION ?
+            .verticalAlign(this.effectiveBottomTabsType === SettingBottomTabsType.SUSPENSION ?
               VerticalAlign.Center : VerticalAlign.Top)
-            .padding(this.bottomTabsType === SettingBottomTabsType.SUSPENSION ?
+            .padding(this.effectiveBottomTabsType === SettingBottomTabsType.SUSPENSION ?
               { left: 4, right: 4, top: 0, bottom: 0 } :
               { left: 4, right: 4, top: 4, bottom: 0 })
           )
@@ -120,9 +126,9 @@ export struct HomeTabs {
             // 悬浮：56vp 胶囊内居中；平铺：内容区顶对齐 + 4vp 顶部安全间距
             // (设计指南平铺式上下安全间距 4vp)，按钮热区落在 48vp 内容区内，
             // 整体高度向下扩展避让导航条(下方 barHeight)
-            .verticalAlign(this.bottomTabsType === SettingBottomTabsType.SUSPENSION ?
+            .verticalAlign(this.effectiveBottomTabsType === SettingBottomTabsType.SUSPENSION ?
               VerticalAlign.Center : VerticalAlign.Top)
-            .padding(this.bottomTabsType === SettingBottomTabsType.SUSPENSION ?
+            .padding(this.effectiveBottomTabsType === SettingBottomTabsType.SUSPENSION ?
               { left: 4, right: 4, top: 0, bottom: 0 } :
               { left: 4, right: 4, top: 4, bottom: 0 })
           )
@@ -138,9 +144,10 @@ export struct HomeTabs {
         // 纵向 BottomTabBarStyle 使用官方默认 96vp 侧栏宽度并占满高度；
         // 窄窗口仍使用原底部安全区与悬浮/平铺样式。
         .barHeight(this.window.UseSideNavigation ? '100%' :
-          (this.bottomTabsType === SettingBottomTabsType.SUSPENSION ? 56 : 48 + this.window.AvoidBottomHeight))
+          (this.effectiveBottomTabsType === SettingBottomTabsType.SUSPENSION ?
+            56 : 48 + this.window.AvoidBottomHeight))
         .barFloatingStyle(!this.window.UseSideNavigation &&
-          this.bottomTabsType === SettingBottomTabsType.SUSPENSION ?
+          this.effectiveBottomTabsType === SettingBottomTabsType.SUSPENSION ?
           {
             barBottomMargin: 28,
             systemMaterialEffect: {

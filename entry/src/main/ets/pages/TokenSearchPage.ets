@@ -194,7 +194,8 @@ export struct TokenSearchPage {
         // 计量单位是行：多列（lanes）设备行高不变。
         .cachedCount({ minCount: 5, maxCount: 10 }, true)
         .alignListItem(ListItemAlign.Center)
-        .lanes({ minLength: 400, maxLength: this.token_preference.app_appearance_item_max_width })
+        .lanes(this.window.IsPc ?
+          { minLength: 400, maxLength: this.token_preference.app_appearance_item_max_width } : 1)
         .layoutWeight(1)
         .width('100%')
         .height('100%')
