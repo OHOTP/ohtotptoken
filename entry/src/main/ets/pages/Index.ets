@@ -958,6 +958,11 @@ struct Index {
             this.businessSplitEnabled = true;
           }
         },
+        onCloseResponsiveTokenEdit: () => {
+          this.selectedTokenUUID = '';
+          this.pageInfos.clear();
+          this.businessSplitEnabled = true;
+        },
         onNavBarVisible: () => {
           if (this.currentHomeTabIndex === 0) {
             this.businessSplitEnabled = true;

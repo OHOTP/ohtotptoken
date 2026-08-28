@@ -21,6 +21,7 @@ export struct AddTotpTokenPage {
   @Require @Param saveToken: (conf: TokenConfig) => Promise<boolean> = async () => false;
   @Param pageParams: AddTokenPageParams = new AddTokenPageParams();
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
+  @Event onBackToPlaceholder: () => void = () => {};
 
   @Local secret: string = '';
   @Local issuer: string = '';
@@ -309,8 +310,8 @@ export struct AddTotpTokenPage {
       }
     }
     .backgroundColor($r('app.color.window_background'))
-    .hideBackButton(this.window.AllowSplit && this.pageParams.editConfig !== undefined)
-    .titleMode(HdsNavDestinationTitleMode.MODAL)
+    .padding({ top: this.window.IsPc ? 8 : 0 })
+    .titleMode(HdsNavDestinationTitleMode.MINI)
     .titleBar({
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: true,
@@ -345,5 +346,12 @@ export struct AddTotpTokenPage {
     })
     .bindToScrollable([this.scroller])
     .onReady((context: NavDestinationContext) => this.pageInfos = context.pathStack)
+    .onBackPressed(() => {
+      if (this.window.AllowSplit && this.pageParams.editConfig !== undefined) {
+        this.onBackToPlaceholder();
+        return true;
+      }
+      return false;
+    })
   }
 }

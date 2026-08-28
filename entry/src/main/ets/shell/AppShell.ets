@@ -84,6 +84,7 @@ export struct AppShell {
   @Require @Param addTokenMenuTargetId: string = '';
   @Event onOpenFullScreenRoute: (name: ROUTE_NAMES, param: Object | null) => void = () => {};
   @Event onExitFullScreenRoute: () => void = () => {};
+  @Event onCloseResponsiveTokenEdit: () => void = () => {};
   @Event onNavBarVisible: () => void = () => {};
   @Event onNavigationModeChange: (mode: NavigationMode) => void = () => {};
   /** 文件拖放回调(由 Index 提供,控制 DropFilesDialog) */
@@ -131,19 +132,22 @@ export struct AppShell {
       AddTotpTokenPage({
         scrollEffectType: this.scrollEffectType,
         pageParams: param as AddTokenPageParams,
-        saveToken: (conf: TokenConfig) => this.saveToken(conf)
+        saveToken: (conf: TokenConfig) => this.saveToken(conf),
+        onBackToPlaceholder: () => this.onCloseResponsiveTokenEdit()
       })
     } else if (name === ROUTE_NAMES.AddFortiTokenPage) {
       AddFortiTokenPage({
         scrollEffectType: this.scrollEffectType,
         pageParams: param as AddTokenPageParams,
-        saveToken: (conf: TokenConfig) => this.saveToken(conf)
+        saveToken: (conf: TokenConfig) => this.saveToken(conf),
+        onBackToPlaceholder: () => this.onCloseResponsiveTokenEdit()
       })
     } else if (name === ROUTE_NAMES.AddSteamTokenPage) {
       AddSteamTokenPage({
         scrollEffectType: this.scrollEffectType,
         pageParams: param as AddTokenPageParams,
-        saveToken: (conf: TokenConfig) => this.saveToken(conf)
+        saveToken: (conf: TokenConfig) => this.saveToken(conf),
+        onBackToPlaceholder: () => this.onCloseResponsiveTokenEdit()
       })
     } else if (name === ROUTE_NAMES.IconPickerPage) {
       IconPickerPage({
