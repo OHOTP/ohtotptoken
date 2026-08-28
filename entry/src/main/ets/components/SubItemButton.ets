@@ -15,7 +15,7 @@ export struct SubItemButton {
   @Param selected: boolean = false;
 
   build() {
-    Column() {
+    ListItem() {
       Row({ space: 12 }) {
         Column({ space: 4 }) {
           Row({ space: 10 }) {
@@ -80,9 +80,13 @@ export struct SubItemButton {
     // 触屏按下立即提供轻量回弹，鼠标场景继续使用系统悬浮高亮。
     .clickEffect({ level: ClickEffectLevel.MIDDLE, scale: 0.98 })
     .hoverEffect(HoverEffect.Highlight)
+    .selected(this.selected)
     .stateStyles({
       normal: {
-        .backgroundColor(this.selected ? $r('app.color.itemActivated') : Color.Transparent)
+        .backgroundColor(Color.Transparent)
+      },
+      selected: {
+        .backgroundColor($r('app.color.itemActivated'))
       },
       pressed: {
         .backgroundColor($r('sys.color.interactive_pressed'))
@@ -95,7 +99,6 @@ export struct SubItemButton {
     .accessibilitySelected(this.selected)
     .padding(SETTING_ROW_PADDING)
     .constraintSize({ minHeight: SETTING_ROW_MIN_HEIGHT })
-    .justifyContent(FlexAlign.Center)
 
   }
 }

@@ -366,66 +366,71 @@ export struct SheetCoordinator {
       // 华为账号登录卡片：与设置子项共用 SettingItem 分组卡片表面
       ListItem() {
         SettingItem({ title: '' }) {
-          Row({ space: 16 }) {
-            if (this.isHuaweiLoggedIn && this.huaweiUser && this.huaweiUser.avatarUri !== '') {
-              Image(this.huaweiUser.avatarUri)
-                .draggable(false)
-                .width(48)
-                .height(48)
-                .borderRadius($r('sys.float.corner_radius_level12'))
-            } else if (this.isHuaweiLoggedIn && this.huaweiUser && this.huaweiUser.nickname !== '') {
-              Text(this.huaweiUser.nickname.length > 0 ?
-                this.huaweiUser.nickname.substring(this.huaweiUser.nickname.length - 1) : '')
-                .width(48)
-                .height(48)
-                .borderRadius($r('sys.float.corner_radius_level12'))
-                .backgroundColor($r('sys.color.ohos_id_color_tertiary'))
-                .linearGradient({
-                  colors: [
-                    [$r('sys.color.ohos_id_color_tertiary'), 0.0],
-                    [$r('sys.color.ohos_id_color_foreground_contrary'), 1.0]
-                  ]
-                })
-                .fontColor($r('sys.color.font_on_primary'))
-                .fontSize(20)
-                .fontWeight(FontWeight.Bold)
-                .textAlign(TextAlign.Center)
-            } else {
-              SymbolGlyph($r('sys.symbol.person_crop_circle_fill_1'))
-                .fontSize(48)
-                .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
-            }
+          ListItem() {
+            Row({ space: 16 }) {
+              if (this.isHuaweiLoggedIn && this.huaweiUser && this.huaweiUser.avatarUri !== '') {
+                Image(this.huaweiUser.avatarUri)
+                  .draggable(false)
+                  .width(48)
+                  .height(48)
+                  .borderRadius($r('sys.float.corner_radius_level12'))
+              } else if (this.isHuaweiLoggedIn && this.huaweiUser && this.huaweiUser.nickname !== '') {
+                Text(this.huaweiUser.nickname.length > 0 ?
+                  this.huaweiUser.nickname.substring(this.huaweiUser.nickname.length - 1) : '')
+                  .width(48)
+                  .height(48)
+                  .borderRadius($r('sys.float.corner_radius_level12'))
+                  .backgroundColor($r('sys.color.ohos_id_color_tertiary'))
+                  .linearGradient({
+                    colors: [
+                      [$r('sys.color.ohos_id_color_tertiary'), 0.0],
+                      [$r('sys.color.ohos_id_color_foreground_contrary'), 1.0]
+                    ]
+                  })
+                  .fontColor($r('sys.color.font_on_primary'))
+                  .fontSize(20)
+                  .fontWeight(FontWeight.Bold)
+                  .textAlign(TextAlign.Center)
+              } else {
+                SymbolGlyph($r('sys.symbol.person_crop_circle_fill_1'))
+                  .fontSize(48)
+                  .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              }
 
-            Column({ space: 4 }) {
-              Text(this.isHuaweiLoggedIn && this.huaweiUser ?
-                this.huaweiUser.nickname : $r('app.string.huawei_account_login'))
-                .fontSize(18)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAccount ?
-                  $r('sys.color.interactive_active') : $r('sys.color.ohos_id_color_text_primary'))
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
+              Column({ space: 4 }) {
+                Text(this.isHuaweiLoggedIn && this.huaweiUser ?
+                  this.huaweiUser.nickname : $r('app.string.huawei_account_login'))
+                  .fontSize(18)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAccount ?
+                    $r('sys.color.interactive_active') : $r('sys.color.ohos_id_color_text_primary'))
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-              Text(this.isHuaweiLoggedIn ?
-                $r('app.string.huawei_account_current') :
-                $r('app.string.huawei_account_login_desc'))
-                .fontSize(14)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                .maxLines(1)
+                Text(this.isHuaweiLoggedIn ?
+                  $r('app.string.huawei_account_current') :
+                  $r('app.string.huawei_account_login_desc'))
+                  .fontSize(14)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .maxLines(1)
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
             }
-            .alignItems(HorizontalAlign.Start)
-            .layoutWeight(1)
+            .width('100%')
+            .padding(SETTING_ROW_PADDING)
+            .alignItems(VerticalAlign.Center)
           }
-          .width('100%')
-          .padding(SETTING_ROW_PADDING)
-          .alignItems(VerticalAlign.Center)
           // 与其余设置项一致：业务选中态使用背板，触屏按下立即回弹，鼠标悬浮高亮。
           .clickEffect({ level: ClickEffectLevel.MIDDLE, scale: 0.98 })
           .hoverEffect(HoverEffect.Highlight)
+          .selected(this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAccount)
           .stateStyles({
             normal: {
-              .backgroundColor(this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAccount ?
-                $r('app.color.itemActivated') : Color.Transparent)
+              .backgroundColor(Color.Transparent)
+            },
+            selected: {
+              .backgroundColor($r('app.color.itemActivated'))
             },
             pressed: {
               .backgroundColor($r('sys.color.interactive_pressed'))
