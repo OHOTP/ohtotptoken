@@ -21,6 +21,7 @@ export struct AddTotpTokenPage {
   @Require @Param saveToken: (conf: TokenConfig) => Promise<boolean> = async () => false;
   @Param pageParams: AddTokenPageParams = new AddTokenPageParams();
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
+  @Event onExitFullScreen: () => void = () => {};
   @Event onBackToPlaceholder: () => void = () => {};
 
   @Local secret: string = '';
@@ -333,7 +334,7 @@ export struct AddTotpTokenPage {
         title: { mainTitle: this.pageParams.editConfig === undefined ?
           $r('app.string.tab_token_add_key') : $r('app.string.edit_token_title') },
         menu: {
-          value: [{
+          value: this.window.IsPc ? [] : [{
             content: {
               label: $r('app.string.add_token_scan'),
               icon: $r('sys.symbol.qrcode'),
@@ -346,6 +347,7 @@ export struct AddTotpTokenPage {
     })
     .bindToScrollable([this.scroller])
     .onReady((context: NavDestinationContext) => this.pageInfos = context.pathStack)
+    .onWillDisappear(() => this.onExitFullScreen())
     .onBackPressed(() => {
       if (this.window.AllowSplit && this.pageParams.editConfig !== undefined) {
         this.onBackToPlaceholder();

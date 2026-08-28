@@ -21,6 +21,7 @@ export struct AddSteamTokenPage {
   @Require @Param saveToken: (conf: TokenConfig) => Promise<boolean> = async () => false;
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Param pageParams: AddTokenPageParams = new AddTokenPageParams();
+  @Event onExitFullScreen: () => void = () => {};
   @Event onBackToPlaceholder: () => void = () => {};
 
   @Local secret: string = '';
@@ -222,7 +223,7 @@ export struct AddSteamTokenPage {
         title: { mainTitle: this.pageParams.editConfig === undefined ?
           $r('app.string.tab_token_add_stream_key') : $r('app.string.edit_token_title') },
         menu: {
-          value: [{
+          value: this.window.IsPc ? [] : [{
             content: {
               label: $r('app.string.add_token_scan'),
               icon: $r('sys.symbol.qrcode'),
@@ -235,6 +236,7 @@ export struct AddSteamTokenPage {
     })
     .bindToScrollable([this.scroller])
     .onReady((context: NavDestinationContext) => this.pageInfos = context.pathStack)
+    .onWillDisappear(() => this.onExitFullScreen())
     .onBackPressed(() => {
       if (this.window.AllowSplit && this.pageParams.editConfig !== undefined) {
         this.onBackToPlaceholder();

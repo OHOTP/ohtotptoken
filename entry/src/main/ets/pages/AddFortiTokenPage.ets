@@ -37,6 +37,7 @@ export struct AddFortiTokenPage {
   @Require @Param saveToken: (conf: TokenConfig) => Promise<boolean> = async () => false;
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Param pageParams: AddTokenPageParams = new AddTokenPageParams();
+  @Event onExitFullScreen: () => void = () => {};
   @Event onBackToPlaceholder: () => void = () => {};
 
   @Local activationCode: string = '';
@@ -322,7 +323,7 @@ export struct AddFortiTokenPage {
         title: { mainTitle: this.pageParams.editConfig === undefined ?
           $r('app.string.tab_token_add_forti_key') : $r('app.string.edit_token_title') },
         menu: {
-          value: [{
+          value: this.window.IsPc ? [] : [{
             content: {
               label: $r('app.string.add_token_scan'),
               icon: $r('sys.symbol.qrcode'),
@@ -335,6 +336,7 @@ export struct AddFortiTokenPage {
     })
     .bindToScrollable([this.scroller])
     .onReady((context: NavDestinationContext) => this.pageInfos = context.pathStack)
+    .onWillDisappear(() => this.onExitFullScreen())
     .onBackPressed(() => {
       if (this.window.AllowSplit && this.pageParams.editConfig !== undefined) {
         this.onBackToPlaceholder();

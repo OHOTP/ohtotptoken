@@ -133,6 +133,7 @@ export struct AppShell {
         scrollEffectType: this.scrollEffectType,
         pageParams: param as AddTokenPageParams,
         saveToken: (conf: TokenConfig) => this.saveToken(conf),
+        onExitFullScreen: () => this.onExitFullScreenRoute(),
         onBackToPlaceholder: () => this.onCloseResponsiveTokenEdit()
       })
     } else if (name === ROUTE_NAMES.AddFortiTokenPage) {
@@ -140,6 +141,7 @@ export struct AppShell {
         scrollEffectType: this.scrollEffectType,
         pageParams: param as AddTokenPageParams,
         saveToken: (conf: TokenConfig) => this.saveToken(conf),
+        onExitFullScreen: () => this.onExitFullScreenRoute(),
         onBackToPlaceholder: () => this.onCloseResponsiveTokenEdit()
       })
     } else if (name === ROUTE_NAMES.AddSteamTokenPage) {
@@ -147,6 +149,7 @@ export struct AppShell {
         scrollEffectType: this.scrollEffectType,
         pageParams: param as AddTokenPageParams,
         saveToken: (conf: TokenConfig) => this.saveToken(conf),
+        onExitFullScreen: () => this.onExitFullScreenRoute(),
         onBackToPlaceholder: () => this.onCloseResponsiveTokenEdit()
       })
     } else if (name === ROUTE_NAMES.IconPickerPage) {
