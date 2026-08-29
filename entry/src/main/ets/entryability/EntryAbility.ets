@@ -23,6 +23,20 @@ let rdbStore: relationalStore.RdbStore | null = null;
 
 export default class EntryAbility extends UIAbility {
   private uiContext?: UIContext;
+  private readonly onWindowStageLifecycleEvent =
+    (eventType: window.WindowStageLifecycleEventType): void => {
+      switch (eventType) {
+        case window.WindowStageLifecycleEventType.PAUSED:
+          this.setBackgroundBlurActive(
+            AppPreference.getPreference(PREF_KEYS.SAFETY_BACKGROUND_BLUR_ENABLE) as boolean);
+          break;
+        case window.WindowStageLifecycleEventType.RESUMED:
+          this.setBackgroundBlurActive(false);
+          break;
+        default:
+          break;
+      }
+    };
   private onWindowSizeChange: (windowSize: window.Size) => void = (windowSize: window.Size) => {
     let win: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
     let widthBp: WidthBreakpoint = this.uiContext!.getWindowWidthBreakpoint();
@@ -43,6 +57,12 @@ export default class EntryAbility extends UIAbility {
     win.HeightToWidthRatio = layout.heightToWidthRatio;
     win.UseSideNavigation = layout.useSideNavigation;
     win.AllowSplit = layout.allowSplit;
+  }
+
+  private setBackgroundBlurActive(active: boolean): void {
+    const win = AppStorageV2.connect(AppWindowInfo, () => new AppWindowInfo())!;
+    win.BackgroundBlurActive = active;
+    AppStorage.setOrCreate('background_blur_flag', active);
   }
 
   private selectPage: string = '';
@@ -116,6 +136,7 @@ export default class EntryAbility extends UIAbility {
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     AppStorage.setOrCreate("appContext", this.context);
+    AppStorage.setOrCreate('background_blur_flag', false);
     registerHdsSnackBar();
     hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onCreate');
 
@@ -166,6 +187,7 @@ export default class EntryAbility extends UIAbility {
       // 异步打点：覆盖 onWindowStageCreate 入口到 loadContent 回调完成
       hiTraceMeter.startTrace('H:onWindowStageCreate', 1);
       let win: AppWindowInfo = AppStorageV2.connect(AppWindowInfo, () => new AppWindowInfo())!;
+      windowStage.on('windowStageLifecycleEvent', this.onWindowStageLifecycleEvent);
 
       win.ColorMode = this.context.config.colorMode ?? -1;
       win.Context = this.context;
@@ -254,6 +276,17 @@ export default class EntryAbility extends UIAbility {
     window.ColorMode = newConfig.colorMode ?? -1;
     this.applyWindowColors(window.WindowClass);
   }
+  onWindowStageWillDestroy(windowStage: window.WindowStage): void {
+    try {
+      windowStage.off('windowStageLifecycleEvent', this.onWindowStageLifecycleEvent);
+    } catch (exception) {
+      const error = exception as BusinessError;
+      hilog.error(error.code, 'EntryAbility',
+        `Failed to disable window stage lifecycle listener. Cause code: ${error.code}, message: ${error.message}`);
+    }
+    this.setBackgroundBlurActive(false);
+  }
+
   onWindowStageDestroy(): void {
     // Main window is destroyed, release UI related resources
     hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onWindowStageDestroy');

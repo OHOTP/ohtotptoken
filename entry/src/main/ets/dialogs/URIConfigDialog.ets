@@ -11,6 +11,7 @@ export struct URIConfigDialog {
   @State otp_uris: Array<string> = [];
   @State btn_camera_clicked: number = 0;
   @State btn_folder_clicked: number = 0;
+  @StorageLink('background_blur_flag') backgroundBlurFlag: boolean = false;
 
   cancel?: () => void;
   confirm: (tokens: Array<TokenConfig>) => Promise<boolean> = async () => false;
@@ -146,5 +147,9 @@ export struct URIConfigDialog {
     }
     .height('50%')
     .margin(10)
+    .foregroundBlurStyle(this.backgroundBlurFlag ? BlurStyle.Thin : BlurStyle.NONE, {
+      colorMode: ThemeColorMode.SYSTEM,
+      adaptiveColor: AdaptiveColor.DEFAULT
+    })
   }
 }

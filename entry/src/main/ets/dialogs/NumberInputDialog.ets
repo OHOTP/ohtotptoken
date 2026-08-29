@@ -5,6 +5,7 @@ export struct NumberInputDialog {
   confirm: (counter: number) => void = () => {};
 
   @State Counter: number = 0;
+  @StorageLink('background_blur_flag') backgroundBlurFlag: boolean = false;
 
   build() {
     Row({space: 10}) {
@@ -29,5 +30,9 @@ export struct NumberInputDialog {
     .justifyContent(FlexAlign.SpaceBetween)
     .width('100%')
     .padding({ left: 10, right: 10 })
+    .foregroundBlurStyle(this.backgroundBlurFlag ? BlurStyle.Thin : BlurStyle.NONE, {
+      colorMode: ThemeColorMode.SYSTEM,
+      adaptiveColor: AdaptiveColor.DEFAULT
+    })
   }
 }

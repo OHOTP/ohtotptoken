@@ -12,6 +12,7 @@ export struct ColorSelectDialog {
   @State mixed_color: number = this.old_color;
   @State input_color: string = '';
   @State input_change: boolean = false;
+  @StorageLink('background_blur_flag') backgroundBlurFlag: boolean = false;
 
   private canvas_context: CanvasRenderingContext2D = new CanvasRenderingContext2D(new RenderingContextSettings(true));
 
@@ -172,6 +173,10 @@ export struct ColorSelectDialog {
     }
     .padding(10)
     .width('100%')
+    .foregroundBlurStyle(this.backgroundBlurFlag ? BlurStyle.Thin : BlurStyle.NONE, {
+      colorMode: ThemeColorMode.SYSTEM,
+      adaptiveColor: AdaptiveColor.DEFAULT
+    })
   }
 }
 

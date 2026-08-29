@@ -16,6 +16,7 @@ export class AppWindowInfo {
   @Trace UseSideNavigation: boolean = false;
   @Trace AllowSplit: boolean = false;
   @Trace ColorMode: ConfigurationConstant.ColorMode = -1;
+  @Trace BackgroundBlurActive: boolean = false;
   @Trace Context?: common.UIAbilityContext;
   @Trace uiContext?: UIContext;
   @Trace WindowClass?: window.Window;

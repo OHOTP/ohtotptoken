@@ -9,6 +9,7 @@ export struct EncryptionPassWordDialog {
   private inputValue: string = '';
   @State private passwordMismatch: boolean = false;
   @State private passwordEmpty: boolean = false;
+  @StorageLink('background_blur_flag') backgroundBlurFlag: boolean = false;
   controller?: CustomDialogController;
   cancel: () => void = () => {
   };
@@ -118,5 +119,9 @@ export struct EncryptionPassWordDialog {
       .width('100%')
       .padding({ left: 16, right: 16, top: 8, bottom: 16 })
     }
+    .foregroundBlurStyle(this.backgroundBlurFlag ? BlurStyle.Thin : BlurStyle.NONE, {
+      colorMode: ThemeColorMode.SYSTEM,
+      adaptiveColor: AdaptiveColor.DEFAULT
+    })
   }
 }

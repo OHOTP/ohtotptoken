@@ -21,6 +21,7 @@ export struct NFCReadDialog {
   @State password: string = '';
   @State promptText: Resource = $r('app.string.nfc_read_prompt_default');
   @State passwordError: boolean = false;
+  @StorageLink('background_blur_flag') backgroundBlurFlag: boolean = false;
 
   aboutToAppear(): void {
     NfcOathReader.getInstance().startRead({
@@ -99,5 +100,9 @@ export struct NFCReadDialog {
     .width('100%')
     .padding({ left: 24, right: 24, top: 20, bottom: 24 })
     .borderRadius(10)
+    .foregroundBlurStyle(this.backgroundBlurFlag ? BlurStyle.Thin : BlurStyle.NONE, {
+      colorMode: ThemeColorMode.SYSTEM,
+      adaptiveColor: AdaptiveColor.DEFAULT
+    })
   }
 }

@@ -13,6 +13,7 @@ export struct QRCodeDialog {
   @Prop winSize: window.Size;
   @State pixelMap: image.PixelMap | undefined = undefined
   @State qrSize: number = 0;
+  @StorageLink('background_blur_flag') backgroundBlurFlag: boolean = false;
 
   aboutToAppear(): void {
   }
@@ -85,5 +86,9 @@ export struct QRCodeDialog {
     }
     .padding(20)
     .width('100%')
+    .foregroundBlurStyle(this.backgroundBlurFlag ? BlurStyle.Thin : BlurStyle.NONE, {
+      colorMode: ThemeColorMode.SYSTEM,
+      adaptiveColor: AdaptiveColor.DEFAULT
+    })
   }
 }

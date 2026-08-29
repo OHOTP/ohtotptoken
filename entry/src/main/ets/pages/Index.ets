@@ -27,7 +27,7 @@ import { AppWindowInfo } from 'common';
 // [冷启动优化] AppLockOverlay 导入 @kit.CryptoArchitectureKit + @kit.UserAuthenticationKit，
 // bindContentCover 的 Builder 仅在 isAppLockOverlayVisible=true 时评估
 import lazy { AppLockOverlay } from './AppLockOverlay';
-import { AppStorageV2, ComponentContent, window } from '@kit.ArkUI';
+import { AppStorageV2, ComponentContent } from '@kit.ArkUI';
 import { ScrollEffectType } from '@kit.UIDesignKit';
 // [冷启动优化] Google Auth 解码仅在扫描迁移链接时使用
 import lazy { decodeProtobuf } from '../utils/GoogleAuthUtils';
@@ -154,7 +154,6 @@ struct Index {
   @Local CurrentTokens: TokenConfig[] = [];
   @Local tokenSortMode: TokenListSortMode = TokenListSortMode.DEFAULT;
   @Local token_loading: Boolean = true;
-  @Local background_blur_flag: Boolean = false;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   @Local appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
   @Local tokenListScroller: Scroller = new Scroller();
@@ -199,8 +198,6 @@ struct Index {
   private DropFilesDialogIsOpen:boolean = false;
   // 存储 setInterval ID 以便在 aboutToDisappear 中清理
   private timestampIntervalId: number = -1;
-  // 防止 onPageShow 中重复注册 windowStageEvent 监听器
-  private windowStageEventListenerRegistered: boolean = false;
 
   private readonly eventId = 'usual.event.PRIVACY_STATE_CHANGED';
   // 订阅者信息, 用于保存创建成功的订阅者对象，后续使用其完成订阅及退订的动作
@@ -570,19 +567,6 @@ struct Index {
         this.token_loading = false;
       });
     });
-
-    let context = this.appCtx as common.UIAbilityContext;
-    let windowStage = context.windowStage;
-    // 防止每次 onPageShow 重复注册 windowStageEvent 监听器
-    if (!this.windowStageEventListenerRegistered && windowStage) {
-      windowStage.on("windowStageEvent", (data) => {
-        this.background_blur_flag = (
-          AppPreference.getPreference(PREF_KEYS.SAFETY_BACKGROUND_BLUR_ENABLE) as boolean &&
-          data === window.WindowStageEventType.PAUSED
-        );
-      })
-      this.windowStageEventListenerRegistered = true;
-    }
 
     if (AppPreference.getPreference(PREF_KEYS.WANT_QUICK_SCAN)) {
       if (this.appCtx.eventHub!= undefined) this.appCtx.eventHub.emit(EVENT_NAMES.START_QUICK_SCAN);
@@ -1057,7 +1041,7 @@ struct Index {
       AppShell({
         pageInfos: this.pageInfos,
         isLoading: this.token_loading as boolean,
-        blurFlag: this.background_blur_flag as boolean,
+        blurFlag: this.window.BackgroundBlurActive,
         applockVisible: this.isAppLockOverlayVisible,
         scrollEffectType: this.currentScrollEffectType,
         currentHomeTabIndex: this.currentHomeTabIndex,
