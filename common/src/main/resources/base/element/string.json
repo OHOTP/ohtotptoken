@@ -1799,6 +1799,10 @@
     {
       "name": "toast_no_test_tokens",
       "value": "No test tokens to remove"
+    },
+    {
+      "name": "watch_sync_no_device_hint",
+      "value": "No connected device found. Please confirm the phone and watch are paired in Huawei Health."
     }
   ]
 }

@@ -7,6 +7,12 @@
     "deviceTypes": [
       "wearable"
     ],
+    "metadata": [
+      {
+        "name": "client_id",
+        "value": "112342101"
+      }
+    ],
     "requestPermissions": [
       {
         "name": "ohos.permission.INTERNET"
@@ -58,6 +64,20 @@
         "startWindowIcon": "$media:startIcon",
         "startWindowBackground": "$color:start_window_background",
         "exported": true,
+        "metadata": [
+          {
+            "name": "wearEngineRemoteAppNameList",
+            "value": "smartcityshenzhen.yylx.totptoken"
+          },
+          {
+            "name": "wearEngineUIAbilityName",
+            "value": "EntryAbility"
+          },
+          {
+            "name": "wearEngineAwaitRegisterReceiver",
+            "value": "true"
+          }
+        ],
         "skills": [
           {
             "entities": [

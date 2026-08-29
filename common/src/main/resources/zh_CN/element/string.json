@@ -1799,6 +1799,10 @@
     {
       "name": "toast_no_test_tokens",
       "value": "没有可移除的测试令牌"
+    },
+    {
+      "name": "watch_sync_no_device_hint",
+      "value": "未检测到已连接设备，请确认手机与手表已在华为运动健康中配对连接"
     }
   ]
 }

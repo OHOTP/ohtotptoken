@@ -33,6 +33,7 @@ export * from './src/main/ets/utils/TokenConfig';
 export * from './src/main/ets/utils/TokenStore';
 export * from './src/main/ets/utils/TokenUtils';
 export * from './src/main/ets/utils/UiUtils';
+export * from './src/main/ets/utils/WearEngineTransfer';
 export { default as Logger } from './src/main/ets/utils/Logger';
 export * from './src/main/ets/models/AppWindowInfo';
 export * from './src/main/ets/utils/importers/TokenImporter';

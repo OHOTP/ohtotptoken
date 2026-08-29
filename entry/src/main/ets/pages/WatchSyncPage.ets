@@ -1,13 +1,14 @@
-import { ble } from '@kit.ConnectivityKit';
+import { wearEngine } from '@kit.WearEngine';
 import { hdsMaterial, HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import { ConfigurationConstant, common } from '@kit.AbilityKit';
 import { PageScaffold } from '../components/PageScaffold';
 import { SettingItem } from '../components/SettingItem';
 import { SubItemDivider } from '../components/SubItemDivider';
-import { TokenStore, TokenConfig, BleTokenClient, getDeviceDisplayName } from 'common';
+import { TokenStore, TokenConfig, WearEngineClient } from 'common';
 import { TokenIcon } from 'uikit';
 import { showSnackBar, SnackBarNotifyType } from 'common';
-import { CommonConstants, PermissionManager, AppWindowInfo } from 'common';
+import { AppWindowInfo, CommonConstants } from 'common';
+import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppStorageV2 } from '@kit.ArkUI';
 import { MaterialSurface } from '../components/MaterialSurface';
@@ -18,23 +19,20 @@ const TAG = 'WatchSyncPage';
 const DOMAIN = 0xFF02;
 
 /**
- * 手表同步页面: 通过 BLE 扫描连接手表, 从当前令牌列表选择若干令牌传输到手表.
- * 背景: 分布式 KV 同步受安全等级限制(S4 无法与低安全手表同步), 改由蓝牙手动传输.
+ * 手表同步页面: 通过 Wear Engine 应用间消息通信(P2P)下发令牌与设置到手表.
+ * 背景: 分布式 KV 同步受安全等级限制(S4 无法与低安全手表同步);
+ * P2P 基于华为运动健康既有配对连接(华为账号信任链), 从已连接设备列表选择目标手表.
  */
 @Entry
 @ComponentV2
 export struct WatchSyncPage {
   pageInfos: NavPathStack | null = null;
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
-  @Local scanning: boolean = false;
-  @Local devices: Array<ble.ScanResult> = [];
-  @Local connected: boolean = false;
-  @Local connectedDeviceId: string = '';
-  @Local bonded: boolean = false;
-  /** 连接进行中: 按钮禁用, 连接结果(成功/失败/断开)到达或超时后恢复 */
-  @Local connecting: boolean = false;
-  /** 本次连接是否为重连(重连成功延迟 2s 展示, 避免快速重复点击; 首次连接立即展示) */
-  private reconnecting: boolean = false;
+  /** 已连接穿戴设备列表(华为运动健康配对连接) */
+  @Local devices: Array<wearEngine.Device> = [];
+  @Local refreshingDevices: boolean = false;
+  /** 当前选中的目标设备 randomId */
+  @Local selectedDeviceRandomId: string = '';
   @Local tokens: TokenConfig[] = [];
   @Local selectedUuids: string[] = [];
   @Local transferring: boolean = false;
@@ -49,55 +47,6 @@ export struct WatchSyncPage {
   private scroller: Scroller = new Scroller();
 
   aboutToAppear(): void {
-    // 确保蓝牙权限已授予(user_grant, 已授予则不会弹窗)
-    PermissionManager.getInstance().reqPermissionsFromUser(
-      AppStorage.get<common.UIAbilityContext>('appContext') as common.UIAbilityContext);
-    BleTokenClient.getInstance().setOnDevicesChanged((devices: Array<ble.ScanResult>) => {
-      this.devices = devices;
-      this.scanning = false;
-    });
-    BleTokenClient.getInstance().setOnConnectionChanged((deviceId: string, isConnected: boolean) => {
-      if (isConnected) {
-        if (this.reconnecting) {
-          // 重连成功延迟 2s 展示: 期间保持 connecting 禁用态, 避免快速重复点击重连
-          setTimeout(() => {
-            this.connected = true;
-            this.connectedDeviceId = deviceId;
-            this.connecting = false;
-          }, 2000);
-        } else {
-          // 首次连接立即展示
-          this.connected = true;
-          this.connectedDeviceId = deviceId;
-          this.connecting = false;
-        }
-      } else if (this.connecting && this.reconnecting) {
-        // 重连流程中旧连接先断开(connect 内部先 disconnect): 保持 connecting,
-        // 等待新连接结果; 若新连接结果未在短时间到达(重连失败无后续回调)则恢复
-        setTimeout(() => {
-          this.connecting = false;
-          this.reconnecting = false;
-        }, 1500);
-      } else if (!this.connecting) {
-        // 意外断开(非连接流程): 立即恢复
-        this.connected = false;
-        this.connectedDeviceId = '';
-        this.connecting = false;
-      } else {
-        // 首次连接失败: 立即恢复
-        this.connected = false;
-        this.connectedDeviceId = '';
-        this.connecting = false;
-        this.reconnecting = false;
-      }
-    });
-    // 配对状态: 连接后系统自动发起配对, bonded 后才能传输 secret 载荷
-    BleTokenClient.getInstance().setOnPairChanged((deviceId: string, isBonded: boolean) => {
-      this.bonded = isBonded;
-      if (!isBonded && this.connected) {
-        showSnackBar($r('app.string.watch_sync_pair_failed'), SnackBarNotifyType.WARNING);
-      }
-    });
     TokenStore.getInstance().initTokenStore().then(() => {
       return TokenStore.getInstance().getTokens();
     }).then((tokens: TokenConfig[]) => {
@@ -105,40 +54,52 @@ export struct WatchSyncPage {
     }).catch((err: Error) => {
       hilog.error(DOMAIN, TAG, `load tokens failed: ${err.message}`);
     });
+    this.refreshDevices();
   }
 
   aboutToDisappear(): void {
-    BleTokenClient.getInstance().stopScan();
-    BleTokenClient.getInstance().disconnect();
   }
 
-  private scan(): void {
-    this.scanning = true;
-    BleTokenClient.getInstance().startScan();
-    // 兜底: 已连接设备可能不再广播, BLEDeviceFind 回调不触发时扫描状态卡死,
-    // 定时恢复按钮(回调早到则提前恢复)
-    setTimeout(() => {
-      this.scanning = false;
-    }, 5000);
+  /** 刷新已连接设备列表 */
+  private async refreshDevices(): Promise<void> {
+    this.refreshingDevices = true;
+    // 先请求用户授权(受限权限验证; P2P 本身无需, 但为授权链路铺路)
+    WearEngineClient.getInstance().ensureAuthorized().then((authorized: boolean) => {
+      hilog.info(DOMAIN, TAG, `ensureAuthorized: ${authorized}`);
+    });
+    try {
+      this.devices = await WearEngineClient.getInstance().getConnectedDevices();
+      hilog.info(DOMAIN, TAG, `connected devices: ${this.devices.length}`);
+    } catch (err) {
+      const e = err as BusinessError;
+      hilog.error(e.code, TAG, `getConnectedDevices failed: ${e.message}`);
+      this.devices = [];
+    }
+    this.refreshingDevices = false;
   }
 
-  private connectDevice(device: ble.ScanResult): void {
-    // 记录本次是否为重连(点击时已处于连接状态)
-    this.reconnecting = this.connected;
-    this.connecting = true;
-    BleTokenClient.getInstance().connect(device.deviceId);
-    // 兜底: 连接结果回调未及时到达时恢复按钮(如连接静默失败)
-    setTimeout(() => {
-      this.connecting = false;
-    }, 15000);
+  /** 设备显示名: 名称 → 型号 → randomId 兜底 */
+  private deviceDisplayName(device: wearEngine.Device): string {
+    if (device.name !== undefined && device.name !== '') {
+      return device.name;
+    }
+    if (device.model !== undefined && device.model !== '') {
+      return device.model;
+    }
+    return device.randomId;
+  }
+
+  /** 选择目标设备并拉起手表端应用 */
+  private selectDevice(device: wearEngine.Device): void {
+    this.selectedDeviceRandomId = device.randomId;
+    // 发送前拉起手表端应用(两端应用需同时处于启动状态)
+    WearEngineClient.getInstance().startRemoteApp(device.randomId).catch((err: Error) => {
+      hilog.warn(DOMAIN, TAG, `startRemoteApp failed(可忽略): ${err.message}`);
+    });
   }
 
   /**
    * 按目标选中态幂等设置(双重检查当前状态, 避免重复/反向设置).
-   *
-   * 幂等语义是打破"select 赋值 → onChange 反馈环"的关键: 即使 select 重新
-   * 绑定触发 onChange, 回调值不变 → 状态不变 → 渲染收敛; 翻转语义(toggle)
-   * 在反馈环中永不收敛会卡死(真机实测).
    */
   private setTokenSelected(uuid: string, selected: boolean): void {
     const has = this.selectedUuids.includes(uuid);
@@ -155,13 +116,8 @@ export struct WatchSyncPage {
   }
 
   private transfer(): void {
-    if (!this.connected) {
+    if (this.selectedDeviceRandomId === '') {
       showSnackBar($r('app.string.watch_sync_not_connected_warn'), SnackBarNotifyType.WARNING);
-      return;
-    }
-    if (!this.bonded) {
-      // 未完成系统 BLE 配对: 提示配对中, 等待系统配对流程
-      showSnackBar($r('app.string.watch_sync_pairing'), SnackBarNotifyType.WARNING);
       return;
     }
     if (this.selectedUuids.length === 0) {
@@ -170,7 +126,7 @@ export struct WatchSyncPage {
     }
     this.transferring = true;
     const selected: TokenConfig[] = this.tokens.filter((t: TokenConfig) => this.selectedUuids.includes(t.TokenUUID));
-    BleTokenClient.getInstance().sendTokens(selected).then(() => {
+    WearEngineClient.getInstance().sendTokens(this.selectedDeviceRandomId, selected).then(() => {
       this.transferring = false;
       showSnackBar($r('app.string.watch_sync_transfer_done'), SnackBarNotifyType.SUCCESS);
     }).catch((err: Error) => {
@@ -180,18 +136,14 @@ export struct WatchSyncPage {
     });
   }
 
-  /** 同步手机端外观/安全设置到手表(WATCH_SYNC_PREF_KEYS 白名单) */
+  /** 同步手机端外观/安全设置到手表(WEAR_SYNC_PREF_KEYS 白名单) */
   private syncSettings(): void {
-    if (!this.connected) {
+    if (this.selectedDeviceRandomId === '') {
       showSnackBar($r('app.string.watch_sync_not_connected_warn'), SnackBarNotifyType.WARNING);
       return;
     }
-    if (!this.bonded) {
-      showSnackBar($r('app.string.watch_sync_pairing'), SnackBarNotifyType.WARNING);
-      return;
-    }
     this.transferring = true;
-    BleTokenClient.getInstance().sendSettings().then(() => {
+    WearEngineClient.getInstance().sendSettings(this.selectedDeviceRandomId).then(() => {
       this.transferring = false;
       showSnackBar($r('app.string.watch_sync_settings_done'), SnackBarNotifyType.SUCCESS);
     }).catch((err: Error) => {
@@ -211,22 +163,19 @@ export struct WatchSyncPage {
               ListItem()
                 .height(CommonConstants.AVOID_TOP_BASE_HEIGHT)
 
-              // 连接手表区
+              // 目标设备区
               ListItem() {
                 SettingItem({ title: $r('app.string.watch_sync_connect_section') }) {
                   Row() {
-                    // 连接中(含重连 2s 等待期)显示"连接中…"状态
-                    Text(this.connecting
-                      ? $r('app.string.watch_sync_connecting')
-                      : (this.connected
-                        ? $r('app.string.watch_sync_connected')
-                        : $r('app.string.watch_sync_not_connected')))
+                    Text(this.devices.length > 0
+                      ? $r('app.string.watch_sync_connected')
+                      : $r('app.string.watch_sync_not_connected'))
                       .fontSize($r('sys.float.ohos_id_text_size_body2'))
                       .fontColor($r('sys.color.font_primary'))
                       .layoutWeight(1)
                       .maxLines(1)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
-                    // 扫描按钮: MaterialSurface 光感材质(沉浸档透明透出材质, 其余档语义色)
+                    // 刷新设备列表按钮: MaterialSurface 光感材质
                     MaterialSurface({
                       thickness: MaterialThickness.THIN,
                       lightEffect: true,
@@ -242,9 +191,9 @@ export struct WatchSyncPage {
                         .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.button_light_gray')))
                         .fontColor(this.is_dark_mode ? Color.White : Color.Black)
                         .stateEffect(false)
-                        .enabled(!this.scanning)
+                        .enabled(!this.refreshingDevices)
                         .onClick(() => {
-                          this.scan();
+                          this.refreshDevices();
                         })
                     }
                   }
@@ -254,38 +203,30 @@ export struct WatchSyncPage {
 
                   if (this.devices.length === 0) {
                     Row() {
-                      Text(this.scanning
+                      Text(this.refreshingDevices
                         ? $r('app.string.watch_sync_scanning')
-                        : $r('app.string.watch_sync_scan_hint'))
+                        : $r('app.string.watch_sync_no_device_hint'))
                         .fontSize($r('sys.float.ohos_id_text_size_body2'))
                         .fontColor($r('sys.color.font_secondary'))
                         .layoutWeight(1)
                     }
                     .padding(10)
                   }
-                  // 已连接但未完成配对: 提示等待配对确认
-                  if (this.connected && !this.bonded) {
+                  // 已连接设备: 点击选择为目标
+                  ForEach(this.devices, (device: wearEngine.Device, index: number) => {
                     Row() {
-                      Text($r('app.string.watch_sync_pairing'))
-                        .fontSize($r('sys.float.ohos_id_text_size_body2'))
-                        .fontColor($r('sys.color.font_secondary'))
-                        .layoutWeight(1)
-                    }
-                    .padding(10)
-
-                    SubItemDivider()
-                  }
-                  // 扫描到的手表设备: 显示设备名(广播名/响应包名/系统名逐级兜底), 点击连接
-                  ForEach(this.devices, (device: ble.ScanResult, index: number) => {
-                    Row() {
-                      Text(getDeviceDisplayName(device))
+                      Text(this.deviceDisplayName(device))
                         .fontSize($r('sys.float.ohos_id_text_size_body2'))
                         .fontColor($r('sys.color.font_primary'))
                         .layoutWeight(1)
                         .maxLines(1)
                         .textOverflow({ overflow: TextOverflow.Ellipsis })
-                      if (this.connected && this.connectedDeviceId === device.deviceId) {
-                        // 已连接: 提供重连按钮(connectDevice 内部先断开旧连接再重连)
+                      if (this.selectedDeviceRandomId === device.randomId) {
+                        Text($r('app.string.watch_sync_connected'))
+                          .fontSize(14)
+                          .fontColor($r('sys.color.font_secondary'))
+                      } else {
+                        // 选择按钮: MaterialSurface 光感材质
                         MaterialSurface({
                           thickness: MaterialThickness.THIN,
                           lightEffect: true,
@@ -295,53 +236,28 @@ export struct WatchSyncPage {
                           solidColor: Color.Transparent,
                           fillWidth: false
                         }) {
-                          Button($r('app.string.watch_sync_reconnect'))
+                          Button($r('app.string.watch_sync_connect'))
                             .fontSize(14)
                             .height(32)
                             .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.button_light_gray')))
                             .fontColor(this.is_dark_mode ? Color.White : Color.Black)
                             .stateEffect(false)
-                            .enabled(!this.connecting)
                             .onClick(() => {
-                              this.connectDevice(device);
-                            })
-                        }
-                      } else {
-                        // 连接按钮: MaterialSurface 光感材质(沉浸档透明透出材质, 其余档语义色)
-                        MaterialSurface({
-                          thickness: MaterialThickness.THIN,
-                          lightEffect: true,
-                      interactive: true,
-                              materialColor: $r('app.color.button_light_gray'),
-                          radius: 8,
-                          solidColor: Color.Transparent,
-                          fillWidth: false
-                        }) {
-                          Button(this.connecting && this.connectedDeviceId === device.deviceId
-                            ? $r('app.string.watch_sync_connecting')
-                            : $r('app.string.watch_sync_connect'))
-                            .fontSize(14)
-                            .height(32)
-                            .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.button_light_gray')))
-                            .fontColor(this.is_dark_mode ? Color.White : Color.Black)
-                            .stateEffect(false)
-                            .enabled(!this.connecting)
-                            .onClick(() => {
-                              this.connectDevice(device);
+                              this.selectDevice(device);
                             })
                         }
                       }
                     }
                     .padding(10)
                     .onClick(() => {
-                      this.connectDevice(device);
+                      this.selectDevice(device);
                     })
 
                     // 行间分隔线: 最后一个 item 之后不加
                     if (index < this.devices.length - 1) {
                       SubItemDivider()
                     }
-                  }, (device: ble.ScanResult) => device.deviceId)
+                  }, (device: wearEngine.Device) => device.randomId)
                 }
               }
               .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
@@ -403,7 +319,7 @@ export struct WatchSyncPage {
               }
               .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
 
-              // 传输按钮: MaterialSurface 光感材质(沉浸档透明透出材质, 其余档语义色)
+              // 传输按钮: MaterialSurface 光感材质
               ListItem() {
                 MaterialSurface({
                   thickness: MaterialThickness.THIN,
@@ -419,8 +335,8 @@ export struct WatchSyncPage {
                     .height(44)
                     .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.button_light_gray')))
                     .fontColor(this.is_dark_mode ? Color.White : Color.Black)
-                        .stateEffect(false)
-                    .enabled(!this.transferring && this.connected && this.bonded)
+                    .stateEffect(false)
+                    .enabled(!this.transferring && this.selectedDeviceRandomId !== '')
                     .onClick(() => {
                       this.transfer();
                     })
@@ -444,8 +360,8 @@ export struct WatchSyncPage {
                     .height(44)
                     .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.button_light_gray')))
                     .fontColor(this.is_dark_mode ? Color.White : Color.Black)
-                        .stateEffect(false)
-                    .enabled(!this.transferring && this.connected && this.bonded)
+                    .stateEffect(false)
+                    .enabled(!this.transferring && this.selectedDeviceRandomId !== '')
                     .onClick(() => {
                       this.syncSettings();
                     })

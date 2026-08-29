@@ -1,6 +1,6 @@
 import { TokenPreference, EVENT_NAMES } from 'common';
 import { TokenConfig, TokenIconPacks } from 'common';
-import { TokenStore, BleTokenServer } from 'common';
+import { TokenStore, WearEngineServer } from 'common';
 import { systemDateTime } from '@kit.BasicServicesKit';
 import { AppStorageV2, ArcList, ArcListItem, LengthMetrics } from "@kit.ArkUI";
 import { common } from '@kit.AbilityKit';
@@ -33,7 +33,7 @@ export struct ArcTokenListPage {
       this.appCtx.eventHub.on(EVENT_NAMES.TOKEN_CHANGED, () => this.onTokenChanged());
     }
     // BLE 接收完成回调: 刷新列表 + 显示接收提示 3 秒后复位
-    BleTokenServer.getInstance().setOnTokensSaved(async (count: number) => {
+    WearEngineServer.getInstance().setOnTokensSaved(async (count: number) => {
       await this.onTokenChanged();
       this.bleStatus = $r('app.string.app_wearable_ble_received');
       setTimeout(() => {
@@ -41,7 +41,7 @@ export struct ArcTokenListPage {
       }, 3000);
     });
     // 设置应用完成回调: 显示设置已同步提示 3 秒后复位
-    BleTokenServer.getInstance().setOnSettingsApplied(() => {
+    WearEngineServer.getInstance().setOnSettingsApplied(() => {
       this.bleStatus = $r('app.string.app_wearable_ble_settings_done');
       setTimeout(() => {
         this.bleStatus = undefined;
