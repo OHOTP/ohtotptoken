@@ -1,7 +1,8 @@
 import {
   BottomBuilderShowType,
+  HdsNavigation,
+  HdsNavigationTitleMode,
   HdsNavDestination,
-  HdsNavDestinationTitleMode,
   ScrollEffectType,
   hdsMaterial
 } from '@kit.UIDesignKit';
@@ -172,7 +173,8 @@ export struct IconPickerPage {
 
   build() {
     HdsNavDestination() {
-      PageScaffold({ avoidBottom: true }) {
+      HdsNavigation() {
+        PageScaffold({ avoidBottom: true }) {
         IconPicker({
           issuer: this.pageParams.issuer,
           currentIconPath: this.pageParams.currentIconPath,
@@ -190,8 +192,9 @@ export struct IconPickerPage {
       }
     }
     .backgroundColor($r('app.color.window_background'))
-    .padding({ top: this.window.IsPc ? 8 : 0 })
-    .titleMode(HdsNavDestinationTitleMode.MINI)
+    .mode(NavigationMode.Stack)
+    .hideBackButton(false)
+    .titleMode(HdsNavigationTitleMode.MINI)
     .titleBar({
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: true,
@@ -216,6 +219,11 @@ export struct IconPickerPage {
         }
       },
       content: {
+        backIcon: {
+          label: $r('app.string.dialog_btn_cancel'),
+          icon: $r('sys.symbol.chevron_left'),
+          action: () => this.pageInfos?.pop()
+        },
         title: { mainTitle: $r('app.string.add_token_choose_icon') },
         bottomBuilder: {
           builder: (): void => this.TitleBottomBuilder(),
@@ -225,6 +233,10 @@ export struct IconPickerPage {
       }
     })
     .bindToScrollable(this.iconScrollers)
+    }
+    .clip(false)
+    .hideTitleBar(true)
+    .backgroundColor($r('app.color.window_background'))
     .onReady((context: NavDestinationContext) => this.pageInfos = context.pathStack)
   }
 }

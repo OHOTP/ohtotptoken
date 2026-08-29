@@ -7,7 +7,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { cryptoFramework } from '@kit.CryptoArchitectureKit';
 import { http } from '@kit.NetworkKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { hdsMaterial, HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
+import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, HdsNavDestination, ScrollEffectType } from '@kit.UIDesignKit';
 
 import { AddTokenActionButton, AddTokenHeader, AddTokenPageParams, ADD_TOKEN_BOTTOM_ACTION_INSET, ADD_TOKEN_PAGE_INSET,
   ADD_TOKEN_SECTION_PADDING, ADD_TOKEN_SECTION_RADIUS,
@@ -227,9 +227,18 @@ export struct AddFortiTokenPage {
     }
   }
 
+  private navigateBack(): void {
+    if (this.window.AllowSplit && this.pageParams.editConfig !== undefined) {
+      this.onBackToPlaceholder();
+      return;
+    }
+    this.pageInfos?.pop();
+  }
+
   build() {
     HdsNavDestination() {
-      PageScaffold() {
+      HdsNavigation() {
+        PageScaffold() {
         Column() {
           List({ space: 12, scroller: this.scroller }) {
             ListItem() {
@@ -328,8 +337,9 @@ export struct AddFortiTokenPage {
       }
     }
     .backgroundColor($r('app.color.window_background'))
-    .padding({ top: this.window.IsPc ? 8 : 0 })
-    .titleMode(HdsNavDestinationTitleMode.MINI)
+    .mode(NavigationMode.Stack)
+    .hideBackButton(false)
+    .titleMode(HdsNavigationTitleMode.MINI)
     .titleBar({
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: true,
@@ -348,6 +358,11 @@ export struct AddFortiTokenPage {
         }
       },
       content: {
+        backIcon: {
+          label: $r('app.string.dialog_btn_cancel'),
+          icon: $r('sys.symbol.chevron_left'),
+          action: () => this.navigateBack()
+        },
         title: { mainTitle: this.pageParams.editConfig === undefined ?
           $r('app.string.tab_token_add_forti_key') : $r('app.string.edit_token_title') },
         menu: {
@@ -363,6 +378,10 @@ export struct AddFortiTokenPage {
       }
     })
     .bindToScrollable([this.scroller])
+    }
+    .clip(false)
+    .hideTitleBar(true)
+    .backgroundColor($r('app.color.window_background'))
     .onReady((context: NavDestinationContext) => {
       this.pageInfos = context.pathStack;
       const switchTrace = this.pageParams.responsiveEdit ?
