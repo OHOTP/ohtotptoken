@@ -44,6 +44,7 @@ import { NFCReadDialog } from '../dialogs/NFCReadDialog';
 import { NfcSessionTokens } from '../oath/NfcSessionTokens';
 import { NfcOathReader, NfcSupportStatus } from '../oath/NfcOathReader';
 import { OathReadResult } from '../oath/OathApplet';
+import { ResponsiveTokenEditStore, TokenSwitchPerf } from '../utils/TokenSwitchPerf';
 
 const TAG = 'PrivacySubscribe';
 
@@ -610,14 +611,26 @@ struct Index {
       this.pageInfos.clear();
       return;
     }
+    const switchTrace = TokenSwitchPerf.begin(conf.TokenUUID, route);
+    const paths = this.pageInfos.getAllPathName();
+    const currentRoute = paths.length > 0 ? paths[paths.length - 1] : '';
+    ResponsiveTokenEditStore.getInstance().select(conf, switchTrace);
     this.selectedTokenUUID = conf.TokenUUID;
     this.businessSplitEnabled = true;
-    const params = new AddTokenPageParams('', conf);
-    if (this.pageInfos.getAllPathName().length === 0) {
+
+    if (currentRoute === route) {
+      TokenSwitchPerf.mark(switchTrace, 'reuseCommitted');
+      this.appCtx.eventHub?.emit(EVENT_NAMES.RESPONSIVE_TOKEN_SELECTION_CHANGED, conf, switchTrace);
+      return;
+    }
+
+    const params = new AddTokenPageParams('', conf, switchTrace, true);
+    if (paths.length === 0) {
       this.pageInfos.pushPathByName(route, params, false);
     } else {
       this.pageInfos.replacePathByName(route, params, false);
     }
+    TokenSwitchPerf.mark(switchTrace, 'routeCommitted');
   }
 
   /**

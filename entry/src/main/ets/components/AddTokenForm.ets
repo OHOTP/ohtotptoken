@@ -2,6 +2,7 @@ import { AppPreference, PREF_KEYS, TokenConfig } from 'common';
 import { TokenIcon } from 'uikit';
 import { MaterialSurface } from './MaterialSurface';
 import { MaterialTheme, MaterialThickness } from './MaterialTheme';
+import { TokenSwitchTrace } from '../utils/TokenSwitchPerf';
 
 /** 添加令牌页面统一视觉常量：克制、清晰、适合表单，不复用旧 Dialog 布局。 */
 export const ADD_TOKEN_PAGE_INSET: number = 16;
@@ -15,10 +16,15 @@ export const ADD_TOKEN_BOTTOM_ACTION_INSET: number = 28;
 export class AddTokenPageParams {
   initialUri: string = '';
   editConfig?: TokenConfig = undefined;
+  switchTrace?: TokenSwitchTrace = undefined;
+  responsiveEdit: boolean = false;
 
-  constructor(initialUri: string = '', editConfig?: TokenConfig) {
+  constructor(initialUri: string = '', editConfig?: TokenConfig, switchTrace?: TokenSwitchTrace,
+    responsiveEdit: boolean = false) {
     this.initialUri = initialUri;
     this.editConfig = editConfig;
+    this.switchTrace = switchTrace;
+    this.responsiveEdit = responsiveEdit;
   }
 }
 

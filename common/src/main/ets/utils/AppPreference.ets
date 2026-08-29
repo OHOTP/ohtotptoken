@@ -17,6 +17,8 @@ export enum EVENT_NAMES {
   NFC_EXTERNAL_TOKENS_CHANGED = 'onNfcExternalTokensChanged',
   /** 单条Token更新事件（精准刷新，携带 TokenConfig） */
   TOKEN_SINGLE_UPDATED = 'onTokenSingleUpdated',
+  /** 宽屏稳定详情页切换令牌事件（携带 TokenConfig 与性能 Trace） */
+  RESPONSIVE_TOKEN_SELECTION_CHANGED = 'onResponsiveTokenSelectionChanged',
   /** 时间戳变更事件 */
   TIMESTAMP_CHANGED = 'onTimestampChanged',
   /** 文件拖放事件 */
