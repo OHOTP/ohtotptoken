@@ -553,6 +553,26 @@
       "value": "新增密鑰"
     },
     {
+      "name": "menu_token_sort_default",
+      "value": "預設"
+    },
+    {
+      "name": "menu_token_sort_username_ascending",
+      "value": "A-Z（使用者名稱）"
+    },
+    {
+      "name": "menu_token_sort_token_name_ascending",
+      "value": "A-Z（令牌名稱）"
+    },
+    {
+      "name": "menu_token_sort_username_descending",
+      "value": "Z-A（使用者名稱）"
+    },
+    {
+      "name": "menu_token_sort_token_name_descending",
+      "value": "Z-A（令牌名稱）"
+    },
+    {
       "name": "app_ua_search_token",
       "value": "搜索密鑰"
     },

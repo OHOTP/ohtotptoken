@@ -68,6 +68,14 @@ const SCROLL_EFFECT_TYPE_MAP: Map<SettingTopEffectType, ScrollEffectType> = new 
 
 let tkStore = TokenStore.getInstance();
 
+enum TokenListSortMode {
+  DEFAULT,
+  USERNAME_ASCENDING,
+  TOKEN_NAME_ASCENDING,
+  USERNAME_DESCENDING,
+  TOKEN_NAME_DESCENDING
+}
+
 @Builder
 function TokenAddMenuBuilder(host: Index) {
   Menu() {
@@ -99,10 +107,52 @@ function TokenAddMenuBuilder(host: Index) {
   }
 }
 
+@Builder
+function TokenSortMenuBuilder(host: Index) {
+  Menu() {
+    MenuItem({ content: $r('app.string.menu_token_sort_default') })
+      .selected(host.tokenSortMode === TokenListSortMode.DEFAULT)
+      .selectIcon(true)
+      .onClick(() => {
+        host.setTokenSortMode(TokenListSortMode.DEFAULT);
+      })
+      .accessibilityText($r('app.string.menu_token_sort_default'))
+    MenuItem({ content: $r('app.string.menu_token_sort_username_ascending') })
+      .selected(host.tokenSortMode === TokenListSortMode.USERNAME_ASCENDING)
+      .selectIcon(true)
+      .onClick(() => {
+        host.setTokenSortMode(TokenListSortMode.USERNAME_ASCENDING);
+      })
+      .accessibilityText($r('app.string.menu_token_sort_username_ascending'))
+    MenuItem({ content: $r('app.string.menu_token_sort_token_name_ascending') })
+      .selected(host.tokenSortMode === TokenListSortMode.TOKEN_NAME_ASCENDING)
+      .selectIcon(true)
+      .onClick(() => {
+        host.setTokenSortMode(TokenListSortMode.TOKEN_NAME_ASCENDING);
+      })
+      .accessibilityText($r('app.string.menu_token_sort_token_name_ascending'))
+    MenuItem({ content: $r('app.string.menu_token_sort_username_descending') })
+      .selected(host.tokenSortMode === TokenListSortMode.USERNAME_DESCENDING)
+      .selectIcon(true)
+      .onClick(() => {
+        host.setTokenSortMode(TokenListSortMode.USERNAME_DESCENDING);
+      })
+      .accessibilityText($r('app.string.menu_token_sort_username_descending'))
+    MenuItem({ content: $r('app.string.menu_token_sort_token_name_descending') })
+      .selected(host.tokenSortMode === TokenListSortMode.TOKEN_NAME_DESCENDING)
+      .selectIcon(true)
+      .onClick(() => {
+        host.setTokenSortMode(TokenListSortMode.TOKEN_NAME_DESCENDING);
+      })
+      .accessibilityText($r('app.string.menu_token_sort_token_name_descending'))
+  }
+}
+
 @Entry
 @ComponentV2
 struct Index {
   @Local CurrentTokens: TokenConfig[] = [];
+  @Local tokenSortMode: TokenListSortMode = TokenListSortMode.DEFAULT;
   @Local token_loading: Boolean = true;
   @Local background_blur_flag: Boolean = false;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
@@ -195,6 +245,7 @@ struct Index {
 
   private backup_select_uri: string = '';
   private readonly addTokenMenuTargetId: string = 'app_ua_add_token';
+  private readonly sortTokenMenuTargetId: string = 'token_right_menu_sort';
   private dialog_nfc_read?: CustomDialogController;
 
   // [性能打点] hiTraceMeter 用于 DevEco Profiler 冷启动分析，搜索 "H:" 前缀查看各阶段耗时
@@ -270,7 +321,7 @@ struct Index {
       stepReached = 2;
       hiTraceMeter.finishTrace('H:aboutToAppear.getTokens', 1);
 
-      this.CurrentTokens = [...tokens, ...NfcSessionTokens.getInstance().getTokens()];
+      this.CurrentTokens = this.sortDisplayTokens([...tokens, ...NfcSessionTokens.getInstance().getTokens()]);
       this.CurrentTokensCount = tokens.length;
       this.token_loading = false;
       this.appIsInit = true;
@@ -552,7 +603,46 @@ struct Index {
    * onPageShow / 删除）统一经此方法，保证外部令牌在本地令牌增删后不丢失、不重复。
    */
   async refreshDisplayTokens(): Promise<void> {
-    this.CurrentTokens = [...await tkStore.getTokens(), ...NfcSessionTokens.getInstance().getTokens()];
+    const tokens = [...await tkStore.getTokens(), ...NfcSessionTokens.getInstance().getTokens()];
+    this.CurrentTokens = this.sortDisplayTokens(tokens);
+  }
+
+  private sortDisplayTokens(tokens: TokenConfig[]): TokenConfig[] {
+    if (this.tokenSortMode === TokenListSortMode.DEFAULT) {
+      return [...tokens].sort((first: TokenConfig, second: TokenConfig) => {
+        if (first.TokenType === otpType.NFC_external && second.TokenType !== otpType.NFC_external) {
+          return 1;
+        }
+        if (first.TokenType !== otpType.NFC_external && second.TokenType === otpType.NFC_external) {
+          return -1;
+        }
+        return first.TokenType === otpType.NFC_external ? 0 : first.RankScore - second.RankScore;
+      });
+    }
+    const sortByUsername = this.tokenSortMode === TokenListSortMode.USERNAME_ASCENDING ||
+      this.tokenSortMode === TokenListSortMode.USERNAME_DESCENDING;
+    const direction = this.tokenSortMode === TokenListSortMode.USERNAME_ASCENDING ||
+      this.tokenSortMode === TokenListSortMode.TOKEN_NAME_ASCENDING ? 1 : -1;
+    return [...tokens].sort((first: TokenConfig, second: TokenConfig) => {
+      const firstPrimary = (sortByUsername ? first.TokenName : first.TokenIssuer).toLowerCase();
+      const secondPrimary = (sortByUsername ? second.TokenName : second.TokenIssuer).toLowerCase();
+      const primaryOrder = firstPrimary.localeCompare(secondPrimary);
+      if (primaryOrder !== 0) {
+        return primaryOrder * direction;
+      }
+      const firstSecondary = (sortByUsername ? first.TokenIssuer : first.TokenName).toLowerCase();
+      const secondSecondary = (sortByUsername ? second.TokenIssuer : second.TokenName).toLowerCase();
+      const secondaryOrder = firstSecondary.localeCompare(secondSecondary);
+      return secondaryOrder === 0 ? first.RankScore - second.RankScore : secondaryOrder * direction;
+    });
+  }
+
+  setTokenSortMode(mode: TokenListSortMode): void {
+    if (this.tokenSortMode === mode) {
+      return;
+    }
+    this.tokenSortMode = mode;
+    this.CurrentTokens = this.sortDisplayTokens(this.CurrentTokens);
   }
 
   async onTokenChanged(): Promise<void> {
@@ -569,7 +659,7 @@ struct Index {
       }
       const isNew = !this.CurrentTokens.some(t => t.TokenUUID === conf.TokenUUID);
       await tkStore.updateToken(conf);
-      if (isNew) {
+      if (isNew || this.tokenSortMode !== TokenListSortMode.DEFAULT) {
         await this.refreshDisplayTokens();
       }
       if (toast) {
@@ -720,7 +810,7 @@ struct Index {
         failCount++;
       }
     }
-    if (hasNew) {
+    if (hasNew || this.tokenSortMode !== TokenListSortMode.DEFAULT) {
       await this.refreshDisplayTokens();
     }
     if (failCount === 0) {
@@ -764,6 +854,18 @@ struct Index {
     } catch (error) {
       const err = error as BusinessError;
       hilog.error(err.code, 'Index', `openAddTokenMenu failed: ${err.message}`);
+    }
+  }
+
+  private openTokenSortMenu(): void {
+    const uiContext = this.getUIContext();
+    const promptAction = uiContext.getPromptAction();
+    const contentNode = new ComponentContent(uiContext, wrapBuilder(TokenSortMenuBuilder), this);
+    try {
+      promptAction.openMenu(contentNode, { id: this.sortTokenMenuTargetId }, {});
+    } catch (error) {
+      const err = error as BusinessError;
+      hilog.error(err.code, 'Index', `openTokenSortMenu failed: ${err.message}`);
     }
   }
 
@@ -965,6 +1067,8 @@ struct Index {
         settingEntryScroller: this.settingEntryScroller,
         openAddTokenMenu: () => this.openAddTokenMenu(),
         addTokenMenuTargetId: this.addTokenMenuTargetId,
+        openTokenSortMenu: () => this.openTokenSortMenu(),
+        sortTokenMenuTargetId: this.sortTokenMenuTargetId,
         onOpenFullScreenRoute: (name: ROUTE_NAMES, param: Object | null) => this.openFullScreenRoute(name, param),
         onExitFullScreenRoute: () => {
           if (this.currentHomeTabIndex === 0) {

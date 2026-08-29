@@ -82,6 +82,8 @@ export struct AppShell {
   @Require @Param settingEntryScroller: Scroller = new Scroller();
   @Require @Param openAddTokenMenu: () => void = () => {};
   @Require @Param addTokenMenuTargetId: string = '';
+  @Require @Param openTokenSortMenu: () => void = () => {};
+  @Require @Param sortTokenMenuTargetId: string = '';
   @Event onOpenFullScreenRoute: (name: ROUTE_NAMES, param: Object | null) => void = () => {};
   @Event onExitFullScreenRoute: () => void = () => {};
   @Event onCloseResponsiveTokenEdit: () => void = () => {};
@@ -286,6 +288,17 @@ export struct AppShell {
                 isEnabled: true,
                 action: () => {
                   this.onOpenFullScreenRoute(ROUTE_NAMES.TokenSearchPage, null);
+                }
+              }
+            },
+            {
+              content: {
+                label: $r('app.string.token_right_menu_sort'),
+                icon: $r('sys.symbol.list_bullet'),
+                isEnabled: true,
+                componentId: this.sortTokenMenuTargetId,
+                action: () => {
+                  this.openTokenSortMenu();
                 }
               }
             },

@@ -553,6 +553,26 @@
       "value": "添加密钥"
     },
     {
+      "name": "menu_token_sort_default",
+      "value": "默认"
+    },
+    {
+      "name": "menu_token_sort_username_ascending",
+      "value": "A-Z（用户名）"
+    },
+    {
+      "name": "menu_token_sort_token_name_ascending",
+      "value": "A-Z（令牌名）"
+    },
+    {
+      "name": "menu_token_sort_username_descending",
+      "value": "Z-A（用户名）"
+    },
+    {
+      "name": "menu_token_sort_token_name_descending",
+      "value": "Z-A（令牌名）"
+    },
+    {
       "name": "app_ua_search_token",
       "value": "搜索密钥"
     },
