@@ -5,7 +5,7 @@ import { convertToken2URI, copyText, generateOTP } from 'common';
 import { TokenIcon } from 'uikit';
 import { SteamUtils } from 'common';
 import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
-import { AppStorageV2, SymbolGlyphModifier } from '@kit.ArkUI';
+import { AppStorageV2, curves, SymbolGlyphModifier } from '@kit.ArkUI';
 import { QRCodeDialog } from 'uikit';
 import { AppWindowInfo } from 'common';
 import { TokenStore } from 'common';
@@ -42,6 +42,8 @@ export struct TokenItem {
   @Local TokenHide: boolean = current_token_hide_map[this.Config.TokenUUID] ?? true;
   @Local previewDetailsVisible: boolean = false;
   @Local debugModeIsOn: boolean = AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON) as boolean;
+  @Local tokenCodeOpacity: number = 1;
+  @Local tokenCodeOffsetY: number = 0;
 
   @Local menu_icon_trash: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.trash')).fontSize('22vp').fontColor([Color.Red]);
   @Local menu_icon_qrcode: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.qrcode')).fontSize('22vp');
@@ -54,6 +56,8 @@ export struct TokenItem {
   private pendingSortNavigation: boolean = false;
 
   private token_steps: number = 0;
+  private tokenCodeInitialized: boolean = false;
+  private tokenCodeAnimationVersion: number = 0;
   private onTimestampChangedHandler: (timestamp: number, force: boolean) => void = () => {};
   private onDebugModeChangedHandler: (isOn: boolean) => void = () => {};
   // 使用 AppStorage 获取 context，避免在 aboutToAppear（build 之前）调用 getUIContext()
@@ -172,7 +176,7 @@ export struct TokenItem {
     if (latest !== undefined) {
       const newCode = latest.TokenExternalCode ?? '';
       if (newCode !== this.TokenNumber) {
-        this.TokenNumber = newCode;
+        this.updateDisplayedTokenCodes(newCode, '');
         hilog.info(0xFF00, 'TokenItem', `event refresh uuid=${this.Config.TokenUUID}`);
       }
     }
@@ -269,7 +273,7 @@ export struct TokenItem {
     }
     if (this.Config.TokenType == otpType.NFC_external) {
       // 外部令牌静态展示：直接显示卡片读取的验证码，不参与计时计算
-      this.TokenNumber = this.Config.TokenExternalCode ?? '';
+      this.updateDisplayedTokenCodes(this.Config.TokenExternalCode ?? '', '', false);
       hilog.info(0xFF00, 'TokenItem', `updateToken external uuid=${this.Config.TokenUUID} issuer=${this.Config.TokenIssuer} name=${this.Config.TokenName}`);
       return;
     }
@@ -281,21 +285,58 @@ export struct TokenItem {
     }
   }
 
+  private updateDisplayedTokenCodes(current: string, next: string, animateChange: boolean = true): void {
+    if (!this.tokenCodeInitialized || !animateChange || this.TokenNumber === current) {
+      this.tokenCodeAnimationVersion++;
+      this.TokenNumber = current;
+      this.TokenNumberNext = next;
+      this.tokenCodeOpacity = 1;
+      this.tokenCodeOffsetY = 0;
+      this.tokenCodeInitialized = true;
+      return;
+    }
+
+    const animationVersion = ++this.tokenCodeAnimationVersion;
+    const uiContext = this.getUIContext();
+    uiContext.animateTo({
+      duration: 90,
+      curve: Curve.EaseIn,
+      onFinish: () => {
+        if (animationVersion !== this.tokenCodeAnimationVersion) {
+          return;
+        }
+        this.TokenNumber = current;
+        this.TokenNumberNext = next;
+        uiContext.animateTo({
+          curve: curves.interpolatingSpring(0, 1, 342, 38)
+        }, () => {
+          this.tokenCodeOpacity = 1;
+          this.tokenCodeOffsetY = 0;
+        });
+      }
+    }, () => {
+      this.tokenCodeOpacity = 0;
+      this.tokenCodeOffsetY = -6;
+    });
+  }
+
   updateHOTPToken() {
     this.TokenCounter = this.Config.TokenCounter.toString();
-    this.TokenNumber = generateOTP(this.Config, this.Config.TokenCounter).toString().padStart(this.Config.TokenDigits, '0');
-    this.TokenNumberNext = generateOTP(this.Config, this.Config.TokenCounter + 1).toString().padStart(this.Config.TokenDigits, '0');
+    this.updateDisplayedTokenCodes(
+      generateOTP(this.Config, this.Config.TokenCounter).toString().padStart(this.Config.TokenDigits, '0'),
+      generateOTP(this.Config, this.Config.TokenCounter + 1).toString().padStart(this.Config.TokenDigits, '0'));
   }
 
   updateTOTPToken() {
     let int_code = generateOTP(this.Config, this.token_steps);
     let int_code_next = generateOTP(this.Config, this.token_steps + 1);
     if (this.Config.TokenType === otpType.Steam) {
-      this.TokenNumber = SteamUtils.SteamTokenFromTOTP(int_code);
-      this.TokenNumberNext = SteamUtils.SteamTokenFromTOTP(int_code_next);
+      this.updateDisplayedTokenCodes(
+        SteamUtils.SteamTokenFromTOTP(int_code), SteamUtils.SteamTokenFromTOTP(int_code_next));
     } else {
-      this.TokenNumber = int_code.toString().padStart(this.Config.TokenDigits, '0');
-      this.TokenNumberNext = int_code_next.toString().padStart(this.Config.TokenDigits, '0');
+      this.updateDisplayedTokenCodes(
+        int_code.toString().padStart(this.Config.TokenDigits, '0'),
+        int_code_next.toString().padStart(this.Config.TokenDigits, '0'));
     }
   }
 
@@ -356,6 +397,8 @@ export struct TokenItem {
                 .fontFamily(AppFonts.CODE_FONT)
             }
           }
+          .opacity(this.tokenCodeOpacity)
+          .translate({ y: this.tokenCodeOffsetY })
 
           if (this.Config.TokenType == otpType.HOTP) {
             SymbolGlyph($r('sys.symbol.lock_filled_arrow_counterclockwise'))
