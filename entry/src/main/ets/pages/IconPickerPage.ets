@@ -6,13 +6,14 @@ import {
   hdsMaterial
 } from '@kit.UIDesignKit';
 import {
+  AppStorageV2,
   SegmentButtonV2ItemOptions,
   SegmentButtonV2Items,
   TabSegmentButtonV2,
   uiMaterial
 } from '@kit.ArkUI';
 import { IconPicker } from 'uikit';
-import { AegisIconPack, TokenIconPacks } from 'common';
+import { AegisIconPack, AppWindowInfo, TokenIconPacks } from 'common';
 import { MaterialTheme, MaterialThickness } from '../components/MaterialTheme';
 import { PageScaffold } from '../components/PageScaffold';
 import { MaterialPolicy } from '../utils/MaterialPolicy';
@@ -52,6 +53,7 @@ export struct IconPickerPage {
   @Param pageParams: IconPickerPageParams = new IconPickerPageParams();
   @Local iconSearchText: string = '';
   @Local currentPackIndex: number = 0;
+  @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
 
   private pageInfos: NavPathStack | null = null;
   private iconScrollers: Scroller[] = createIconScrollers();
@@ -188,6 +190,7 @@ export struct IconPickerPage {
       }
     }
     .backgroundColor($r('app.color.window_background'))
+    .padding({ top: this.window.IsPc ? 8 : 0 })
     .titleMode(HdsNavDestinationTitleMode.MINI)
     .titleBar({
       avoidLayoutSafeArea: true,
