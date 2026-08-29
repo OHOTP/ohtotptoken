@@ -344,11 +344,6 @@ export struct TokenItem {
   TokenIconBuilder() {
     TokenIcon({ issuer: this.Config.TokenIssuer, icon_path: this.Config.TokenIconPath })
       .padding({ left: $r('sys.float.ohos_id_text_overlay_menu_button_padding_left'), right: $r('sys.float.ohos_id_text_overlay_menu_button_padding_right') })
-      .onClick(() => {
-        if (this.selectionMode) {
-          this.Select(this.Config);
-        }
-      })
   }
 
   @Builder
@@ -555,11 +550,6 @@ export struct TokenItem {
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
-      .onClick(() => {
-        if (this.selectionMode) {
-          this.Select(this.Config);
-        }
-      })
 
       if (sort) {
         this.TokenSortIconBuilder()
@@ -570,6 +560,11 @@ export struct TokenItem {
     .width('100%')
     .height(this.token_preference.app_appearance_item_height)
     .alignItems(VerticalAlign.Center)
+    .onClick(() => {
+      if (this.selectionMode && !sort) {
+        this.Select(this.Config);
+      }
+    })
   }
 
   @Builder
