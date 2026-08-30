@@ -200,7 +200,7 @@ export struct AppearancePage {
                 SubItemDivider()
 
                 SubItemEnumSelect({
-                  icon: $r('sys.symbol.circle_lefthalf_inset_filled'),
+                  icon: $r('sys.symbol.arrow_counterclockwise_clock'),
                   title: $r('app.string.token_progress_type'),
                   options: AVAILABLE_TOKEN_PROGRESS_TYPES,
                   selected: this.token_preference.app_appearance_token_progress_type ?? SettingTokenProgressType.LINEAR,
