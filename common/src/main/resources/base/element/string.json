@@ -825,6 +825,26 @@
       "value": "Standard"
     },
     {
+      "name": "token_progress_type",
+      "value": "Countdown Progress Style"
+    },
+    {
+      "name": "token_progress_type_desc",
+      "value": "Choose how token countdown progress is displayed."
+    },
+    {
+      "name": "token_progress_type_ring",
+      "value": "Ring"
+    },
+    {
+      "name": "token_progress_type_linear",
+      "value": "Linear"
+    },
+    {
+      "name": "token_progress_type_scale_ring",
+      "value": "ScaleRing"
+    },
+    {
       "name": "custom_color",
       "value": "Color"
     },

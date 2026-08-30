@@ -7,7 +7,7 @@ import { SubItemToggle } from '../components/SubItemToggle';
 import { TokenItem } from '../components/TokenItem';
 import { PageScaffold } from '../components/PageScaffold';
 import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, SettingHiddenTokenType,
-  AVAILABLE_HIDDEN_TOKEN_TYPES } from 'common';
+  SettingTokenProgressType, AVAILABLE_HIDDEN_TOKEN_TYPES, AVAILABLE_TOKEN_PROGRESS_TYPES } from 'common';
 import { otpType, TokenConfig } from 'common';
 import { systemDateTime } from '@kit.BasicServicesKit';
 import { SubItemColor } from '../components/SubItemColor';
@@ -194,6 +194,20 @@ export struct AppearancePage {
                   onChange: (value: number) => {
                     AppPreference.setPreference(PREF_KEYS.APPEARANCE_HIDDEN_TOKEN_TYPE, value);
                     this.token_preference.app_appearance_hidden_token_type = value;
+                  }
+                })
+
+                SubItemDivider()
+
+                SubItemEnumSelect({
+                  icon: $r('sys.symbol.circle_lefthalf_inset_filled'),
+                  title: $r('app.string.token_progress_type'),
+                  options: AVAILABLE_TOKEN_PROGRESS_TYPES,
+                  selected: this.token_preference.app_appearance_token_progress_type ?? SettingTokenProgressType.LINEAR,
+                  description: $r('app.string.token_progress_type_desc'),
+                  onChange: (value: number) => {
+                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_TOKEN_PROGRESS_TYPE, value);
+                    this.token_preference.app_appearance_token_progress_type = value;
                   }
                 })
 

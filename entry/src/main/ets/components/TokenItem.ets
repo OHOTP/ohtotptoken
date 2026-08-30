@@ -4,7 +4,8 @@ import { otpType, TokenConfig, dialogSystemMaterial } from 'common';
 import { convertToken2URI, copyText, generateOTP } from 'common';
 import { TokenIcon } from 'uikit';
 import { SteamUtils } from 'common';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, SettingHiddenTokenType } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, SettingHiddenTokenType,
+  SettingTokenProgressType } from 'common';
 import { AppStorageV2, curves, SymbolGlyphModifier } from '@kit.ArkUI';
 import { QRCodeDialog } from 'uikit';
 import { AppWindowInfo } from 'common';
@@ -44,6 +45,7 @@ export struct TokenItem {
   @Local debugModeIsOn: boolean = AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON) as boolean;
   @Local tokenCodeOpacity: number = 1;
   @Local tokenCodeOffsetY: number = 0;
+  @Local tokenNumberWidth: number = 0;
 
   @Local menu_icon_trash: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.trash')).fontSize('22vp').fontColor([Color.Red]);
   @Local menu_icon_qrcode: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.qrcode')).fontSize('22vp');
@@ -378,6 +380,34 @@ export struct TokenItem {
   }
 
   @Builder
+  TokenProgressBuilder() {
+    Stack() {
+      Text(this.TokenLeftPeriod.toString())
+      if (this.token_preference.app_appearance_token_progress_type === SettingTokenProgressType.SCALE_RING) {
+        Progress({ value: this.TokenLeftPeriod, total: this.Config.TokenPeriod, type: ProgressType.ScaleRing })
+          .style({ strokeWidth: 8, scaleCount: this.Config.TokenPeriod, scaleWidth: 1 })
+          .width(40)
+          .height(40)
+          .color(this.TokenLeftPeriod <= this.token_color_change_threshold ?
+            (this.is_dark_mode ?
+              this.token_preference.app_appearance_token_counter_next_dark_color_end :
+              this.token_preference.app_appearance_token_counter_next_light_color_end) :
+            (this.is_dark_mode ?
+              this.token_preference.app_appearance_token_counter_dark_color_end :
+              this.token_preference.app_appearance_token_counter_light_color_end))
+      } else {
+        Progress({ value: this.TokenLeftPeriod, total: this.Config.TokenPeriod, type: ProgressType.Ring })
+          .style({ strokeWidth: 8 })
+          .width(40)
+          .height(40)
+          .color(this.TokenLeftPeriod <= this.token_color_change_threshold ?
+            this.token_progress_color_near_next :
+            this.token_progress_color_normal)
+      }
+    }
+  }
+
+  @Builder
   TokenCodeBuilder() {
     Column() {
       if (this.TokenHide && this.token_preference.app_safety_hide_token_enable) {
@@ -395,12 +425,28 @@ export struct TokenItem {
               .fontSize(this.token_preference.app_appearance_token_font_size)
               .fontWeight(this.token_preference.app_appearance_token_font_weight)
               .fontFamily(AppFonts.CODE_FONT)
+              .onAreaChange((_oldValue: Area, newValue: Area) => {
+                const width = Number(newValue.width);
+                if (width > 0 && width !== this.tokenNumberWidth) {
+                  this.tokenNumberWidth = width;
+                }
+              })
               .gesture(
                 LongPressGesture()
                   .onAction(() => {
                     copyText(this.TokenNumber, `token ${this.TokenNumber} `+ this.getUIContext().getHostContext()?.resourceManager.getStringSync($r('app.string.token_copied').id));
                   })
               )
+            if (this.Config.TokenType !== otpType.HOTP && this.Config.TokenType !== otpType.NFC_external &&
+              this.token_preference.app_appearance_token_progress_type === SettingTokenProgressType.LINEAR) {
+              Progress({ value: this.TokenLeftPeriod, total: this.Config.TokenPeriod, type: ProgressType.Linear })
+                .style({ strokeWidth: 3 })
+                .width(this.tokenNumberWidth)
+                .margin({ top: 2, bottom: 1 })
+                .color(this.TokenLeftPeriod <= this.token_color_change_threshold ?
+                  this.token_progress_color_near_next :
+                  this.token_progress_color_normal)
+            }
             if (this.Config.TokenType == otpType.HOTP) {
               Text(this.TokenCounter + (this.token_preference.app_appearance_show_next_token_enable ? ":" + this.TokenNumberNext : ""))
                 .textAlign(TextAlign.End)
@@ -437,17 +483,9 @@ export struct TokenItem {
               })
           } else if (this.Config.TokenType == otpType.NFC_external) {
             // 外部令牌静态展示：不显示倒计时环
-          } else {
-            Stack() {
-              Text(this.TokenLeftPeriod.toString())
-              Progress({ value: this.TokenLeftPeriod, total: this.Config.TokenPeriod, type: ProgressType.Ring })
-                .style({ strokeWidth: 8 })
-                .width(40)
-                .height(40)
-                .color(this.TokenLeftPeriod <= this.token_color_change_threshold ?
-                  this.token_progress_color_near_next :
-                  this.token_progress_color_normal)
-            }
+          } else if (this.token_preference.app_appearance_token_progress_type !==
+            SettingTokenProgressType.LINEAR) {
+            this.TokenProgressBuilder()
           }
         }
       }

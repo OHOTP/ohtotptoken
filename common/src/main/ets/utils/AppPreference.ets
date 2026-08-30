@@ -109,6 +109,8 @@ export enum PREF_KEYS {
   APPEARANCE_ITEM_RADIUS = 'app_appearance_item_radius',
   /** 隐藏令牌样式（紧凑/标准） */
   APPEARANCE_HIDDEN_TOKEN_TYPE = 'app_appearance_hidden_token_type',
+  /** 令牌倒计时进度条样式 */
+  APPEARANCE_TOKEN_PROGRESS_TYPE = 'app_appearance_token_progress_type',
   /** Logo大小 */
   APPEARANCE_LOGO_SIZE = 'app_appearance_logo_size',
   /** Logo背景大小 */
@@ -259,6 +261,24 @@ export const AVAILABLE_HIDDEN_TOKEN_TYPES: EnumSelectOption[] = [
 ];
 
 /**
+ * 令牌倒计时进度条样式，值与 ArkUI ProgressType 保持一致。
+ */
+export enum SettingTokenProgressType {
+  LINEAR = 0,
+  RING = 1,
+  SCALE_RING = 3,
+}
+
+/**
+ * 当前支持的令牌倒计时进度条样式选项数组。
+ */
+export const AVAILABLE_TOKEN_PROGRESS_TYPES: EnumSelectOption[] = [
+  { label: $r('app.string.token_progress_type_linear'), value: SettingTokenProgressType.LINEAR },
+  { label: $r('app.string.token_progress_type_ring'), value: SettingTokenProgressType.RING },
+  { label: $r('app.string.token_progress_type_scale_ring'), value: SettingTokenProgressType.SCALE_RING },
+];
+
+/**
  * 当前支持的顶部模糊类型选项数组
  *
  * @example
@@ -394,6 +414,7 @@ export class TokenPreference {
   @Trace app_appearance_item_space = 10;
   @Trace app_appearance_item_radius = 16;
   @Trace app_appearance_hidden_token_type: number = SettingHiddenTokenType.STANDARD;
+  @Trace app_appearance_token_progress_type: number = SettingTokenProgressType.LINEAR;
   @Trace app_appearance_logo_size = 40;
   @Trace app_appearance_logo_background = false;
   @Trace app_appearance_logo_background_size = 45;
@@ -590,6 +611,8 @@ export class AppPreference {
     [PREF_KEYS.APPEARANCE_ITEM_RADIUS, 16],
     // 隐藏令牌样式默认标准（6个小圆点）
     [PREF_KEYS.APPEARANCE_HIDDEN_TOKEN_TYPE, SettingHiddenTokenType.STANDARD],
+    // 令牌倒计时默认使用线性进度条
+    [PREF_KEYS.APPEARANCE_TOKEN_PROGRESS_TYPE, SettingTokenProgressType.LINEAR],
     [PREF_KEYS.APPEARANCE_LOGO_SIZE, 40],
     [PREF_KEYS.APPEARANCE_LOGO_BACKGROUND_SIZE, 45],
     [PREF_KEYS.APPEARANCE_LOGO_BACKGROUND_RADIUS, 5],
@@ -705,6 +728,8 @@ export class AppPreference {
     token_appearance.app_appearance_item_radius = AppPreference.getPreference(PREF_KEYS.APPEARANCE_ITEM_RADIUS) as number;
     token_appearance.app_appearance_hidden_token_type =
       AppPreference.getPreference(PREF_KEYS.APPEARANCE_HIDDEN_TOKEN_TYPE) as number;
+    token_appearance.app_appearance_token_progress_type =
+      AppPreference.getPreference(PREF_KEYS.APPEARANCE_TOKEN_PROGRESS_TYPE) as number;
     token_appearance.app_appearance_logo_size = AppPreference.getPreference(PREF_KEYS.APPEARANCE_LOGO_SIZE) as number;
     token_appearance.app_appearance_logo_background_size =
       AppPreference.getPreference(PREF_KEYS.APPEARANCE_LOGO_BACKGROUND_SIZE) as number;

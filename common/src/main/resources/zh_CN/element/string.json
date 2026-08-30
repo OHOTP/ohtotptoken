@@ -833,6 +833,26 @@
       "value": "标准"
     },
     {
+      "name": "token_progress_type",
+      "value": "倒计时进度样式"
+    },
+    {
+      "name": "token_progress_type_desc",
+      "value": "选择令牌倒计时进度条的显示样式。"
+    },
+    {
+      "name": "token_progress_type_ring",
+      "value": "环形"
+    },
+    {
+      "name": "token_progress_type_linear",
+      "value": "线性"
+    },
+    {
+      "name": "token_progress_type_scale_ring",
+      "value": "刻度环形"
+    },
+    {
       "name": "custom_color",
       "value": "颜色"
     },

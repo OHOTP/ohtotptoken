@@ -833,6 +833,26 @@
       "value": "標準"
     },
     {
+      "name": "token_progress_type",
+      "value": "倒計時進度樣式"
+    },
+    {
+      "name": "token_progress_type_desc",
+      "value": "選擇權杖倒計時進度條的顯示樣式。"
+    },
+    {
+      "name": "token_progress_type_ring",
+      "value": "環形"
+    },
+    {
+      "name": "token_progress_type_linear",
+      "value": "線性"
+    },
+    {
+      "name": "token_progress_type_scale_ring",
+      "value": "刻度環形"
+    },
+    {
       "name": "custom_color",
       "value": "顏色"
     },
