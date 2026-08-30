@@ -1,7 +1,9 @@
 import { ColorSelectDialog } from "../dialogs/ColorSelectDialog";
 import { AppWindowInfo, dialogSystemMaterial } from 'common';
-import { colorHex } from 'common';
+import { colorHex, hexColor } from 'common';
 import { AppStorageV2 } from "@kit.ArkUI";
+import { deviceInfo } from '@kit.BasicServicesKit';
+import { HdsColorPicker } from '@kit.UIDesignKit';
 import { SETTING_ROW_MIN_HEIGHT, SETTING_ROW_PADDING } from './SettingStyle';
 
 export class ColorItem {
@@ -22,6 +24,24 @@ export struct SubItemColor {
   @Local collapsed: boolean = true;
 
   private dialog_color_picker?: CustomDialogController;
+
+  private isHdsColorPickerAvailable(): boolean {
+    return deviceInfo.apiAvailable('26.0.0') &&
+      canIUse('SystemCapability.UIDesign.HDSPattern.Standard');
+  }
+
+  private openLegacyColorPicker(color: number, index: number): void {
+    this.dialog_color_picker = new CustomDialogController({
+      systemMaterial: dialogSystemMaterial(),
+      builder: ColorSelectDialog({
+        old_color: color,
+        confirm: (new_color) => {
+          this.onChange(index, new_color);
+        }
+      })
+    })
+    this.dialog_color_picker.open()
+  }
 
   build() {
     Column() {
@@ -86,29 +106,45 @@ export struct SubItemColor {
               Text(color.name)
                 .width('50%')
                 .textOverflow({ overflow: TextOverflow.MARQUEE })
-              Text(colorHex(color.color))
-                .fontWeight(FontWeight.Medium)
-                .backgroundColor(color.color)
-                .textAlign(TextAlign.Center)
-                .textShadow({ color: Color.White, radius: 10 })
-                .borderRadius($r('sys.float.corner_radius_level2'))
-                .height(30)
-                .fontSize($r('sys.float.Subtitle_M'))
-                .fontColor(Color.Black)
-                .layoutWeight(1)
-                .onClick(() => {
-                  this.dialog_color_picker = new CustomDialogController({
-                    systemMaterial: dialogSystemMaterial(),
-                    builder: ColorSelectDialog({
-                      old_color: color.color,
-                      confirm: (new_color) => {
-                        this.onChange(index, new_color);
-                      }
-                    })
+              if (this.isHdsColorPickerAvailable()) {
+                Row() {
+                  HdsColorPicker({
+                    initialColor: colorHex(color.color),
+                    options: {
+                      circleRadius: 16
+                    },
+                    onColorSelected: (selectedColor: string) => {
+                      const normalizedColor = selectedColor.startsWith('#') ?
+                        selectedColor : `#${selectedColor}`;
+                      this.onChange(index, hexColor(normalizedColor));
+                    }
                   })
-                  this.dialog_color_picker.open()
-                })
+                }
+                .layoutWeight(1)
+                .justifyContent(FlexAlign.End)
+                .alignItems(VerticalAlign.Center)
+              } else {
+                Text(colorHex(color.color))
+                  .fontWeight(FontWeight.Medium)
+                  .backgroundColor(color.color)
+                  .textAlign(TextAlign.Center)
+                  .textShadow({ color: Color.White, radius: 10 })
+                  .borderRadius($r('sys.float.corner_radius_level2'))
+                  .height(30)
+                  .fontSize($r('sys.float.Subtitle_M'))
+                  .fontColor(Color.Black)
+                  .layoutWeight(1)
+                  .onClick(() => {
+                    this.openLegacyColorPicker(color.color, index)
+                  })
+              }
             }
+          }, (color: ColorItem, index: number) => {
+            if (this.isHdsColorPickerAvailable()) {
+              // 切换颜色时保持组件身份稳定，避免销毁正在使用的 HdsColorPicker。
+              return index.toString();
+            }
+            return `${index}_${color.color}`;
           })
         }
 
