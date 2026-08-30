@@ -400,7 +400,7 @@ struct Index {
   })
 
   async refreshIconPack(): Promise<void> {
-    TokenIconPacks.addUserIconPack(this.user_icon_dir);
+    await TokenIconPacks.addUserIconPack(this.user_icon_dir);
     try {
       const paths = await fs.listFile(this.icon_pack_dir);
       for (const path of paths) {

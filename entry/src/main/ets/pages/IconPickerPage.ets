@@ -13,7 +13,7 @@ import {
   TabSegmentButtonV2,
   uiMaterial
 } from '@kit.ArkUI';
-import { IconPicker } from 'uikit';
+import { IconPicker, IconPickerViewState } from 'uikit';
 import { AegisIconPack, AppWindowInfo, TokenIconPacks } from 'common';
 import { MaterialTheme, MaterialThickness } from '../components/MaterialTheme';
 import { PageScaffold } from '../components/PageScaffold';
@@ -52,8 +52,7 @@ function createIconPackSegmentItems(): SegmentButtonV2Items {
 export struct IconPickerPage {
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Param pageParams: IconPickerPageParams = new IconPickerPageParams();
-  @Local iconSearchText: string = '';
-  @Local currentPackIndex: number = 0;
+  @Local pickerViewState: IconPickerViewState = new IconPickerViewState();
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
 
   private pageInfos: NavPathStack | null = null;
@@ -107,7 +106,7 @@ export struct IconPickerPage {
       if (MaterialTheme.isImmersiveEffective()) {
         Search({
           placeholder: $r('app.string.dialog_icon_search_placeholder'),
-          value: this.iconSearchText
+          value: this.pickerViewState.searchText
         })
           .width('100%')
           .backgroundColor(Color.Transparent)
@@ -116,22 +115,22 @@ export struct IconPickerPage {
             lightEffect: { color: Color.White }
           }))
           .onChange((value: string) => {
-            this.iconSearchText = value;
+            this.pickerViewState.searchText = value;
           })
           .onSubmit((value: string) => {
-            this.iconSearchText = value;
+            this.pickerViewState.searchText = value;
           })
       } else {
         Search({
           placeholder: $r('app.string.dialog_icon_search_placeholder'),
-          value: this.iconSearchText
+          value: this.pickerViewState.searchText
         })
           .width('100%')
           .onChange((value: string) => {
-            this.iconSearchText = value;
+            this.pickerViewState.searchText = value;
           })
           .onSubmit((value: string) => {
-            this.iconSearchText = value;
+            this.pickerViewState.searchText = value;
           })
       }
     }
@@ -146,10 +145,10 @@ export struct IconPickerPage {
     Column() {
       TabSegmentButtonV2({
         items: this.packSegmentItems,
-        selectedIndex: this.currentPackIndex,
+        selectedIndex: this.pickerViewState.packIndex,
         backgroundSystemMaterial: this.segmentBackgroundMaterial(),
         $selectedIndex: (index: number) => {
-          this.currentPackIndex = index;
+          this.pickerViewState.packIndex = index;
           this.iconScrollers[index]?.scrollTo({ xOffset: 0, yOffset: 0 });
         }
       })
@@ -181,10 +180,11 @@ export struct IconPickerPage {
           showCancelButton: false,
           showSearch: false,
           showPackTabs: false,
-          currentPackIndex: this.currentPackIndex,
+          currentPackIndex: this.pickerViewState.packIndex,
           immersiveMaterialEnabled: MaterialTheme.isImmersiveEffective(),
           iconScrollers: this.iconScrollers,
-          searchText: this.iconSearchText,
+          searchText: this.pickerViewState.searchText,
+          viewState: this.pickerViewState,
           confirm: (path: string) => this.completeSelection(path)
         })
           .width('100%')
