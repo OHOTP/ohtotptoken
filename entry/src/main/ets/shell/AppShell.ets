@@ -217,12 +217,12 @@ export struct AppShell {
       .onDragLeave(() => {
         this.onDragLeaveFile();
       })
-      .foregroundBlurStyle((this.blurFlag || this.applockVisible) ? BlurStyle.Thin : BlurStyle.NONE, {
-        colorMode: ThemeColorMode.SYSTEM,
-        adaptiveColor: AdaptiveColor.DEFAULT
-      })
     }
     .backgroundColor($r('app.color.window_background'))
+    .foregroundBlurStyle((this.blurFlag || this.applockVisible) ? BlurStyle.Thin : BlurStyle.NONE, {
+      colorMode: ThemeColorMode.SYSTEM,
+      adaptiveColor: AdaptiveColor.DEFAULT
+    })
     .hideTitleBar(this.isLoading)
     .mode(this.window.AllowSplit && (this.currentHomeTabIndex === 1 || this.businessSplitEnabled) ?
       NavigationMode.Split : NavigationMode.Stack)
