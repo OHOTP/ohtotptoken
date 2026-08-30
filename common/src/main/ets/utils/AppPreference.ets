@@ -416,7 +416,7 @@ export class TokenPreference {
  */
 @ObservedV2
 export class MaterialPreference {
-  /** 材质模式（SettingMaterialMode：AUTO/IMMERSIVE/SOLID） */
+  /** 材质模式（SettingMaterialMode：AUTO/IMMERSIVE/SOLID，默认自动） */
   @Trace app_appearance_material_mode: number = SettingMaterialMode.AUTO;
   /** 沉浸材质厚度偏好（SettingImmersiveStyle 五档） */
   @Trace app_appearance_immersive_style: number = SettingImmersiveStyle.REGULAR;

@@ -55,6 +55,7 @@ export struct AppearanceSheet {
       options: AVAILABLE_TOKEN_ITEM_MATERIALS,
       description: $r('app.string.setting_token_item_material_desc'),
       selected: this.material_preference.app_appearance_token_item_material,
+      disable: !MaterialPolicy.getInstance().isImmersiveMaterialSupported(),
       onChange: (value: number) => {
         if (value === SettingTokenItemMaterial.IMMERSIVE) {
           // 选择光感：Dialog 二次确认并说明逐项材质的性能影响
@@ -208,6 +209,7 @@ export struct AppearanceSheet {
                   description: $r('app.string.setting_material_mode_desc'),
                   selected: AppPreference.getPreference(PREF_KEYS.APPEARANCE_MATERIAL_MODE) as number ??
                     SettingMaterialMode.AUTO,
+                  disable: !MaterialPolicy.getInstance().isImmersiveMaterialSupported(),
                   onChange: (value: number) => {
                     AppPreference.setPreference(PREF_KEYS.APPEARANCE_MATERIAL_MODE, value);
                     this.material_preference.app_appearance_material_mode = value;
@@ -223,6 +225,7 @@ export struct AppearanceSheet {
                   description: $r('app.string.setting_immersive_style_desc'),
                   selected: AppPreference.getPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE) as number ??
                     SettingImmersiveStyle.REGULAR,
+                  disable: !MaterialPolicy.getInstance().isImmersiveMaterialSupported(),
                   onChange: (value: number) => {
                     AppPreference.setPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE, value);
                     this.material_preference.app_appearance_immersive_style = value;
@@ -238,6 +241,7 @@ export struct AppearanceSheet {
                   description: $r('app.string.setting_light_effect_mode_desc'),
                   selected: AppPreference.getPreference(PREF_KEYS.APPEARANCE_LIGHT_EFFECT_MODE) as number ??
                     SettingLightEffectMode.DEFAULT,
+                  disable: !MaterialPolicy.getInstance().isImmersiveMaterialSupported(),
                   onChange: (value: number) => {
                     AppPreference.setPreference(PREF_KEYS.APPEARANCE_LIGHT_EFFECT_MODE, value);
                     this.material_preference.app_appearance_light_effect_mode = value;

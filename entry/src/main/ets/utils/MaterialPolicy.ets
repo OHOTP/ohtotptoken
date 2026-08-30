@@ -24,11 +24,6 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 const TAG = 'MaterialPolicy';
 const DOMAIN = 0xFF00;
 
-/** 支持原生 ImmersiveMaterial 的最低 API 版本 */
-const API_LEVEL_IMMERSIVE = 26;
-/** 支持 HDS 材质的最低 API 版本 6.1.0(23) */
-const API_LEVEL_HDS = 23;
-
 /**
  * 材质能力档位
  * - immersive：原生沉浸式系统材质（API 26+）
@@ -58,6 +53,8 @@ export class MaterialPolicy {
   private tier: MaterialTier = 'solid';
   /** 应用级材质状态（uiMaterial.MaterialState，未初始化或不支持时为 -1） */
   private appMaterialState: number = -1;
+  /** 设备是否原生支持 API 26 ImmersiveMaterial */
+  private immersiveMaterialSupported: boolean = false;
   /** HDS 材质等级（tier 为 hds 时有效） */
   private hdsLevel: hdsMaterial.MaterialLevel = hdsMaterial.MaterialLevel.ADAPTIVE;
   /** 设备是否支持 HDS IMMERSIVE 类型（用于 EXQUISITE/GENTLE 与 SMOOTH 的选择） */
@@ -82,48 +79,57 @@ export class MaterialPolicy {
   /**
    * 初始化材质能力判定
    *
-   * 在应用启动时调用一次。判定过程全部包裹在 canIUse + try/catch 中，
-   * 保证 API 23~25 设备上引用 API 26 符号不会崩溃。
+   * 在应用启动时调用一次。API 版本通过官方 apiAvailable 接口判断，
+   * 再结合系统能力检查与 try/catch，保证低版本设备安全回退。
    */
   init(): void {
     if (this.initialized) {
       hilog.info(DOMAIN, TAG, 'init: already initialized');
       return;
     }
-    const apiVersion: number = deviceInfo.distributionOSApiVersion || 0;
-    hilog.info(DOMAIN, TAG, `init: distributionOSApiVersion=${apiVersion}`);
+    hilog.info(DOMAIN, TAG,
+      `init: distributionOSApiVersion=${deviceInfo.distributionOSApiVersion || 0}`);
 
     // 第一档：原生沉浸式系统材质（API 26+）
-    if (apiVersion >= API_LEVEL_IMMERSIVE && canIUse('SystemCapability.ArkUI.ArkUI.Full')) {
-      try {
-        const info: uiMaterial.MaterialInfo = uiMaterial.getMaterialInfo();
-        this.appMaterialState = info.state;
-        if (info.state !== uiMaterial.MaterialState.DISABLE) {
-          this.tier = 'immersive';
-          this.initialized = true;
-          hilog.info(DOMAIN, TAG, `init: tier=immersive, appMaterialState=${info.state}`);
-          return;
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      if (canIUse('SystemCapability.ArkUI.ArkUI.Full')) {
+        try {
+          this.immersiveMaterialSupported = uiMaterial.isImmersiveMaterialSupported();
+          if (!this.immersiveMaterialSupported) {
+            hilog.info(DOMAIN, TAG, 'init: ImmersiveMaterial unsupported, fall through to hds/solid');
+          } else {
+            const info: uiMaterial.MaterialInfo = uiMaterial.getMaterialInfo();
+            this.appMaterialState = info.state;
+            if (info.state !== uiMaterial.MaterialState.DISABLE) {
+              this.tier = 'immersive';
+              this.initialized = true;
+              hilog.info(DOMAIN, TAG, `init: tier=immersive, appMaterialState=${info.state}`);
+              return;
+            }
+            hilog.info(DOMAIN, TAG, 'init: app-level material DISABLE, fall through to hds/solid');
+          }
+        } catch (e) {
+          hilog.error(DOMAIN, TAG, `init: uiMaterial check failed, error=${JSON.stringify(e)}`);
         }
-        hilog.info(DOMAIN, TAG, 'init: app-level material DISABLE, fall through to hds/solid');
-      } catch (e) {
-        hilog.error(DOMAIN, TAG, `init: uiMaterial check failed, error=${JSON.stringify(e)}`);
       }
     }
 
-    // 第二档：HDS 材质（API 23+）
-    if (apiVersion >= API_LEVEL_HDS && canIUse('SystemCapability.UIDesign.HDSComponent.Core')) {
-      try {
-        const types: Array<hdsMaterial.MaterialType> = hdsMaterial.getSystemMaterialTypes();
-        this.hdsImmersiveSupported = types.indexOf(hdsMaterial.MaterialType.IMMERSIVE) >= 0;
-        // 不支持 IMMERSIVE 类型的设备使用 SMOOTH，降低卡顿和发热风险（官方建议）
-        this.hdsLevel = this.hdsImmersiveSupported ?
-          hdsMaterial.MaterialLevel.EXQUISITE : hdsMaterial.MaterialLevel.SMOOTH;
-        this.tier = 'hds';
-        this.initialized = true;
-        hilog.info(DOMAIN, TAG, `init: tier=hds, immersiveSupported=${this.hdsImmersiveSupported}`);
-        return;
-      } catch (e) {
-        hilog.error(DOMAIN, TAG, `init: hdsMaterial check failed, error=${JSON.stringify(e)}`);
+    // 第二档：HDS 材质（6.1.0(23)+）
+    if (deviceInfo.apiAvailable('6.1.0')) {
+      if (canIUse('SystemCapability.UIDesign.HDSComponent.Core')) {
+        try {
+          const types: Array<hdsMaterial.MaterialType> = hdsMaterial.getSystemMaterialTypes();
+          this.hdsImmersiveSupported = types.indexOf(hdsMaterial.MaterialType.IMMERSIVE) >= 0;
+          // 不支持 IMMERSIVE 类型的设备使用 SMOOTH，降低卡顿和发热风险（官方建议）
+          this.hdsLevel = this.hdsImmersiveSupported ?
+            hdsMaterial.MaterialLevel.EXQUISITE : hdsMaterial.MaterialLevel.SMOOTH;
+          this.tier = 'hds';
+          this.initialized = true;
+          hilog.info(DOMAIN, TAG, `init: tier=hds, immersiveSupported=${this.hdsImmersiveSupported}`);
+          return;
+        } catch (e) {
+          hilog.error(DOMAIN, TAG, `init: hdsMaterial check failed, error=${JSON.stringify(e)}`);
+        }
       }
     }
 
@@ -147,6 +153,16 @@ export class MaterialPolicy {
    */
   isImmersive(): boolean {
     return this.tier === 'immersive';
+  }
+
+  /**
+   * 设备是否原生支持 API 26 ImmersiveMaterial。
+   * 供设置界面决定是否允许修改沉浸光感相关选项。
+   *
+   * @returns 原生支持时返回 true
+   */
+  isImmersiveMaterialSupported(): boolean {
+    return this.immersiveMaterialSupported;
   }
 
   /**
