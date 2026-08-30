@@ -277,7 +277,7 @@ struct Index {
       this.appCtx.eventHub.on(EVENT_NAMES.FILE_DROP, (uri: string) => {
         this.backup_select_uri = uri;
         if (this.backup_select_uri.endsWith('.bak')) {
-          this.password_input_dialog?.open();
+          this.openEncryptionPasswordDialog();
         } else if (this.backup_select_uri.endsWith('.json')) {
           restoreFromBackup(uri).then((backup) => {
             this.updateTokenConfigs(backup.configs).then(() => {
@@ -415,10 +415,9 @@ struct Index {
   }
 
   //region 导入
-  private password_input_dialog: CustomDialogController | null = new CustomDialogController({
-    systemMaterial: dialogSystemMaterial(),
-    builder: EncryptionPassWordDialog({
-      cancel: () => {},
+  @Builder
+  EncryptionPasswordDialogBuilder(): void {
+    EncryptionPassWordDialog({
       confirm: (password: string) => {
         restoreFromBackup(this.backup_select_uri, true, password).then((backup) => {
           this.updateTokenConfigs(backup.configs).then(() => {
@@ -427,25 +426,21 @@ struct Index {
         }).catch((reason: BusinessError) => {
           showSnackBar(reason.message, SnackBarNotifyType.ERROR);
         });
+      }
+    })
+  }
+
+  private openEncryptionPasswordDialog(): void {
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: () => {
+        this.EncryptionPasswordDialogBuilder();
       },
-    }),
-    cancel: () => {},
-    autoCancel: true,
-    onWillDismiss: (dismissDialogAction: DismissDialogAction) => {
-      hilog.info(0, 'Index', "reason=" + JSON.stringify(dismissDialogAction.reason))
-      hilog.info(0, 'Index', "dialog onWillDismiss")
-      if (dismissDialogAction.reason == DismissReason.PRESS_BACK) {
-        dismissDialogAction.dismiss()
-      }
-      if (dismissDialogAction.reason == DismissReason.TOUCH_OUTSIDE) {
-        dismissDialogAction.dismiss()
-      }
-    },
-    alignment: DialogAlignment.Center,
-    gridCount: 4,
-    customStyle: false,
-    cornerRadius: $r('sys.float.ohos_id_corner_radius_panel'),
-  })
+      autoCancel: true,
+      alignment: DialogAlignment.Center
+    }).catch((error: BusinessError) => {
+      hilog.error(error.code, 'Index', `open password dialog failed: ${error.message}`);
+    });
+  }
 
   async refreshIconPack(): Promise<void> {
     await TokenIconPacks.addUserIconPack(this.user_icon_dir);

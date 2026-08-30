@@ -2,7 +2,7 @@ import { TokenItem } from "../components/TokenItem";
 import { MaterialSurface } from "../components/MaterialSurface";
 import { MaterialThickness } from "../components/MaterialTheme";
 import { QRCodeDialog } from 'uikit';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, dialogSystemMaterial } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
 import { otpType, TokenConfig, TokenConfigVM } from 'common';
 import { TokenStore } from 'common';
 import { convertToken2URI } from 'common';
@@ -13,6 +13,7 @@ import { showSnackBar, SnackBarNotifyType } from 'common';
 import { common } from "@kit.AbilityKit";
 import { NfcSessionTokens } from "../oath/NfcSessionTokens";
 import { hilog } from "@kit.PerformanceAnalysisKit";
+import { BusinessError } from '@kit.BasicServicesKit';
 import { HdsListItem } from '@kit.UIDesignKit';
 
 let tkStore = TokenStore.getInstance();
@@ -64,7 +65,6 @@ export struct TokenListPage {
     this.dataSource.updateData(toVMs(monitor.value()?.now as TokenConfig[]));
   }
 
-  private dialog_qrcode?: CustomDialogController;
   private appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
   private onSingleTokenUpdatedHandler: (token: TokenConfig) => void = () => {};
 
@@ -177,15 +177,22 @@ export struct TokenListPage {
     }
   }
 
+  @Builder
+  QRCodeDialogBuilder(conf: TokenConfig): void {
+    QRCodeDialog({
+      content: convertToken2URI(conf),
+      winSize: this.appWindowSize
+    })
+  }
+
   showQRCodeDialog(conf: TokenConfig): void {
-    this.dialog_qrcode = new CustomDialogController({
-      systemMaterial: dialogSystemMaterial(),
-      builder: QRCodeDialog({
-        content: convertToken2URI(conf),
-        winSize: this.appWindowSize
-      })
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: () => {
+        this.QRCodeDialogBuilder(conf);
+      }
+    }).catch((error: BusinessError) => {
+      hilog.error(error.code, 'TokenListPage', `open QR code dialog failed: ${error.message}`);
     });
-    this.dialog_qrcode.open();
   }
 
   private openEditPage(conf: TokenConfig): void {

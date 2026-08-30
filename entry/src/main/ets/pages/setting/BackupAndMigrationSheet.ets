@@ -60,13 +60,11 @@ export struct BackupAndMigrationSheet {
   }
 
   //region 加密导入导出
-  // 加密导出：设置备份密码
-  private password_export_dialog: CustomDialogController | null = new CustomDialogController({
-    systemMaterial: dialogSystemMaterial(),
-    builder: EncryptionPassWordDialog({
+  @Builder
+  EncryptionPasswordExportDialogBuilder(): void {
+    EncryptionPassWordDialog({
       title: $r('app.string.dialog_backup_password_set'),
       showConfirmPassword: true,
-      cancel: () => {},
       confirm: (password: string) => {
         // NFC 外部令牌仅会话存在、不持久化，导出前统一过滤（不含空 secret 伪 TOTP）
         const exportable = this.Tokens.filter(t => t.TokenType !== otpType.NFC_external);
@@ -84,57 +82,33 @@ export struct BackupAndMigrationSheet {
             });
           }
         });
-      },
-    }),
-    cancel: () => {},
-    autoCancel: true,
-    onWillDismiss: (dismissDialogAction: DismissDialogAction) => {
-      hilog.info(0, 'BackupAndMigrationSheet', "reason=" + JSON.stringify(dismissDialogAction.reason))
-      hilog.info(0, 'BackupAndMigrationSheet', "dialog onWillDismiss")
-      if (dismissDialogAction.reason == DismissReason.PRESS_BACK) {
-        dismissDialogAction.dismiss()
       }
-      if (dismissDialogAction.reason == DismissReason.TOUCH_OUTSIDE) {
-        dismissDialogAction.dismiss()
-      }
-    },
-    alignment: DialogAlignment.Center,
-    gridCount: 4,
-    customStyle: false,
-    cornerRadius: $r('sys.float.ohos_id_corner_radius_panel'),
-  })
+    })
+  }
 
-  // 加密导入：输入备份密码
-  private password_import_dialog: CustomDialogController | null = new CustomDialogController({
-    systemMaterial: dialogSystemMaterial(),
-    builder: EncryptionPassWordDialog({
+  @Builder
+  EncryptionPasswordImportDialogBuilder(): void {
+    EncryptionPassWordDialog({
       title: $r('app.string.dialog_backup_password'),
-      cancel: () => {},
       confirm: (password: string) => {
         restoreFromBackup(this.backup_select_uri, true, password).then((backup) => {
           this.backupReload(backup.configs);
         }).catch((reason: BusinessError) => {
           showSnackBar(reason.message, SnackBarNotifyType.ERROR);
         });
-      },
-    }),
-    cancel: () => {},
-    autoCancel: true,
-    onWillDismiss: (dismissDialogAction: DismissDialogAction) => {
-      hilog.info(0, 'BackupAndMigrationSheet', "reason=" + JSON.stringify(dismissDialogAction.reason))
-      hilog.info(0, 'BackupAndMigrationSheet', "dialog onWillDismiss")
-      if (dismissDialogAction.reason == DismissReason.PRESS_BACK) {
-        dismissDialogAction.dismiss()
       }
-      if (dismissDialogAction.reason == DismissReason.TOUCH_OUTSIDE) {
-        dismissDialogAction.dismiss()
-      }
-    },
-    alignment: DialogAlignment.Center,
-    gridCount: 4,
-    customStyle: false,
-    cornerRadius: $r('sys.float.ohos_id_corner_radius_panel'),
-  })
+    })
+  }
+
+  private openEncryptionPasswordDialog(builder: CustomBuilder): void {
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: builder,
+      autoCancel: true,
+      alignment: DialogAlignment.Center
+    }).catch((error: BusinessError) => {
+      hilog.error(error.code, 'BackupAndMigrationSheet', `open password dialog failed: ${error.message}`);
+    });
+  }
 
   async callFilePickerSaveMigrationFile(): Promise<void> {
     this.getUIContext().showAlertDialog(
@@ -205,7 +179,9 @@ export struct BackupAndMigrationSheet {
           {
             value: $r('app.string.setting_backup_type_enc'),
             action: () => {
-              this.password_export_dialog?.open();
+              this.openEncryptionPasswordDialog(() => {
+                this.EncryptionPasswordExportDialogBuilder();
+              });
             }
           },
           {
@@ -259,7 +235,9 @@ export struct BackupAndMigrationSheet {
       this.backup_select_uri = uris[0];
       if (this.backup_select_uri.endsWith('.bak')) {
         //后缀bak为加密包 唤醒加密导入弹窗
-        this.password_import_dialog?.open();
+        this.openEncryptionPasswordDialog(() => {
+          this.EncryptionPasswordImportDialogBuilder();
+        });
       } else {
         restoreFromBackup(uris[0]).then((backup) => {
           this.backupReload(backup.configs);
@@ -280,10 +258,8 @@ export struct BackupAndMigrationSheet {
   }
 
   //endregion
-  // 在自定义组件即将析构销毁时将dialogController置空
+  // 在自定义组件即将析构销毁时释放 URI Dialog 控制器。
   aboutToDisappear() {
-    this.password_export_dialog = null // 将dialogController置空
-    this.password_import_dialog = null
     this.uriDialogController = null
   }
 

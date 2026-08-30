@@ -1,20 +1,17 @@
+import { CustomContentDialogV2 } from '@kit.ArkUI';
+
 @Preview
-@CustomDialog
-@Component
+@ComponentV2
 export struct EncryptionPassWordDialog {
-  title: Resource = $r('app.string.dialog_backup_password');
-  showConfirmPassword: boolean = false;
-  private textValue: string = '';
-  private confirmTextValue: string = '';
-  private inputValue: string = '';
-  @State private passwordMismatch: boolean = false;
-  @State private passwordEmpty: boolean = false;
-  @StorageLink('background_blur_flag') backgroundBlurFlag: boolean = false;
-  controller?: CustomDialogController;
-  cancel: () => void = () => {
-  };
-  confirm: (text: string) => void = (text: string) => {
-  };
+  @Param title: ResourceStr = $r('app.string.dialog_backup_password');
+  @Param showConfirmPassword: boolean = false;
+  @Event cancel: () => void = () => {};
+  @Event confirm: (text: string) => void = () => {};
+
+  @Local private textValue: string = '';
+  @Local private confirmTextValue: string = '';
+  @Local private passwordMismatch: boolean = false;
+  @Local private passwordEmpty: boolean = false;
 
   private resetInput(): void {
     this.textValue = '';
@@ -23,28 +20,22 @@ export struct EncryptionPassWordDialog {
     this.passwordEmpty = false;
   }
 
-  build() {
-    Column() {
-      // 标题：对齐系统 AlertDialog 标题（ohos_id_text_size_dialog_tittle / Bold / 主文本色 / 居中）
-      Text(this.title)
-        .fontSize($r('sys.float.ohos_id_text_size_dialog_tittle'))
-        .fontWeight(FontWeight.Bold)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
-        .textAlign(TextAlign.Center)
-        .maxLines(2)
-        .width('100%')
-        .padding({ left: 24, right: 24, top: 24 })
+  private close(): void {
+    this.getDialogController()?.close();
+  }
 
+  @Builder
+  contentBuilder(): void {
+    Column() {
       TextInput({ placeholder: $r('app.string.dialog_backup_password_placeholder'), text: this.textValue })
         .height(40)
-        .margin({ left: 24, right: 24, top: 16 })
         .maxLength(32)
         .type(InputType.Password)
         .showPasswordIcon(true)
         .onChange((value: string) => {
-          this.textValue = value
-          this.passwordMismatch = false
-          this.passwordEmpty = false
+          this.textValue = value;
+          this.passwordMismatch = false;
+          this.passwordEmpty = false;
         })
 
       if (this.showConfirmPassword) {
@@ -53,20 +44,20 @@ export struct EncryptionPassWordDialog {
           text: this.confirmTextValue
         })
           .height(40)
-          .margin({ left: 24, right: 24, top: 12 })
+          .margin({ top: 12 })
           .maxLength(32)
           .type(InputType.Password)
           .showPasswordIcon(true)
           .showError(this.passwordEmpty ? $r('app.string.dialog_backup_password_empty') :
             this.passwordMismatch ? $r('app.string.dialog_backup_password_mismatch') : undefined)
           .onChange((value: string) => {
-            this.confirmTextValue = value
-            this.passwordMismatch = false
-            this.passwordEmpty = false
+            this.confirmTextValue = value;
+            this.passwordMismatch = false;
+            this.passwordEmpty = false;
           })
       }
 
-      // 按钮区：对齐系统 AlertDialog（40vp 胶囊文本按钮 + 竖分隔线，行内边距 16/8/16）
+      // 保留自定义按钮，确保校验失败时弹窗不会被系统按钮自动关闭。
       Row() {
         Button($r('app.string.setting_backup_cancel'))
           .type(ButtonType.ROUNDED_RECTANGLE)
@@ -78,11 +69,9 @@ export struct EncryptionPassWordDialog {
           .fontSize($r('sys.float.ohos_id_text_size_body1'))
           .fontWeight(FontWeight.Medium)
           .onClick(() => {
-            if (this.controller != undefined) {
-              this.cancel()
-              this.resetInput()
-              this.controller.close()
-            }
+            this.cancel();
+            this.resetInput();
+            this.close();
           })
         Divider()
           .vertical(true)
@@ -100,28 +89,32 @@ export struct EncryptionPassWordDialog {
           .fontSize($r('sys.float.ohos_id_text_size_body1'))
           .fontWeight(FontWeight.Medium)
           .onClick(() => {
-            if (this.controller != undefined) {
-              if (this.showConfirmPassword && this.textValue.length === 0) {
-                this.passwordEmpty = true
-                return
-              }
-              if (this.showConfirmPassword && this.textValue !== this.confirmTextValue) {
-                this.passwordMismatch = true
-                return
-              }
-              this.inputValue = this.textValue
-              this.resetInput()
-              this.confirm(this.inputValue)
-              this.controller.close()
+            if (this.showConfirmPassword && this.textValue.length === 0) {
+              this.passwordEmpty = true;
+              return;
             }
+            if (this.showConfirmPassword && this.textValue !== this.confirmTextValue) {
+              this.passwordMismatch = true;
+              return;
+            }
+            const password = this.textValue;
+            this.resetInput();
+            this.confirm(password);
+            this.close();
           })
       }
       .width('100%')
-      .padding({ left: 16, right: 16, top: 8, bottom: 16 })
+      .padding({ top: 8 })
     }
-    .foregroundBlurStyle(this.backgroundBlurFlag ? BlurStyle.Thin : BlurStyle.NONE, {
-      colorMode: ThemeColorMode.SYSTEM,
-      adaptiveColor: AdaptiveColor.DEFAULT
+    .width('100%')
+  }
+
+  build() {
+    CustomContentDialogV2({
+      primaryTitle: this.title,
+      contentBuilder: () => {
+        this.contentBuilder();
+      }
     })
   }
 }

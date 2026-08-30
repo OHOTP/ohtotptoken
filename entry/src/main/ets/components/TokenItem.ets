@@ -1,6 +1,6 @@
-import { systemDateTime } from '@kit.BasicServicesKit';
+import { BusinessError, systemDateTime } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { otpType, TokenConfig, dialogSystemMaterial } from 'common';
+import { otpType, TokenConfig } from 'common';
 import { convertToken2URI, copyText, generateOTP } from 'common';
 import { TokenIcon } from 'uikit';
 import { SteamUtils } from 'common';
@@ -53,7 +53,6 @@ export struct TokenItem {
   @Local menu_icon_copy: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.doc_text_on_doc_text')).fontSize('22vp');
   @Local menu_icon_sort: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.list_bullet')).fontSize('22vp');
 
-  private dialog_qrcode?: CustomDialogController;
   private isLongPressMenuActive: boolean = false;
   private pendingSortNavigation: boolean = false;
 
@@ -711,6 +710,24 @@ export struct TokenItem {
   }
 
   @Builder
+  QRCodeDialogBuilder(): void {
+    QRCodeDialog({
+      content: convertToken2URI(this.Config),
+      winSize: this.window.Size
+    })
+  }
+
+  private openQRCodeDialog(): void {
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: () => {
+        this.QRCodeDialogBuilder();
+      }
+    }).catch((error: BusinessError) => {
+      hilog.error(error.code, 'TokenItem', `open QR code dialog failed: ${error.message}`);
+    });
+  }
+
+  @Builder
   TokenRightCtxMenu() {
     Menu() {
       // NFC 外部令牌为会话级、不持久化，排序（RankScore 持久化）对其无意义，故不提供排序入口
@@ -729,14 +746,7 @@ export struct TokenItem {
       if (this.Config.TokenType !== otpType.NFC_external) {
         MenuItem({ symbolStartIcon: this.menu_icon_qrcode, content: $r('app.string.token_right_menu_show_qrcode') })
           .onClick(() => {
-            this.dialog_qrcode = new CustomDialogController({
-              systemMaterial: dialogSystemMaterial(),
-              builder: QRCodeDialog({
-                content: convertToken2URI(this.Config),
-                winSize: this.window.Size
-              })
-            });
-            this.dialog_qrcode.open();
+            this.openQRCodeDialog();
           })
           .accessibilityText($r('app.string.token_right_menu_show_qrcode'))
         MenuItem({ symbolStartIcon: this.menu_icon_edit, content: $r('app.string.token_right_menu_edit') })
