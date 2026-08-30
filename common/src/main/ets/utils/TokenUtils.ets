@@ -1,5 +1,5 @@
 import { cryptoFramework } from '@kit.CryptoArchitectureKit';
-import { buffer, HashMap, HashSet, util } from '@kit.ArkTS';
+import { buffer, HashMap, HashSet, taskpool, util } from '@kit.ArkTS';
 import { common } from '@kit.AbilityKit';
 import { otpType, TokenConfig } from './TokenConfig';
 import { scanBarcode, scanCore } from '@kit.ScanKit';
@@ -9,6 +9,7 @@ import { readFileContent } from './FileUtils';
 import { fileIo } from '@kit.CoreFileKit';
 import { AppPreference, EVENT_NAMES, BUILTIN_DEFAULT_PACK_ID } from './AppPreference';
 import { showSnackBar, SnackBarNotifyType } from './SnackBar';
+import { generateIconThumbnails } from './IconThumbnailTask';
 
 const RFC4648 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 const RFC4648_HEX = '0123456789ABCDEFGHIJKLMNOPQRSTUV';
@@ -315,21 +316,27 @@ export class UserAddedIconPack {
     return !lower.endsWith('.svg');
   }
 
-  public initIconPack(path: string): void {
+  public async initIconPack(path: string): Promise<void> {
     this.ensureName();
     this.user_icon_path = path;
     if (fs.accessSync(path) === false) {
       fs.mkdirSync(path);
     }
-    fs.listFile(path).then((files) => {
-      files.forEach((file) => {
-        const fullPath = "file://" + this.user_icon_path + "/" + file;
-        this.icon_path.push(fullPath);
-        if (this.isRasterFile(file)) {
-          this.raster_icons.add(fullPath);
-        }
-      })
-    });
+
+    this.icon_path = [];
+    this.raster_icons.clear();
+    const files = await fs.listFile(path);
+    for (const file of files) {
+      const localPath = this.user_icon_path + "/" + file;
+      if (!fs.statSync(localPath).isFile()) {
+        continue;
+      }
+      const fullPath = "file://" + localPath;
+      this.icon_path.push(fullPath);
+      if (this.isRasterFile(file)) {
+        this.raster_icons.add(fullPath);
+      }
+    }
   }
 
   public addIcon(file: fileIo.File): void {
@@ -371,6 +378,58 @@ export class TokenIconPacks {
   public static user_added_icon_packs: UserAddedIconPack = new UserAddedIconPack();
   public static enabled_packs: string[] = [BUILTIN_DEFAULT_PACK_ID];
   private static packByUuid: Map<string, AegisIconPack> = new Map();
+  private static pickerPreviewPathBySource: Map<string, string> = new Map();
+
+  public static getPickerPreviewPath(path: string): string {
+    const builtInPrefix = 'rawfile://icons/';
+    if (path.startsWith(builtInPrefix) && path.toLowerCase().endsWith('.svg')) {
+      const fileName = path.slice(builtInPrefix.length, -4);
+      return `rawfile://icon_thumbnails/${fileName}.png`;
+    }
+    return TokenIconPacks.pickerPreviewPathBySource.get(path) ?? path;
+  }
+
+  public static async preparePickerPreviewPaths(paths: string[]): Promise<void> {
+    const sourcePaths: string[] = [];
+    const seen: Set<string> = new Set<string>();
+    for (const path of paths) {
+      if (path.startsWith('file://') && !seen.has(path)) {
+        seen.add(path);
+        sourcePaths.push(path);
+      }
+    }
+    if (sourcePaths.length === 0) {
+      return;
+    }
+
+    const ctx = AppStorage.get<common.UIAbilityContext>('appContext');
+    if (!ctx) {
+      return;
+    }
+    const cacheDir = ctx.filesDir + '/icon_thumbnails';
+    try {
+      const previewPaths = await taskpool.execute(generateIconThumbnails, sourcePaths, cacheDir) as string[];
+      for (let index = 0; index < sourcePaths.length; index++) {
+        const previewPath = previewPaths[index];
+        if (previewPath) {
+          TokenIconPacks.pickerPreviewPathBySource.set(sourcePaths[index], previewPath);
+        }
+      }
+    } catch (_) {
+      // Keep the original paths as a functional fallback when thumbnail generation fails.
+    }
+  }
+
+  public static removePickerPreviewPath(path: string): void {
+    const previewPath = TokenIconPacks.pickerPreviewPathBySource.get(path);
+    TokenIconPacks.pickerPreviewPathBySource.delete(path);
+    if (previewPath?.startsWith('file://')) {
+      const localPath = previewPath.slice(7);
+      if (fileIo.accessSync(localPath)) {
+        fileIo.unlink(localPath).catch(() => {});
+      }
+    }
+  }
 
   private static rebuildPackMap(): void {
     TokenIconPacks.packByUuid.clear();
@@ -382,7 +441,8 @@ export class TokenIconPacks {
   }
 
   public static async addUserIconPack(path: string): Promise<void> {
-    TokenIconPacks.user_added_icon_packs.initIconPack(path);
+    await TokenIconPacks.user_added_icon_packs.initIconPack(path);
+    await TokenIconPacks.preparePickerPreviewPaths(TokenIconPacks.user_added_icon_packs.icon_path);
   }
 
   public static async addAegisIconPack(path: string): Promise<void> {
@@ -415,10 +475,22 @@ export class TokenIconPacks {
       pack.buildUpHashMap();
       TokenIconPacks.aegis_icon_packs.push(pack);
       TokenIconPacks.rebuildPackMap();
+      const previewPaths: string[] = [];
+      for (const icon of pack.icons) {
+        for (const iconPath of icon.icon_pack_path) {
+          previewPaths.push(iconPath);
+        }
+      }
+      return TokenIconPacks.preparePickerPreviewPaths(previewPaths);
     })
   }
 
   public static async removeAegisIconPack(icon_pack: AegisIconPack): Promise<void> {
+    for (const icon of icon_pack.icons) {
+      for (const iconPath of icon.icon_pack_path) {
+        TokenIconPacks.removePickerPreviewPath(iconPath);
+      }
+    }
     TokenIconPacks.enabled_packs = TokenIconPacks.enabled_packs.filter(id => id !== icon_pack.uuid);
     if (TokenIconPacks.enabled_packs.length === 0) {
       TokenIconPacks.enabled_packs = [BUILTIN_DEFAULT_PACK_ID];

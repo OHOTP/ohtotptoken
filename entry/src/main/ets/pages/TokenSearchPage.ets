@@ -35,6 +35,7 @@ function toVMs(tokens: TokenConfig[]): TokenConfigVM[] {
 @ComponentV2
 export struct TokenSearchPage {
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
+  @Event onExitFullScreen: () => void = () => {};
   @Local token_preference: TokenPreference = AppStorageV2.connect(TokenPreference) as TokenPreference;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   @Local tokens: TokenConfig[] = [];
@@ -193,7 +194,8 @@ export struct TokenSearchPage {
         // 计量单位是行：多列（lanes）设备行高不变。
         .cachedCount({ minCount: 5, maxCount: 10 }, true)
         .alignListItem(ListItemAlign.Center)
-        .lanes({ minLength: 400, maxLength: this.token_preference.app_appearance_item_max_width })
+        .lanes(this.window.IsPc ?
+          { minLength: 400, maxLength: this.token_preference.app_appearance_item_max_width } : 1)
         .layoutWeight(1)
         .width('100%')
         .height('100%')
@@ -240,6 +242,7 @@ export struct TokenSearchPage {
     })
     .bindToScrollable([this.searchListScroller])
     .onReady((context: NavDestinationContext) => this.pageInfos = context.pathStack)
+    .onWillDisappear(() => this.onExitFullScreen())
   }
 
   showQRCodeDialog(conf: TokenConfig): void {

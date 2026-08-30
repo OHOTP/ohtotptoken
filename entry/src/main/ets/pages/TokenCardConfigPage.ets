@@ -1,35 +1,35 @@
-import { TokenConfig, otpType } from 'common';
+import { TokenConfig } from 'common';
 import { TokenStore } from 'common';
+import { GenericDataSource } from 'common';
 import { TokenCardStore, CardConfig } from 'common';
 import { formProvider, formBindingData } from '@kit.FormKit';
-import { ConfigurationConstant } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppStorageV2 } from '@kit.ArkUI';
-import { AppWindowInfo, CommonConstants } from 'common';
+import { AppWindowInfo } from 'common';
 import { PageScaffold } from '../components/PageScaffold';
-import { MaterialSurface } from '../components/MaterialSurface';
-import { MaterialTheme, MaterialThickness } from '../components/MaterialTheme';
-import { hdsMaterial, HdsNavDestination, HdsNavDestinationTitleMode } from '@kit.UIDesignKit';
+import {
+  hdsMaterial,
+  HdsNavDestination,
+  HdsNavDestinationTitleMode,
+  ScrollEffectType
+} from '@kit.UIDesignKit';
 import { MaterialPolicy } from '../utils/MaterialPolicy';
 import { TokenIcon } from 'uikit';
 
 @Entry
 @ComponentV2
 export struct TokenCardConfigPage {
+  @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   pathStack: NavPathStack = new NavPathStack();
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   @Local tokens: TokenConfig[] = [];
+  @Local dataSource: GenericDataSource<TokenConfig> = new GenericDataSource([]);
   @Local selectedUUIDs: string[] = [];
   @Local formId: string = '';
   @Local formName: string = 'tokenCard_1x2';
   @Local maxSelect: number = 1;
-
-  /** 亮暗模式判定: 浅灰按钮背景在亮色下用深色文字, 暗色下用白色文字 */
-  @Computed
-  get is_dark_mode() {
-    return this.window.ColorMode == ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
-  }
+  private tokenListScroller: Scroller = new Scroller();
 
   aboutToAppear(): void {
     this.formName = AppStorage.get<string>('card_config_formName') ?? 'tokenCard_1x2';
@@ -41,6 +41,7 @@ export struct TokenCardConfigPage {
     tkStore.initTokenStore().then(() => {
       tkStore.getTokens().then((tokens: TokenConfig[]) => {
         this.tokens = tokens;
+        this.dataSource.updateData(tokens);
       });
     });
 
@@ -72,137 +73,59 @@ export struct TokenCardConfigPage {
     }
   }
 
+  @Builder
+  SelectionHintBuilder() {
+    Row() {
+      Text($r('app.string.card_config_select_hint', this.maxSelect))
+        .fontSize(16)
+        .fontColor($r('app.color.str_main'))
+        .fontWeight(FontWeight.Medium)
+      Blank()
+      Text($r('app.string.card_config_selected', this.selectedUUIDs.length, this.maxSelect))
+        .fontSize(12)
+        .fontColor($r('app.color.str_gray'))
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ left: 16, right: 16 })
+    .alignItems(VerticalAlign.Center)
+  }
+
   build() {
     HdsNavDestination() {
-      // 页面背景与主 app 一致(实体 window_background, 亮 #eeeeee / 暗 #222)
       PageScaffold({ bgColor: $r('app.color.window_background') }) {
-        // 顶对齐: 浮层 wrap 高度贴顶, 不撑满避免拦截列表触摸
-        Stack({ alignContent: Alignment.Top }) {
-          // 令牌列表: 撑满整个页面(顶部/底部经偏移让滚动内容从安全区穿过)
-          if (this.tokens.length === 0) {
-            Column() {
-              Text($r('app.string.card_config_no_token'))
-                .fontSize(14)
-                .fontColor($r('app.color.str_gray'))
-            }
-            .width('100%')
-            .height('100%')
-            .justifyContent(FlexAlign.Center)
-          } else {
-            List({ space: 4 }) {
-              ForEach(this.tokens, (token: TokenConfig) => {
-                ListItem() {
-                  this.TokenItemBuilder(token)
-                }
-              }, (token: TokenConfig) => token.TokenUUID)
-            }
-            .width('100%')
-            .height('100%')
-            // 顶部偏移 = 浮层总高度(状态栏 + 导航栏 52 + 提示行), 首项不被浮层遮挡
-            .contentStartOffset(this.window.AvoidTopHeight + 96)
-            // 上下撑满: 滚动内容从安全区(状态栏/导航条)穿过, 沉浸滚动
-            .contentEndOffset(this.window.AvoidBottomHeight)
-            .scrollBar(BarState.Off)
-          }
-
-          // 顶部浮层: 自绘导航栏(返回+标题+确认按钮) + 选择提示
-          // 沉浸光感渐变模糊: ImmersiveMaterial 材质(系统材质自带模糊/光感/边缘渐变)
+        if (this.tokens.length === 0) {
           Column() {
-            MaterialSurface({
-              thickness: MaterialThickness.THIN,
-              lightEffect: true,
-              radius: 0,
-              solidColor: MaterialTheme.surfaceBackground($r('app.color.window_background')),
-              fillWidth: true
-            }) {
-              Column() {
-                // 顶部安全区避让: 自绘导航栏需自行避开状态栏
-                Column()
-                  .height(this.window.AvoidTopHeight)
-
-                // 导航栏: 返回按钮 + 页面标题 + 右侧确认按钮
-                Row() {
-                  Button({ type: ButtonType.Circle }) {
-                    SymbolGlyph($r('sys.symbol.chevron_left'))
-                      .fontSize(20)
-                      .fontWeight(FontWeight.Medium)
-                      .fontColor([$r('sys.color.icon_primary')])
-                  }
-                  .width(36)
-                  .height(36)
-                  .backgroundColor(Color.Transparent)
-                  .stateEffect(false)
-                  .onClick(() => {
-                    this.pathStack.pop();
-                  })
-
-                  Text($r('app.string.card_config_title'))
-                    .fontSize(18)
-                    .fontWeight(FontWeight.Medium)
-                    .fontColor($r('sys.color.font_primary'))
-                    .margin({ left: 8 })
-                    .layoutWeight(1)
-                    .textAlign(TextAlign.Start)
-
-                  // 确认按钮(圆圈对勾): 选中令牌后才可用
-                  MaterialSurface({
-                    thickness: MaterialThickness.THIN,
-                    lightEffect: true,
-                    interactive: true,
-                    materialColor: $r('app.color.button_blue'),
-                    radius: 18,
-                    solidColor: Color.Transparent,
-                    fillWidth: false
-                  }) {
-                    Button({ type: ButtonType.Circle }) {
-                      SymbolGlyph($r('sys.symbol.checkmark_circle'))
-                        .fontSize(20)
-                        .fontWeight(FontWeight.Medium)
-                        .fontColor([Color.White])
-                    }
-                    .width(36)
-                    .height(36)
-                    .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.button_blue')))
-                    .stateEffect(false)
-                    .enabled(this.selectedUUIDs.length > 0)
-                    .onClick(() => {
-                      this.saveAndRefresh();
-                    })
-                  }
-                }
-                .width('100%')
-                .height(52)
-                .padding({ left: 12, right: 16 })
-                .alignItems(VerticalAlign.Center)
-
-                // 选择提示行
-                Row() {
-                  Text($r('app.string.card_config_select_hint', this.maxSelect))
-                    .fontSize(16)
-                    .fontColor($r('app.color.str_main'))
-                    .fontWeight(FontWeight.Medium)
-                  Blank()
-                  Text($r('app.string.card_config_selected', this.selectedUUIDs.length, this.maxSelect))
-                    .fontSize(12)
-                    .fontColor($r('app.color.str_gray'))
-                }
-                .width('100%')
-                .padding({ left: 16, right: 16, top: 4, bottom: 8 })
-              }
-            }
+            Text($r('app.string.card_config_no_token'))
+              .fontSize(14)
+              .fontColor($r('app.color.str_gray'))
           }
-          // 浮层: 内容自适应高度(仅覆盖顶部区域, 下方列表可正常触摸)
           .width('100%')
-
+          .height('100%')
+          .justifyContent(FlexAlign.Center)
+        } else {
+          List({ space: 4, scroller: this.tokenListScroller }) {
+            LazyForEach(this.dataSource, (token: TokenConfig) => {
+              ListItem() {
+                this.TokenItemBuilder(token)
+              }
+            }, (token: TokenConfig) => token.TokenUUID)
+          }
+          .width('100%')
+          .height('100%')
+          .clip(false)
+          .cachedCount({ minCount: 5, maxCount: 10 }, true)
+          .contentEndOffset(this.window.AvoidBottomHeight)
+          .scrollBar(BarState.Off)
+          .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
         }
-        .width('100%')
-        .height('100%')
       }
     }
+    .backgroundColor($r('app.color.window_background'))
     .titleMode(HdsNavDestinationTitleMode.MODAL)
     .titleBar({
-      // 标题栏避让系统安全区(状态栏): 对齐 TokenSortPage 等正常页面配置
       avoidLayoutSafeArea: true,
+      enableComponentSafeArea: true,
       style: {
         originalStyle: {
           contentStyle: {
@@ -210,10 +133,17 @@ export struct TokenCardConfigPage {
               mainTitleColor: $r('sys.color.font_primary'),
               subTitleColor: $r('sys.color.font_secondary')
             },
+            menuStyle: {
+              iconColor: $r('sys.color.icon_primary')
+            },
             backIconStyle: {
               iconColor: $r('sys.color.icon_primary')
             }
           },
+        },
+        scrollEffectOpts: {
+          enableScrollEffect: true,
+          scrollEffectType: this.scrollEffectType
         },
         systemMaterialEffect: {
           materialType: hdsMaterial.MaterialType.ADAPTIVE,
@@ -224,10 +154,25 @@ export struct TokenCardConfigPage {
         title: {
           mainTitle: $r('app.string.card_config_title'),
         },
+        menu: {
+          value: [{
+            content: {
+              label: $r('app.string.card_config_confirm'),
+              icon: $r('sys.symbol.checkmark_circle'),
+              isEnabled: this.selectedUUIDs.length > 0,
+              action: () => {
+                this.saveAndRefresh();
+              }
+            }
+          }]
+        },
+        bottomBuilder: {
+          builder: (): void => this.SelectionHintBuilder(),
+          height: 44
+        }
       }
     })
-    // 隐藏系统标题栏: 导航栏由页面自绘(返回+标题+确认按钮)
-    .hideTitleBar(true)
+    .bindToScrollable([this.tokenListScroller])
     .onReady((context: NavDestinationContext) => {
       this.pathStack = context.pathStack;
     })

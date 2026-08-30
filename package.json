@@ -1,8 +1,14 @@
 {
+  "scripts": {
+    "generate:icon-thumbnails": "node scripts/generate-icon-thumbnails.mjs"
+  },
   "dependencies": {
     "@ohos/hamock": "^1.0.0",
     "@ohos/hypium": "^1.0.27",
     "@ohos/lottie": "^2.0.30",
     "@ohos/protobufjs": "^3.0.1"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2"
   }
 }

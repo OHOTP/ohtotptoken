@@ -45,6 +45,14 @@
       "value": "我的"
     },
     {
+      "name": "responsive_token_placeholder_title",
+      "value": "选择一个令牌"
+    },
+    {
+      "name": "responsive_token_placeholder_description",
+      "value": "从左侧列表选择可编辑令牌，即可在此处编辑。"
+    },
+    {
       "name": "button_settings",
       "value": "设置"
     },

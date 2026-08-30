@@ -1,10 +1,11 @@
-import { AppWindowInfo, maFile, otpType, readFileContent, ROUTE_NAMES, ScanBarCode, showSelectFilePicker, showSnackBar,
-  SnackBarNotifyType, TokenConfig } from 'common';
+import { AppWindowInfo, EVENT_NAMES, maFile, otpType, readFileContent, ROUTE_NAMES, ScanBarCode,
+  showSelectFilePicker, showSnackBar, SnackBarNotifyType, TokenConfig } from 'common';
 import { AppStorageV2 } from '@kit.ArkUI';
 import { JSON, url } from '@kit.ArkTS';
 import { BusinessError } from '@kit.BasicServicesKit';
+import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { hdsMaterial, HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
+import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, HdsNavDestination, ScrollEffectType } from '@kit.UIDesignKit';
 
 import { AddTokenActionButton, AddTokenHeader, AddTokenPageParams, ADD_TOKEN_BOTTOM_ACTION_INSET, ADD_TOKEN_PAGE_INSET,
   ADD_TOKEN_SECTION_PADDING, ADD_TOKEN_SECTION_RADIUS,
@@ -13,6 +14,7 @@ import { MaterialSurface } from '../components/MaterialSurface';
 import { PageScaffold } from '../components/PageScaffold';
 import { MaterialPolicy } from '../utils/MaterialPolicy';
 import { IconPickerPageParams } from './IconPickerPage';
+import { ResponsiveTokenEditStore, TokenSwitchPerf, TokenSwitchTrace } from '../utils/TokenSwitchPerf';
 
 @Entry
 @Preview
@@ -21,6 +23,8 @@ export struct AddSteamTokenPage {
   @Require @Param saveToken: (conf: TokenConfig) => Promise<boolean> = async () => false;
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Param pageParams: AddTokenPageParams = new AddTokenPageParams();
+  @Event onExitFullScreen: () => void = () => {};
+  @Event onBackToPlaceholder: () => void = () => {};
 
   @Local secret: string = '';
   @Local issuer: string = 'Steam';
@@ -31,17 +35,44 @@ export struct AddSteamTokenPage {
 
   private pageInfos: NavPathStack | null = null;
   private scroller: Scroller = new Scroller();
+  private activeEditConfig?: TokenConfig = undefined;
+  private appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
+  private onResponsiveTokenSelectedHandler: (config: TokenConfig, trace: TokenSwitchTrace) => void = () => {};
 
   private steamMaFile: maFile | undefined = undefined;
 
+  private applyEditConfig(editConfig: TokenConfig): void {
+    this.activeEditConfig = editConfig;
+    this.secret = editConfig.TokenSecret;
+    this.issuer = editConfig.TokenIssuer;
+    this.accountName = editConfig.TokenName;
+    this.iconPath = editConfig.TokenIconPath ?? '';
+    this.steamMaFile = editConfig.SteamMaFile;
+  }
+
   aboutToAppear(): void {
-    const editConfig = this.pageParams.editConfig;
+    const responsiveStore = ResponsiveTokenEditStore.getInstance();
+    const switchTrace = this.pageParams.responsiveEdit ? responsiveStore.currentTrace() : this.pageParams.switchTrace;
+    TokenSwitchPerf.mark(switchTrace, 'aboutToAppear');
+    this.onResponsiveTokenSelectedHandler = (config: TokenConfig, trace: TokenSwitchTrace): void => {
+      this.applyEditConfig(config);
+      TokenSwitchPerf.reusedReady(trace, this.getUIContext());
+    };
+    if (this.pageParams.responsiveEdit) {
+      this.appCtx.eventHub?.on(EVENT_NAMES.RESPONSIVE_TOKEN_SELECTION_CHANGED,
+        this.onResponsiveTokenSelectedHandler);
+    }
+    const editConfig = this.pageParams.responsiveEdit ?
+      (responsiveStore.currentConfig() ?? this.pageParams.editConfig) : this.pageParams.editConfig;
     if (editConfig !== undefined) {
-      this.secret = editConfig.TokenSecret;
-      this.issuer = editConfig.TokenIssuer;
-      this.accountName = editConfig.TokenName;
-      this.iconPath = editConfig.TokenIconPath ?? '';
-      this.steamMaFile = editConfig.SteamMaFile;
+      this.applyEditConfig(editConfig);
+    }
+  }
+
+  aboutToDisappear(): void {
+    if (this.pageParams.responsiveEdit) {
+      this.appCtx.eventHub?.off(EVENT_NAMES.RESPONSIVE_TOKEN_SELECTION_CHANGED,
+        this.onResponsiveTokenSelectedHandler);
     }
   }
 
@@ -106,20 +137,31 @@ export struct AddSteamTokenPage {
     if (!this.canSave()) return;
     this.isSaving = true;
     const conf = new TokenConfig(this.secret.trim(), otpType.Steam, this.issuer.trim(), this.accountName.trim(),
-      'SHA1', 30, 10, 0, this.pageParams.editConfig?.RankScore ?? 0);
-    if (this.pageParams.editConfig !== undefined) {
-      conf.TokenUUID = this.pageParams.editConfig.TokenUUID;
+      'SHA1', 30, 10, 0, this.activeEditConfig?.RankScore ?? 0);
+    if (this.activeEditConfig !== undefined) {
+      conf.TokenUUID = this.activeEditConfig.TokenUUID;
     }
     conf.TokenIconPath = this.iconPath;
     conf.SteamMaFile = this.steamMaFile;
     const ok = await this.saveToken(conf);
     this.isSaving = false;
-    if (ok) this.pageInfos?.pop();
+    if (ok && !(this.window.AllowSplit && this.pageParams.editConfig !== undefined)) {
+      this.pageInfos?.pop();
+    }
+  }
+
+  private navigateBack(): void {
+    if (this.window.AllowSplit && this.pageParams.editConfig !== undefined) {
+      this.onBackToPlaceholder();
+      return;
+    }
+    this.pageInfos?.pop();
   }
 
   build() {
     HdsNavDestination() {
-      PageScaffold() {
+      HdsNavigation() {
+        PageScaffold() {
         Column() {
           List({ space: 12, scroller: this.scroller }) {
             ListItem() {
@@ -196,7 +238,9 @@ export struct AddSteamTokenPage {
       }
     }
     .backgroundColor($r('app.color.window_background'))
-    .titleMode(HdsNavDestinationTitleMode.MODAL)
+    .mode(NavigationMode.Stack)
+    .hideBackButton(false)
+    .titleMode(HdsNavigationTitleMode.MINI)
     .titleBar({
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: true,
@@ -215,10 +259,15 @@ export struct AddSteamTokenPage {
         }
       },
       content: {
+        backIcon: {
+          label: $r('app.string.dialog_btn_cancel'),
+          icon: $r('sys.symbol.chevron_left'),
+          action: () => this.navigateBack()
+        },
         title: { mainTitle: this.pageParams.editConfig === undefined ?
           $r('app.string.tab_token_add_stream_key') : $r('app.string.edit_token_title') },
         menu: {
-          value: [{
+          value: this.window.IsPc ? [] : [{
             content: {
               label: $r('app.string.add_token_scan'),
               icon: $r('sys.symbol.qrcode'),
@@ -230,6 +279,28 @@ export struct AddSteamTokenPage {
       }
     })
     .bindToScrollable([this.scroller])
-    .onReady((context: NavDestinationContext) => this.pageInfos = context.pathStack)
+    }
+    .clip(false)
+    .hideTitleBar(true)
+    .backgroundColor($r('app.color.window_background'))
+    .onReady((context: NavDestinationContext) => {
+      this.pageInfos = context.pathStack;
+      const switchTrace = this.pageParams.responsiveEdit ?
+        ResponsiveTokenEditStore.getInstance().currentTrace() : this.pageParams.switchTrace;
+      TokenSwitchPerf.routeReady(switchTrace, this.getUIContext());
+    })
+    .onShown(() => TokenSwitchPerf.mark(this.pageParams.responsiveEdit ?
+      ResponsiveTokenEditStore.getInstance().currentTrace() : this.pageParams.switchTrace, 'shown'))
+    .onWillDisappear(() => {
+      TokenSwitchPerf.mark(this.pageParams.switchTrace, 'willDisappear');
+      this.onExitFullScreen();
+    })
+    .onBackPressed(() => {
+      if (this.window.AllowSplit && this.pageParams.editConfig !== undefined) {
+        this.onBackToPlaceholder();
+        return true;
+      }
+      return false;
+    })
   }
 }

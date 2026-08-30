@@ -52,6 +52,8 @@ export struct SubItemToggle {
           .id('ToggleSwitch')
           .width(36)
           .height(20)
+          // 视觉尺寸保持紧凑，触摸热区按手机 UX 推荐扩展至 48vp × 48vp。
+          .responseRegion({ x: -6, y: -14, width: 48, height: 48 })
           .onChange((isOn: boolean) => {
             this.onChange(isOn);
           })

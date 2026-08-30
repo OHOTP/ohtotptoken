@@ -5,7 +5,7 @@ import { convertToken2URI, copyText, generateOTP } from 'common';
 import { TokenIcon } from 'uikit';
 import { SteamUtils } from 'common';
 import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
-import { AppStorageV2, SymbolGlyphModifier } from '@kit.ArkUI';
+import { AppStorageV2, curves, SymbolGlyphModifier } from '@kit.ArkUI';
 import { QRCodeDialog } from 'uikit';
 import { AppWindowInfo } from 'common';
 import { TokenStore } from 'common';
@@ -25,7 +25,11 @@ export struct TokenItem {
   @Require @Param Config: TokenConfig = new TokenConfig();
   @Event Update: (conf: TokenConfig) => Promise<boolean> = async () => false;
   @Event Edit: (conf: TokenConfig) => void = () => {};
+  @Event Select: (conf: TokenConfig) => void = () => {};
   @Param sortMode: boolean = false;
+  @Param selectionMode: boolean = false;
+  @Param selected: boolean = false;
+  @Param hdsCardMode: boolean = false;
 
   @Local token_preference: TokenPreference = AppStorageV2.connect(TokenPreference) as TokenPreference;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
@@ -38,6 +42,8 @@ export struct TokenItem {
   @Local TokenHide: boolean = current_token_hide_map[this.Config.TokenUUID] ?? true;
   @Local previewDetailsVisible: boolean = false;
   @Local debugModeIsOn: boolean = AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON) as boolean;
+  @Local tokenCodeOpacity: number = 1;
+  @Local tokenCodeOffsetY: number = 0;
 
   @Local menu_icon_trash: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.trash')).fontSize('22vp').fontColor([Color.Red]);
   @Local menu_icon_qrcode: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.qrcode')).fontSize('22vp');
@@ -50,6 +56,8 @@ export struct TokenItem {
   private pendingSortNavigation: boolean = false;
 
   private token_steps: number = 0;
+  private tokenCodeInitialized: boolean = false;
+  private tokenCodeAnimationVersion: number = 0;
   private onTimestampChangedHandler: (timestamp: number, force: boolean) => void = () => {};
   private onDebugModeChangedHandler: (isOn: boolean) => void = () => {};
   // 使用 AppStorage 获取 context，避免在 aboutToAppear（build 之前）调用 getUIContext()
@@ -125,7 +133,10 @@ export struct TokenItem {
   @Builder
   TextContentBuilder() {
     Column() {
-      Text(this.token_preference.app_appearance_swap_host_user_enable ? this.Config.TokenName : this.Config.TokenIssuer)
+      // DEBUG 排名并入首行，避免在固定高度卡片的验证码区新增一行并挤出计时环。
+      Text(this.debugModeIsOn ?
+        `${this.Config.RankScore} · ${this.token_preference.app_appearance_swap_host_user_enable ? this.Config.TokenName : this.Config.TokenIssuer}` :
+        (this.token_preference.app_appearance_swap_host_user_enable ? this.Config.TokenName : this.Config.TokenIssuer))
         .fontSize(this.token_preference.app_appearance_issuer_font_size)
         .fontWeight(this.token_preference.app_appearance_issuer_font_weight)
         .fontColor($r('app.color.str_main'))
@@ -165,7 +176,7 @@ export struct TokenItem {
     if (latest !== undefined) {
       const newCode = latest.TokenExternalCode ?? '';
       if (newCode !== this.TokenNumber) {
-        this.TokenNumber = newCode;
+        this.updateDisplayedTokenCodes(newCode, '');
         hilog.info(0xFF00, 'TokenItem', `event refresh uuid=${this.Config.TokenUUID}`);
       }
     }
@@ -262,7 +273,7 @@ export struct TokenItem {
     }
     if (this.Config.TokenType == otpType.NFC_external) {
       // 外部令牌静态展示：直接显示卡片读取的验证码，不参与计时计算
-      this.TokenNumber = this.Config.TokenExternalCode ?? '';
+      this.updateDisplayedTokenCodes(this.Config.TokenExternalCode ?? '', '', false);
       hilog.info(0xFF00, 'TokenItem', `updateToken external uuid=${this.Config.TokenUUID} issuer=${this.Config.TokenIssuer} name=${this.Config.TokenName}`);
       return;
     }
@@ -274,21 +285,58 @@ export struct TokenItem {
     }
   }
 
+  private updateDisplayedTokenCodes(current: string, next: string, animateChange: boolean = true): void {
+    if (!this.tokenCodeInitialized || !animateChange || this.TokenNumber === current) {
+      this.tokenCodeAnimationVersion++;
+      this.TokenNumber = current;
+      this.TokenNumberNext = next;
+      this.tokenCodeOpacity = 1;
+      this.tokenCodeOffsetY = 0;
+      this.tokenCodeInitialized = true;
+      return;
+    }
+
+    const animationVersion = ++this.tokenCodeAnimationVersion;
+    const uiContext = this.getUIContext();
+    uiContext.animateTo({
+      duration: 90,
+      curve: Curve.EaseIn,
+      onFinish: () => {
+        if (animationVersion !== this.tokenCodeAnimationVersion) {
+          return;
+        }
+        this.TokenNumber = current;
+        this.TokenNumberNext = next;
+        uiContext.animateTo({
+          curve: curves.interpolatingSpring(0, 1, 342, 38)
+        }, () => {
+          this.tokenCodeOpacity = 1;
+          this.tokenCodeOffsetY = 0;
+        });
+      }
+    }, () => {
+      this.tokenCodeOpacity = 0;
+      this.tokenCodeOffsetY = -6;
+    });
+  }
+
   updateHOTPToken() {
     this.TokenCounter = this.Config.TokenCounter.toString();
-    this.TokenNumber = generateOTP(this.Config, this.Config.TokenCounter).toString().padStart(this.Config.TokenDigits, '0');
-    this.TokenNumberNext = generateOTP(this.Config, this.Config.TokenCounter + 1).toString().padStart(this.Config.TokenDigits, '0');
+    this.updateDisplayedTokenCodes(
+      generateOTP(this.Config, this.Config.TokenCounter).toString().padStart(this.Config.TokenDigits, '0'),
+      generateOTP(this.Config, this.Config.TokenCounter + 1).toString().padStart(this.Config.TokenDigits, '0'));
   }
 
   updateTOTPToken() {
     let int_code = generateOTP(this.Config, this.token_steps);
     let int_code_next = generateOTP(this.Config, this.token_steps + 1);
     if (this.Config.TokenType === otpType.Steam) {
-      this.TokenNumber = SteamUtils.SteamTokenFromTOTP(int_code);
-      this.TokenNumberNext = SteamUtils.SteamTokenFromTOTP(int_code_next);
+      this.updateDisplayedTokenCodes(
+        SteamUtils.SteamTokenFromTOTP(int_code), SteamUtils.SteamTokenFromTOTP(int_code_next));
     } else {
-      this.TokenNumber = int_code.toString().padStart(this.Config.TokenDigits, '0');
-      this.TokenNumberNext = int_code_next.toString().padStart(this.Config.TokenDigits, '0');
+      this.updateDisplayedTokenCodes(
+        int_code.toString().padStart(this.Config.TokenDigits, '0'),
+        int_code_next.toString().padStart(this.Config.TokenDigits, '0'));
     }
   }
 
@@ -301,14 +349,6 @@ export struct TokenItem {
   @Builder
   TokenCodeBuilder() {
     Column() {
-      if (this.debugModeIsOn) {
-        Text(this.Config.RankScore.toString())
-          .textAlign(TextAlign.Center)
-          .textOverflow({ overflow: TextOverflow.MARQUEE })
-          .maxLines(1)
-          .fontSize(30)
-      }
-
       if (this.TokenHide && this.token_preference.app_safety_hide_token_enable) {
         Text() {
           Span("●●●●")
@@ -352,6 +392,8 @@ export struct TokenItem {
                 .fontFamily(AppFonts.CODE_FONT)
             }
           }
+          .opacity(this.tokenCodeOpacity)
+          .translate({ y: this.tokenCodeOffsetY })
 
           if (this.Config.TokenType == otpType.HOTP) {
             SymbolGlyph($r('sys.symbol.lock_filled_arrow_counterclockwise'))
@@ -385,6 +427,12 @@ export struct TokenItem {
     }
     .alignItems(HorizontalAlign.End)
     .padding({ left: $r('sys.float.ohos_id_text_overlay_menu_button_padding_left'), right: $r('sys.float.ohos_id_text_overlay_menu_button_padding_right') })
+    .onClick(() => {
+      if (this.token_preference.app_safety_hide_token_enable) {
+        this.TokenHide = !this.TokenHide;
+        current_token_hide_map[this.Config.TokenUUID] = this.TokenHide;
+      }
+    })
   }
 
   build() {
@@ -392,7 +440,16 @@ export struct TokenItem {
       // 排序模式：禁用上下文菜单和长按手势，Suffix 显示排序图标；
       // 材质与主列表一致跟随设置（逐项光感为用户显式开启项，开启前经 Dialog 二次确认）
       Column() {
-        if (MaterialTheme.isTokenItemMaterialEffective()) {
+        if (this.hdsCardMode) {
+          // 排序页由外层 HdsListItem 承担实体卡片背景、圆角和边距。
+          if (MaterialTheme.isTokenItemMaterialEffective()) {
+            MaterialSurface({ radius: this.token_preference.app_appearance_item_radius }) {
+              this.TokenRowContent(true)
+            }
+          } else {
+            this.TokenRowContent(true)
+          }
+        } else if (MaterialTheme.isTokenItemMaterialEffective()) {
           // 内容背景透明透出材质层（不透明背景会盖住 ImmersiveMaterial）
           MaterialSurface({ radius: this.token_preference.app_appearance_item_radius }) {
             this.TokenRowContent(true)
@@ -406,15 +463,32 @@ export struct TokenItem {
           .backgroundColor($r('app.color.item_bg'))
         }
       }
-      // 外层只带 margin 不设 width：width('100%')+margin 会把卡片撑出列表右边界；
-      // 与下方非排序分支结构一致，margin 由外层承担，宽度交给 ListItem 约束
-      .margin({
+      // HdsListItem 模式的边距由外层系统列表项承担；其余场景继续使用自绘卡片边距。
+      .margin(this.hdsCardMode ? 0 : {
         left: this.token_preference.app_appearance_token_list_item_prefix_padding,
         right: this.token_preference.app_appearance_token_list_item_suffix_padding
       })
+      // 侧滑时 customItemBuilder 内容会平移，圆角必须跟随内容层移动；
+      // 仅裁剪外层 ListItem 会让平移后新暴露的边缘呈直角。
+      .borderRadius(this.token_preference.app_appearance_item_radius)
+      .clip(this.hdsCardMode)
     } else {
       Column() {
-        if (MaterialTheme.isTokenItemMaterialEffective()) {
+        if (this.hdsCardMode) {
+          // 选中背板由外层 HdsListItem 以系统默认样式绘制；选中时内容层透明，
+          // 让系统背板完整透出。未选中时仍保留实体或用户显式启用的光感表面。
+          if (MaterialTheme.isTokenItemMaterialEffective() && !this.selected) {
+            MaterialSurface({ radius: this.token_preference.app_appearance_item_radius }) {
+              this.TokenRowContent(false)
+            }
+          } else {
+            Column() {
+              this.TokenRowContent(false)
+            }
+            .width('100%')
+            .backgroundColor(this.selected ? Color.Transparent : $r('app.color.item_bg'))
+          }
+        } else if (MaterialTheme.isTokenItemMaterialEffective()) {
           // 列表项光感材质：用户在设置中显式开启（官方不建议滚动列表逐项
           // 材质，开启前已经 Dialog 二次确认）；内容背景透明透出材质层
           MaterialSurface({ radius: this.token_preference.app_appearance_item_radius }) {
@@ -429,21 +503,14 @@ export struct TokenItem {
           .backgroundColor($r('app.color.item_bg'))
         }
       }
-      // 卡片左右边距跟随设置中的「左侧边距/右侧边距」，实体与光感两种模式等宽；
-      // 卡片内部内容边距固定为 0（见 TokenRowContent）
-      .margin({
+      // HdsListItem 模式的边距由外层系统列表项承担；其余场景继续使用自绘卡片边距。
+      .margin(this.hdsCardMode ? 0 : {
         left: this.token_preference.app_appearance_token_list_item_prefix_padding,
         right: this.token_preference.app_appearance_token_list_item_suffix_padding
       })
-      .onClick(() => {
-        if (this.TokenHide && this.token_preference.app_safety_hide_token_enable) {
-          this.TokenHide = !this.TokenHide;
-          current_token_hide_map[this.Config.TokenUUID] = false;
-        } else if (this.token_preference.app_safety_hide_token_enable) {
-          this.TokenHide = !this.TokenHide;
-          current_token_hide_map[this.Config.TokenUUID] = true;
-        }
-      })
+      // 外层系统列表项负责固定选中背板圆角，内容层圆角则随侧滑位移。
+      .borderRadius(this.token_preference.app_appearance_item_radius)
+      .clip(this.hdsCardMode)
       .bindContextMenu(this.TokenRightCtxMenu, ResponseType.LongPress, {
         // 官方 hoverScale 仅在 LongPress + CustomBuilder 预览中提供原组件截图到
         // 扩展预览的一镜到底变形；isShown 方式只会直接展示目标尺寸。
@@ -493,6 +560,11 @@ export struct TokenItem {
     .width('100%')
     .height(this.token_preference.app_appearance_item_height)
     .alignItems(VerticalAlign.Center)
+    .onClick(() => {
+      if (this.selectionMode && !sort) {
+        this.Select(this.Config);
+      }
+    })
   }
 
   @Builder

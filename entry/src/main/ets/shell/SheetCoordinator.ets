@@ -10,9 +10,9 @@ import lazy { AgreementSheet } from '../pages/setting/AgreementSheet'
 import lazy { AboutSheet } from '../pages/setting/AboutSheet'
 import lazy { FeedbackSheet } from '../pages/setting/FeedbackSheet'
 import { showSnackBar, SnackBarNotifyType } from 'common';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES } from 'common';
 import { AppStorageV2 } from '@kit.ArkUI';
-import { ScrollEffectType } from '@kit.UIDesignKit';
+import { HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import lazy { HuaweiAccountManager, HuaweiUserInfo, HuaweiAccountLoginError } from 'common';
 import { MaterialSheetStyle } from '../components/MaterialSheetStyle';
 import { SettingItem } from '../components/SettingItem';
@@ -35,6 +35,12 @@ export struct SheetCoordinator {
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Require @Param scroller: Scroller = new Scroller();
   @Require @Param bottomAvoidHeight: number = 0;
+  @Require @Param wideMode: boolean = false;
+  @Require @Param active: boolean = false;
+  @Require @Param pageInfos: NavPathStack = new NavPathStack();
+  @Param selectedRoute: ROUTE_NAMES = ROUTE_NAMES.SettingAbout;
+  @Param detailOnlyRoute: string = '';
+  @Event onSelectRoute: (route: ROUTE_NAMES) => void = () => {};
   /** 备份恢复完成回调(由 Index 提供:批量更新 Token 并重新排序) */
   @Require @Param backupReload: (conf: TokenConfig[]) => Promise<void> = async (conf: TokenConfig[]) => {};
   /** 开发者选项：生成并持久化 100 个随机测试令牌 */
@@ -66,6 +72,22 @@ export struct SheetCoordinator {
       this.syncHuaweiAccountState();
     };
     this.appCtx.eventHub?.on(EVENT_NAMES.HUAWEI_ACCOUNT_STATE_CHANGED, this.onAccountStateChanged);
+    if (this.detailOnlyRoute === '' && this.active && this.wideMode) {
+      this.openSettingDetail(this.selectedRoute);
+    }
+  }
+
+  @Monitor('wideMode')
+  onWideModeChanged(monitor: IMonitor): void {
+    const isWide = monitor.value()?.now as boolean;
+    if (this.detailOnlyRoute !== '' || !this.active) {
+      return;
+    }
+    if (isWide) {
+      this.openSettingDetail(this.selectedRoute);
+    } else {
+      this.pageInfos.clear();
+    }
   }
 
   aboutToDisappear(): void {
@@ -82,6 +104,19 @@ export struct SheetCoordinator {
     this.appCtx.eventHub?.emit(EVENT_NAMES.DEBUG_MODE_CHANGED, isOn);
     if (!isOn) {
       this.isDeveloperOptionsSheetVisible = false;
+      if (this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingDeveloper) {
+        this.openSettingDetail(ROUTE_NAMES.SettingAbout);
+      }
+    }
+  }
+
+  private openSettingDetail(route: ROUTE_NAMES): void {
+    this.onSelectRoute(route);
+    const paths = this.pageInfos.getAllPathName();
+    if (paths.length === 0) {
+      this.pageInfos.pushPathByName(route, null, false);
+    } else if (paths[paths.length - 1] !== route) {
+      this.pageInfos.replacePathByName(route, null, false);
     }
   }
 
@@ -89,7 +124,11 @@ export struct SheetCoordinator {
     try {
       await HuaweiAccountManager.getInstance().login(this.getUIContext());
       this.syncHuaweiAccountState();
-      this.isAccountSheetVisible = true;
+      if (this.wideMode) {
+        this.openSettingDetail(ROUTE_NAMES.SettingAccount);
+      } else {
+        this.isAccountSheetVisible = true;
+      }
     } catch (error) {
       this.syncHuaweiAccountState();
       const loginError = error as HuaweiAccountLoginError;
@@ -145,35 +184,39 @@ export struct SheetCoordinator {
   }
 
   @Builder
-  BackupAndMigrationSheetBuilder() {
+  BackupAndMigrationSheetBuilder(embedded: boolean) {
     BackupAndMigrationSheet({
       Tokens: this.tokens,
       scrollEffectStyle: this.scrollEffectType,
+      embedded: embedded,
       backupReload: this.backupReload
     })
       .height('100%')
   }
 
   @Builder
-  SecuritySheetBuilder() {
+  SecuritySheetBuilder(embedded: boolean) {
     SecuritySheet({
       scrollEffectStyle: this.scrollEffectType,
+      embedded: embedded
     })
       .height('100%')
   }
 
   @Builder
-  AppearanceSheetBuilder() {
+  AppearanceSheetBuilder(embedded: boolean) {
     AppearanceSheet({
       scrollEffectType: this.scrollEffectType,
+      embedded: embedded
     })
       .height('100%')
   }
 
   @Builder
-  DeveloperOptionsSheetBuilder() {
+  DeveloperOptionsSheetBuilder(embedded: boolean) {
     DeveloperOptionsSheet({
       scrollEffectType: this.scrollEffectType,
+      embedded: embedded,
       debugModeChanged: (isOn: boolean) => this.updateDebugMode(isOn),
       addTestTokens: () => this.addTestTokens(),
       removeTestTokens: () => this.removeTestTokens()
@@ -182,34 +225,38 @@ export struct SheetCoordinator {
   }
 
   @Builder
-  DataSyncSheetBuilder() {
+  DataSyncSheetBuilder(embedded: boolean) {
     DataSyncSheet({
       scrollEffectType: this.scrollEffectType,
+      embedded: embedded
     })
       .height('100%')
   }
 
   @Builder
-  AgreementSheetBuilder() {
+  AgreementSheetBuilder(embedded: boolean) {
     AgreementSheet({
       scrollEffectType: this.scrollEffectType,
+      embedded: embedded
     })
       .height('100%')
   }
 
   @Builder
-  AboutSheetBuilder() {
+  AboutSheetBuilder(embedded: boolean) {
     AboutSheet({
       scrollEffectStyle: this.scrollEffectType,
+      embedded: embedded,
       debugModeChanged: (isOn: boolean) => this.updateDebugMode(isOn)
     })
       .height('100%')
   }
 
   @Builder
-  FeedbackSheetBuilder() {
+  FeedbackSheetBuilder(embedded: boolean) {
     FeedbackSheet({
       scrollEffectType: this.scrollEffectType,
+      embedded: embedded
     })
       .height('100%')
   }
@@ -237,14 +284,14 @@ export struct SheetCoordinator {
               .draggable(false)
               .width(85)
               .height(85)
-              .borderRadius(42.5)
+              .borderRadius('50%')
               .margin({ top: 40 })
           } else if (this.huaweiUser.nickname !== '') {
             Text(this.huaweiUser.nickname.length > 0 ?
               this.huaweiUser.nickname.substring(this.huaweiUser.nickname.length - 1) : '')
               .width(85)
               .height(85)
-              .borderRadius(42.5)
+              .borderRadius('50%')
               .backgroundColor($r('sys.color.ohos_id_color_tertiary'))
               .linearGradient({
                 colors: [
@@ -292,69 +339,113 @@ export struct SheetCoordinator {
     .height('100%')
   }
 
-  build() {
+  @Builder
+  AccountDetailBuilder() {
+    HdsNavigation() {
+      this.AccountSheetBuilder()
+    }
+    .clip(false)
+    .backgroundColor($r('app.color.window_background'))
+    .mode(NavigationMode.Stack)
+    .hideBackButton(true)
+    .titleMode(HdsNavigationTitleMode.MINI)
+    .titleBar({
+      avoidLayoutSafeArea: true,
+      enableComponentSafeArea: true,
+      content: {
+        title: {
+          mainTitle: $r('app.string.huawei_account_current')
+        }
+      }
+    })
+  }
+
+  @Builder
+  SettingEntryList() {
     List({ space: 10, scroller: this.scroller }) {
       // 华为账号登录卡片：与设置子项共用 SettingItem 分组卡片表面
       ListItem() {
         SettingItem({ title: '' }) {
-          Row({ space: 16 }) {
-            if (this.isHuaweiLoggedIn && this.huaweiUser && this.huaweiUser.avatarUri !== '') {
-              Image(this.huaweiUser.avatarUri)
-                .draggable(false)
-                .width(48)
-                .height(48)
-                .borderRadius(24)
-            } else if (this.isHuaweiLoggedIn && this.huaweiUser && this.huaweiUser.nickname !== '') {
-              Text(this.huaweiUser.nickname.length > 0 ?
-                this.huaweiUser.nickname.substring(this.huaweiUser.nickname.length - 1) : '')
-                .width(48)
-                .height(48)
-                .borderRadius(24)
-                .backgroundColor($r('sys.color.ohos_id_color_tertiary'))
-                .linearGradient({
-                  colors: [
-                    [$r('sys.color.ohos_id_color_tertiary'), 0.0],
-                    [$r('sys.color.ohos_id_color_foreground_contrary'), 1.0]
-                  ]
-                })
-                .fontColor($r('sys.color.font_on_primary'))
-                .fontSize(20)
-                .fontWeight(FontWeight.Bold)
-                .textAlign(TextAlign.Center)
-            } else {
-              SymbolGlyph($r('sys.symbol.person_crop_circle_fill_1'))
-                .fontSize(48)
-                .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
-            }
+          ListItem() {
+            Row({ space: 16 }) {
+              if (this.isHuaweiLoggedIn && this.huaweiUser && this.huaweiUser.avatarUri !== '') {
+                Image(this.huaweiUser.avatarUri)
+                  .draggable(false)
+                  .width(48)
+                  .height(48)
+                  .borderRadius($r('sys.float.corner_radius_level12'))
+              } else if (this.isHuaweiLoggedIn && this.huaweiUser && this.huaweiUser.nickname !== '') {
+                Text(this.huaweiUser.nickname.length > 0 ?
+                  this.huaweiUser.nickname.substring(this.huaweiUser.nickname.length - 1) : '')
+                  .width(48)
+                  .height(48)
+                  .borderRadius($r('sys.float.corner_radius_level12'))
+                  .backgroundColor($r('sys.color.ohos_id_color_tertiary'))
+                  .linearGradient({
+                    colors: [
+                      [$r('sys.color.ohos_id_color_tertiary'), 0.0],
+                      [$r('sys.color.ohos_id_color_foreground_contrary'), 1.0]
+                    ]
+                  })
+                  .fontColor($r('sys.color.font_on_primary'))
+                  .fontSize(20)
+                  .fontWeight(FontWeight.Bold)
+                  .textAlign(TextAlign.Center)
+              } else {
+                SymbolGlyph($r('sys.symbol.person_crop_circle_fill_1'))
+                  .fontSize(48)
+                  .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              }
 
-            Column({ space: 4 }) {
-              Text(this.isHuaweiLoggedIn && this.huaweiUser ?
-                this.huaweiUser.nickname : $r('app.string.huawei_account_login'))
-                .fontSize(18)
-                .fontWeight(FontWeight.Medium)
-                .fontColor($r('sys.color.ohos_id_color_text_primary'))
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
+              Column({ space: 4 }) {
+                Text(this.isHuaweiLoggedIn && this.huaweiUser ?
+                  this.huaweiUser.nickname : $r('app.string.huawei_account_login'))
+                  .fontSize(18)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAccount ?
+                    $r('sys.color.interactive_active') : $r('sys.color.ohos_id_color_text_primary'))
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-              Text(this.isHuaweiLoggedIn ?
-                $r('app.string.huawei_account_current') :
-                $r('app.string.huawei_account_login_desc'))
-                .fontSize(14)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                .maxLines(1)
+                Text(this.isHuaweiLoggedIn ?
+                  $r('app.string.huawei_account_current') :
+                  $r('app.string.huawei_account_login_desc'))
+                  .fontSize(14)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .maxLines(1)
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
             }
-            .alignItems(HorizontalAlign.Start)
-            .layoutWeight(1)
+            .width('100%')
+            .padding(SETTING_ROW_PADDING)
+            .alignItems(VerticalAlign.Center)
           }
-          .width('100%')
-          .padding(SETTING_ROW_PADDING)
-          .alignItems(VerticalAlign.Center)
-          // PC/2in1 光标悬浮时提供系统高亮反馈
+          // 与其余设置项一致：业务选中态使用背板，触屏按下立即回弹，鼠标悬浮高亮。
+          .clickEffect({ level: ClickEffectLevel.MIDDLE, scale: 0.98 })
           .hoverEffect(HoverEffect.Highlight)
-          .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.95 })
+          .selected(this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAccount)
+          .stateStyles({
+            normal: {
+              .backgroundColor(Color.Transparent)
+            },
+            selected: {
+              .backgroundColor($r('app.color.itemActivated'))
+            },
+            pressed: {
+              .backgroundColor($r('sys.color.interactive_pressed'))
+            },
+            clicked: {
+              .backgroundColor($r('sys.color.interactive_pressed'))
+            }
+          })
+          .borderRadius($r('sys.float.corner_radius_level8'))
+          .accessibilitySelected(this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAccount)
           .onClick(() => {
             if (!this.isHuaweiLoggedIn) {
               this.triggerHuaweiLogin();
+            } else if (this.wideMode) {
+              this.openSettingDetail(ROUTE_NAMES.SettingAccount);
             } else {
               this.isAccountSheetVisible = true;
             }
@@ -370,24 +461,34 @@ export struct SheetCoordinator {
         SettingItem({ title: $r('app.string.setting_group_data_management') }) {
           SubItemButton({
             symbol: $r('sys.symbol.save'),
-            text: $r('app.string.setting_backup')
+            text: $r('app.string.setting_backup'),
+            selected: this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingBackup
           })
             .onClick(() => {
-              this.isBackupSheetVisible = true;
+              if (this.wideMode) {
+                this.openSettingDetail(ROUTE_NAMES.SettingBackup);
+              } else {
+                this.isBackupSheetVisible = true;
+              }
             })
-            .bindSheet($$this.isBackupSheetVisible, this.BackupAndMigrationSheetBuilder(),
+            .bindSheet($$this.isBackupSheetVisible, this.BackupAndMigrationSheetBuilder(false),
               MaterialSheetStyle.options())
 
           SubItemDivider()
 
           SubItemButton({
             symbol: $r('sys.symbol.link'),
-            text: $r('app.string.data_sync')
+            text: $r('app.string.data_sync'),
+            selected: this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingDataSync
           })
             .onClick(() => {
-              this.isDataSyncSheetVisible = true;
+              if (this.wideMode) {
+                this.openSettingDetail(ROUTE_NAMES.SettingDataSync);
+              } else {
+                this.isDataSyncSheetVisible = true;
+              }
             })
-            .bindSheet($$this.isDataSyncSheetVisible, this.DataSyncSheetBuilder(),
+            .bindSheet($$this.isDataSyncSheetVisible, this.DataSyncSheetBuilder(false),
               MaterialSheetStyle.options())
         }
       }
@@ -398,24 +499,34 @@ export struct SheetCoordinator {
         SettingItem({ title: $r('app.string.setting_group_app_settings') }) {
           SubItemButton({
             symbol: $r('sys.symbol.staroflife_rectangle'),
-            text: $r('app.string.setting_safety')
+            text: $r('app.string.setting_safety'),
+            selected: this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingSecurity
           })
             .onClick(() => {
-              this.isSafetySheetVisible = true;
+              if (this.wideMode) {
+                this.openSettingDetail(ROUTE_NAMES.SettingSecurity);
+              } else {
+                this.isSafetySheetVisible = true;
+              }
             })
-            .bindSheet($$this.isSafetySheetVisible, this.SecuritySheetBuilder(),
+            .bindSheet($$this.isSafetySheetVisible, this.SecuritySheetBuilder(false),
               MaterialSheetStyle.options())
 
           SubItemDivider()
 
           SubItemButton({
             symbol: $r('sys.symbol.chevron_up_2_circle'),
-            text: $r('app.string.app_appearance')
+            text: $r('app.string.app_appearance'),
+            selected: this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAppearance
           })
             .onClick(() => {
-              this.isAppearanceSheetVisible = true;
+              if (this.wideMode) {
+                this.openSettingDetail(ROUTE_NAMES.SettingAppearance);
+              } else {
+                this.isAppearanceSheetVisible = true;
+              }
             })
-            .bindSheet($$this.isAppearanceSheetVisible, this.AppearanceSheetBuilder(),
+            .bindSheet($$this.isAppearanceSheetVisible, this.AppearanceSheetBuilder(false),
               MaterialSheetStyle.options())
 
           if (this.debug_mode_is_on) {
@@ -423,12 +534,17 @@ export struct SheetCoordinator {
 
             SubItemButton({
               symbol: $r('sys.symbol.wrench_and_screwdriver'),
-              text: $r('app.string.setting_group_developer_options')
+              text: $r('app.string.setting_group_developer_options'),
+              selected: this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingDeveloper
             })
               .onClick(() => {
-                this.isDeveloperOptionsSheetVisible = true;
+                if (this.wideMode) {
+                  this.openSettingDetail(ROUTE_NAMES.SettingDeveloper);
+                } else {
+                  this.isDeveloperOptionsSheetVisible = true;
+                }
               })
-              .bindSheet($$this.isDeveloperOptionsSheetVisible, this.DeveloperOptionsSheetBuilder(),
+              .bindSheet($$this.isDeveloperOptionsSheetVisible, this.DeveloperOptionsSheetBuilder(false),
                 MaterialSheetStyle.options())
           }
         }
@@ -440,49 +556,88 @@ export struct SheetCoordinator {
         SettingItem({ title: $r('app.string.setting_group_support_about') }) {
           SubItemButton({
             symbol: $r('sys.symbol.person_shield'),
-            text: $r('app.string.setting_agreement_statement')
+            text: $r('app.string.setting_agreement_statement'),
+            selected: this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAgreement
           })
             .onClick(() => {
-              this.isAgreementSheetVisible = true;
+              if (this.wideMode) {
+                this.openSettingDetail(ROUTE_NAMES.SettingAgreement);
+              } else {
+                this.isAgreementSheetVisible = true;
+              }
             })
-            .bindSheet($$this.isAgreementSheetVisible, this.AgreementSheetBuilder(),
+            .bindSheet($$this.isAgreementSheetVisible, this.AgreementSheetBuilder(false),
               MaterialSheetStyle.options())
 
           SubItemDivider()
 
           SubItemButton({
             symbol: $r('sys.symbol.envelope'),
-            text: $r('app.string.setting_feedback')
+            text: $r('app.string.setting_feedback'),
+            selected: this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingFeedback
           })
             .onClick(() => {
-              this.isFeedbackSheetVisible = true;
+              if (this.wideMode) {
+                this.openSettingDetail(ROUTE_NAMES.SettingFeedback);
+              } else {
+                this.isFeedbackSheetVisible = true;
+              }
             })
-            .bindSheet($$this.isFeedbackSheetVisible, this.FeedbackSheetBuilder(),
+            .bindSheet($$this.isFeedbackSheetVisible, this.FeedbackSheetBuilder(false),
               MaterialSheetStyle.options())
 
           SubItemDivider()
 
           SubItemButton({
             symbol: $r('sys.symbol.info_circle'),
-            text: $r('app.string.setting_about')
+            text: $r('app.string.setting_about'),
+            selected: this.wideMode && this.selectedRoute === ROUTE_NAMES.SettingAbout
           })
             .onClick(() => {
-              this.isAboutSheetVisible = true;
+              if (this.wideMode) {
+                this.openSettingDetail(ROUTE_NAMES.SettingAbout);
+              } else {
+                this.isAboutSheetVisible = true;
+              }
             })
-            .bindSheet($$this.isAboutSheetVisible, this.AboutSheetBuilder(),
+            .bindSheet($$this.isAboutSheetVisible, this.AboutSheetBuilder(false),
               MaterialSheetStyle.options())
         }
       }
       .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
     }
     .clip(false)
-    // 与令牌列表使用相同的页签栏末端避让，确保最后一组可滚动至 HdsTabs 上方
-    .contentEndOffset(80 + this.bottomAvoidHeight)
+    // 宽屏使用侧边页签，无需再为底部 HdsTabs 预留 80vp。
+    .contentEndOffset((this.wideMode ? 16 : 80) + this.bottomAvoidHeight)
     .chainAnimation(this.token_preference.app_appearance_chain_animation_enable)
     .width('100%')
     .height('100%')
     .scrollBar(BarState.Off)
     .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     .backgroundColor($r('app.color.window_background'))
+  }
+
+  build() {
+    if (this.detailOnlyRoute === ROUTE_NAMES.SettingAccount) {
+      this.AccountDetailBuilder()
+    } else if (this.detailOnlyRoute === ROUTE_NAMES.SettingBackup) {
+      this.BackupAndMigrationSheetBuilder(true)
+    } else if (this.detailOnlyRoute === ROUTE_NAMES.SettingDataSync) {
+      this.DataSyncSheetBuilder(true)
+    } else if (this.detailOnlyRoute === ROUTE_NAMES.SettingSecurity) {
+      this.SecuritySheetBuilder(true)
+    } else if (this.detailOnlyRoute === ROUTE_NAMES.SettingAppearance) {
+      this.AppearanceSheetBuilder(true)
+    } else if (this.detailOnlyRoute === ROUTE_NAMES.SettingDeveloper) {
+      this.DeveloperOptionsSheetBuilder(true)
+    } else if (this.detailOnlyRoute === ROUTE_NAMES.SettingAgreement) {
+      this.AgreementSheetBuilder(true)
+    } else if (this.detailOnlyRoute === ROUTE_NAMES.SettingFeedback) {
+      this.FeedbackSheetBuilder(true)
+    } else if (this.detailOnlyRoute === ROUTE_NAMES.SettingAbout) {
+      this.AboutSheetBuilder(true)
+    } else {
+      this.SettingEntryList()
+    }
   }
 }

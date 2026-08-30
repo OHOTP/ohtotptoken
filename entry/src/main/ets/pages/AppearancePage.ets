@@ -159,19 +159,6 @@ export struct AppearancePage {
 
                 SubItemDivider()
 
-                SubItemToggle({
-                  icon: $r('sys.symbol.rectangle_stack'),
-                  title: $r('app.string.chain_animation'),
-                  isOn: this.token_preference.app_appearance_chain_animation_enable,
-                  description: $r('app.string.chain_animation_des'),
-                  onChange: (IsOn: boolean) => {
-                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_CHAIN_ANIMATION_ENABLE, IsOn);
-                    this.token_preference.app_appearance_chain_animation_enable = IsOn;
-                  }
-                })
-
-                SubItemDivider()
-
                 SubItemSlider({
                   icon: $r('sys.symbol.slider_horizontal_2'),
                   title: $r('app.string.token_item_function_slider'),

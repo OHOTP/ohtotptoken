@@ -1,4 +1,3 @@
-import { TokenIcon } from './TokenIcon';
 import { CropModel, CropView } from './ImageCropView';
 import { getImageDimensions, savePixelMapToFile, copyFileToDir } from 'common';
 import { showSelectFilePicker } from 'common';
@@ -19,57 +18,140 @@ function extractIconName(path: string): string {
   return name.toLowerCase();
 }
 
+function getPickerImageSource(path: string): ResourceStr {
+  const previewPath = TokenIconPacks.getPickerPreviewPath(path);
+  if (previewPath.startsWith('rawfile://')) {
+    return $rawfile(previewPath.slice(10));
+  }
+  return previewPath;
+}
+
+enum IconGridItemType {
+  AUTO,
+  ADD,
+  USER,
+  PACK
+}
+
+@ObservedV2
+class IconGridItem {
+  readonly key: string;
+  readonly type: IconGridItemType;
+  readonly path: string;
+  readonly removable: boolean;
+
+  constructor(key: string, type: IconGridItemType, path: string = '', removable: boolean = false) {
+    this.key = key;
+    this.type = type;
+    this.path = path;
+    this.removable = removable;
+  }
+}
+
+function uniquePaths(paths: string[]): string[] {
+  const seen: Set<string> = new Set<string>();
+  const result: string[] = [];
+  for (const path of paths) {
+    if (path !== undefined && !seen.has(path)) {
+      seen.add(path);
+      result.push(path);
+    }
+  }
+  return result;
+}
+
+function createGridItems(packPaths: string[], userPaths: string[], includeUtilities: boolean): IconGridItem[] {
+  const items: IconGridItem[] = [];
+  if (includeUtilities) {
+    items.push(new IconGridItem('__auto__', IconGridItemType.AUTO));
+    items.push(new IconGridItem('__add__', IconGridItemType.ADD));
+    for (const path of userPaths) {
+      items.push(new IconGridItem(`user:${path}`, IconGridItemType.USER, path, true));
+    }
+  }
+  for (const path of packPaths) {
+    items.push(new IconGridItem(`pack:${path}`, IconGridItemType.PACK, path));
+  }
+  return items;
+}
+
+@ObservedV2
+export class IconPickerViewState {
+  @Trace searchText: string = '';
+  @Trace packIndex: number = 0;
+}
+
 @Preview
-@Component
+@ComponentV2
 export struct IconPicker {
-  @Prop @Require issuer: string = '';
-  @Prop currentIconPath: string = '';
-  @Prop showCancelButton: boolean = true;
-  @Prop showSearch: boolean = true;
-  @Prop showPackTabs: boolean = true;
-  @Prop currentPackIndex: number = 0;
+  @Require @Param issuer: string = '';
+  @Param currentIconPath: string = '';
+  @Param showCancelButton: boolean = true;
+  @Param showSearch: boolean = true;
+  @Param showPackTabs: boolean = true;
+  @Param currentPackIndex: number = 0;
   /**
    * 确认按钮是否启用沉浸光感材质（跟随设置里的材质模式选项）。
    * uikit 无法依赖 entry 侧 MaterialTheme，由调用方（entry 页面）求值后传入；
    * 默认 false 保持实体蓝底（SelectIconDialog 等未传入场景行为不变）。
    */
-  @Prop immersiveMaterialEnabled: boolean = false;
-  iconScrollers: Scroller[] = [];
-  @Prop @Watch('onSearchTextChanged') searchText: string = '';
-  cancel: () => void = () => {};
-  confirm: (new_conf: string) => void = () => {};
-  onPackChange: (index: number) => void = () => {};
+  @Param immersiveMaterialEnabled: boolean = false;
+  @Param iconScrollers: Scroller[] = [];
+  @Param searchText: string = '';
+  @Param viewState: IconPickerViewState = new IconPickerViewState();
+  @Event cancel: () => void = () => {};
+  @Event confirm: (new_conf: string) => void = () => {};
+  @Event onPackChange: (index: number) => void = () => {};
 
-  @State selected_icon_path: string = '';
-  @State showCropCover: boolean = false;
-  @State cropModel: CropModel = new CropModel();
-  @State pendingCropUri: string = '';
+  @Local selectedIconPath: string = '';
+  @Local showCropCover: boolean = false;
+  @Local cropModel: CropModel = new CropModel();
+  @Local pendingCropUri: string = '';
+  @Local localSearchText: string = '';
+  @Local activePackIndex: number = 0;
+  @Local defaultIconPaths: string[] = [];
+  @Local userIconPaths: string[] = [];
+  @Local aegisIconPaths: string[][] = [];
 
-  private default_icon_data: MyDataSource = new MyDataSource();
-  private user_icon_data: MyDataSource = new MyDataSource();
-  private aegis_icon_data: MyDataSource[] = [];
-  private filtered_default_icon_data: MyDataSource = new MyDataSource();
-  private filtered_aegis_icon_data: MyDataSource[] = [];
+  private defaultGridData: IconGridDataSource = new IconGridDataSource();
+  private aegisGridData: IconGridDataSource[] = [];
 
   aboutToAppear(): void {
-    this.selected_icon_path = this.currentIconPath;
+    this.selectedIconPath = this.currentIconPath;
+    this.localSearchText = this.searchText;
+    this.activePackIndex = this.currentPackIndex;
+
     const defaultIconPaths: string[] = [];
     TokenIconPacks.default_icon_pack.default_icon_pack_path.forEach((path: string) => {
       defaultIconPaths.push(path);
     });
-    this.default_icon_data.replaceData(defaultIconPaths);
-    this.user_icon_data.replaceData(TokenIconPacks.user_added_icon_packs.icon_path);
-    this.aegis_icon_data = TokenIconPacks.aegis_icon_packs.map((aegis_icon_pack) => {
-      const data_source = new MyDataSource();
-      for (let icon of aegis_icon_pack.icons) {
-        for (let path of icon.icon_pack_path) {
-          data_source.pushData(path);
+    this.defaultIconPaths = uniquePaths(defaultIconPaths);
+    this.userIconPaths = uniquePaths(TokenIconPacks.user_added_icon_packs.icon_path);
+    this.aegisIconPaths = TokenIconPacks.aegis_icon_packs.map((aegisIconPack: AegisIconPack) => {
+      const paths: string[] = [];
+      for (const icon of aegisIconPack.icons) {
+        for (const path of icon.icon_pack_path) {
+          paths.push(path);
         }
       }
-      return data_source;
+      return uniquePaths(paths);
     });
-    this.filtered_aegis_icon_data = this.aegis_icon_data.map(() => new MyDataSource());
-    this.refreshFilteredData();
+    this.aegisGridData = this.aegisIconPaths.map(() => new IconGridDataSource());
+    this.refreshGridData();
+  }
+
+  @Monitor('viewState.searchText')
+  onViewStateSearchChanged(_monitor: IMonitor): void {
+    if (!this.showSearch) {
+      this.refreshGridData();
+    }
+  }
+
+  @Monitor('searchText')
+  onSearchParamChanged(_monitor: IMonitor): void {
+    if (!this.showSearch) {
+      this.refreshGridData();
+    }
   }
 
   private filterPaths(paths: string[], query: string): string[] {
@@ -77,88 +159,99 @@ export struct IconPicker {
       return paths;
     }
     const q = query.toLowerCase();
-    return paths.filter(p => extractIconName(p).includes(q));
+    return paths.filter((path: string) => extractIconName(path).includes(q));
   }
 
-  private onSearchTextChanged(): void {
-    this.refreshFilteredData();
+  private currentSearchText(): string {
+    return this.showSearch ? this.localSearchText : (this.viewState.searchText || this.searchText);
   }
 
-  private refreshFilteredData(): void {
-    this.filtered_default_icon_data.replaceData(
-      this.filterPaths(this.default_icon_data.toArray(), this.searchText)
-    );
-    for (let i = 0; i < this.aegis_icon_data.length; i++) {
-      if (i >= this.filtered_aegis_icon_data.length) {
-        this.filtered_aegis_icon_data.push(new MyDataSource());
+  private currentPack(): number {
+    return this.showPackTabs ? this.activePackIndex : this.viewState.packIndex;
+  }
+
+  private gridItemsFor(paths: string[]): IconGridItem[] {
+    const query = this.currentSearchText();
+    return createGridItems(this.filterPaths(paths, query), this.userIconPaths, query === '');
+  }
+
+  private refreshGridData(): void {
+    this.defaultGridData.replaceData(this.gridItemsFor(this.defaultIconPaths));
+    for (let index = 0; index < this.aegisIconPaths.length; index++) {
+      if (index >= this.aegisGridData.length) {
+        this.aegisGridData.push(new IconGridDataSource());
       }
-      this.filtered_aegis_icon_data[i].replaceData(
-        this.filterPaths(this.aegis_icon_data[i].toArray(), this.searchText)
-      );
+      this.aegisGridData[index].replaceData(this.gridItemsFor(this.aegisIconPaths[index]));
     }
   }
 
-  @Builder
+  private updateSearchText(value: string): void {
+    if (this.localSearchText !== value) {
+      this.localSearchText = value;
+      this.refreshGridData();
+    }
+  }
+
+  @LocalBuilder
   ItemIconOverlay(path: string, removable: boolean) {
-    Stack({ alignContent: Alignment.Bottom }) {
-      Row() {
-        if (removable) {
-          Button({ type: ButtonType.Circle }) {
-            SymbolGlyph($r('sys.symbol.plus'))
-              .fontSize(LengthMetrics.vp(12).value)
-              .fontColor([Color.White])
-              .fontWeight(FontWeight.Medium)
-              .rotate({ angle: 45 })
-          }
-          .backgroundColor(Color.Red)
-          .width(LengthMetrics.vp(18).value)
-          .height(LengthMetrics.vp(18).value)
-          .onClick(() => {
-            this.getUIContext().showAlertDialog({
-              message: $r('app.string.icon_alert_remove_confirm_msg'),
-              autoCancel: true,
-              alignment: DialogAlignment.Center,
-              primaryButton: {
-                defaultFocus: false,
-                value: $r('app.string.dialog_btn_cancel'),
-                action: () => {
-                  return
-                }
-              },
-              secondaryButton: {
-                value: $r('app.string.dialog_btn_confirm'),
-                fontColor: Color.Red,
-                action: () => {
-                  TokenIconPacks.user_added_icon_packs.removeIcon(path);
-                  this.user_icon_data.removeData(path);
-                }
+    Stack() {
+      if (removable) {
+        Button({ type: ButtonType.Circle }) {
+          SymbolGlyph($r('sys.symbol.plus'))
+            .fontSize(LengthMetrics.vp(12).value)
+            .fontColor([Color.White])
+            .fontWeight(FontWeight.Medium)
+            .rotate({ angle: 45 })
+        }
+        .backgroundColor(Color.Red)
+        .width(LengthMetrics.vp(18).value)
+        .height(LengthMetrics.vp(18).value)
+        .align(Alignment.BottomStart)
+        .onClick(() => {
+          this.getUIContext().showAlertDialog({
+            message: $r('app.string.icon_alert_remove_confirm_msg'),
+            autoCancel: true,
+            alignment: DialogAlignment.Center,
+            primaryButton: {
+              defaultFocus: false,
+              value: $r('app.string.dialog_btn_cancel'),
+              action: () => {
+                return
               }
-            })
+            },
+            secondaryButton: {
+              value: $r('app.string.dialog_btn_confirm'),
+              fontColor: Color.Red,
+              action: () => {
+                TokenIconPacks.user_added_icon_packs.removeIcon(path);
+                TokenIconPacks.removePickerPreviewPath(path);
+                this.userIconPaths = this.userIconPaths.filter((iconPath: string) => iconPath !== path);
+                this.refreshGridData();
+              }
+            }
           })
-        }
-
-        Blank()
-
-        if (this.selected_icon_path === path) {
-          Stack() {
-            SymbolGlyph($r('sys.symbol.checkmark'))
-              .fontSize(LengthMetrics.vp(12).value)
-              .fontWeight(FontWeight.Bold)
-              .fontColor([Color.White])
-          }
-          .width(LengthMetrics.vp(18).value)
-          .height(LengthMetrics.vp(18).value)
-          .borderRadius(LengthMetrics.vp(9).value)
-          .backgroundColor($r('app.color.button_blue'))
-        }
+        })
       }
-      .width('100%')
+
+      if (this.selectedIconPath === path) {
+        Stack() {
+          SymbolGlyph($r('sys.symbol.checkmark'))
+            .fontSize(LengthMetrics.vp(12).value)
+            .fontWeight(FontWeight.Bold)
+            .fontColor([Color.White])
+        }
+        .width(LengthMetrics.vp(18).value)
+        .height(LengthMetrics.vp(18).value)
+        .borderRadius(LengthMetrics.vp(9).value)
+        .backgroundColor($r('app.color.button_blue'))
+        .align(Alignment.BottomEnd)
+      }
     }
     .width('100%')
     .height('100%')
   }
 
-  @Builder
+  @LocalBuilder
   ItemIcon(path: string, removable: boolean) {
     Stack() {
       if (path === '') {
@@ -171,16 +264,24 @@ export struct IconPicker {
         .width(LengthMetrics.vp(40).value)
         .borderRadius(LengthMetrics.vp(20).value)
       } else {
-        TokenIcon({ issuer: '', icon_path: path, bypassColorFilter: true, bypassLogoBackground: true })
+        Image(getPickerImageSource(path))
+          .width(LengthMetrics.vp(40).value)
+          .height(LengthMetrics.vp(40).value)
+          .objectFit(ImageFit.Contain)
+          .borderRadius(TokenIconPacks.user_added_icon_packs.raster_icons.has(path) ?
+            LengthMetrics.vp(20).value : 0)
+      }
+
+      if (removable || this.selectedIconPath === path) {
+        this.ItemIconOverlay(path, removable)
       }
     }
     .width(LengthMetrics.vp(40).value)
     .height(LengthMetrics.vp(40).value)
     .alignContent(Alignment.Center)
-    .overlay(this.ItemIconOverlay(path, removable), { align: Alignment.Bottom })
   }
 
-  @Builder
+  @LocalBuilder
   IconChoice(path: string, removable: boolean) {
     Stack() {
       this.ItemIcon(path, removable)
@@ -189,23 +290,27 @@ export struct IconPicker {
     .height(LengthMetrics.vp(56).value)
     .alignContent(Alignment.Center)
     .borderRadius(LengthMetrics.vp(12).value)
-    .backgroundColor(this.selected_icon_path === path ? $r('app.color.item_bg') : Color.Transparent)
+    .backgroundColor(this.selectedIconPath === path ? $r('app.color.item_bg') : Color.Transparent)
     .border({
-      width: this.selected_icon_path === path ? LengthMetrics.vp(2).value : 0,
+      width: this.selectedIconPath === path ? LengthMetrics.vp(2).value : 0,
       color: $r('app.color.button_blue')
     })
     .onClick(() => {
-      this.selected_icon_path = path;
+      this.selectedIconPath = path;
     })
   }
 
   private async addIconToUserPack(uri: string): Promise<void> {
     const destPath = await copyFileToDir(uri, TokenIconPacks.user_added_icon_packs.user_icon_path);
     TokenIconPacks.user_added_icon_packs.addIconByPath(destPath);
-    this.user_icon_data.pushData(destPath);
+    await TokenIconPacks.preparePickerPreviewPaths([destPath]);
+    if (!this.userIconPaths.includes(destPath)) {
+      this.userIconPaths = [...this.userIconPaths, destPath];
+      this.refreshGridData();
+    }
   }
 
-  @Builder
+  @LocalBuilder
   ItemIconAddButton() {
     Button({ type: ButtonType.Normal }) {
       SymbolGlyph($r('sys.symbol.plus'))
@@ -251,7 +356,7 @@ export struct IconPicker {
     })
   }
 
-  @Builder
+  @LocalBuilder
   CropCoverBuilder() {
     Column() {
       CropView({ model: this.cropModel })
@@ -275,7 +380,11 @@ export struct IconPicker {
               const pm: PixelMap = await this.cropModel.crop();
               const destPath = await savePixelMapToFile(pm, TokenIconPacks.user_added_icon_packs.user_icon_path);
               TokenIconPacks.user_added_icon_packs.addIconByPath(destPath);
-              this.user_icon_data.pushData(destPath);
+              await TokenIconPacks.preparePickerPreviewPaths([destPath]);
+              if (!this.userIconPaths.includes(destPath)) {
+                this.userIconPaths = [...this.userIconPaths, destPath];
+                this.refreshGridData();
+              }
               this.showCropCover = false;
             } catch (e) {
               hilog.error(0, 'IconPicker', 'Crop error: ' + JSON.stringify(e));
@@ -290,9 +399,9 @@ export struct IconPicker {
     .backgroundColor(Color.Black)
   }
 
-  @Builder
-  LazyIconGrid(dataSource: MyDataSource, scroller?: Scroller) {
-    if (dataSource.totalCount() === 0 && this.searchText !== '') {
+  @LocalBuilder
+  LazyIconGrid(dataSource: IconGridDataSource, scroller?: Scroller) {
+    if (dataSource.totalCount() === 0 && this.currentSearchText() !== '') {
       Column() {
         Text($r('app.string.dialog_icon_empty'))
           .fontSize(LengthMetrics.vp(14).value)
@@ -304,24 +413,15 @@ export struct IconPicker {
       .alignItems(HorizontalAlign.Center)
     } else {
       Grid(scroller) {
-        if (this.searchText === '') {
+        LazyForEach(dataSource, (item: IconGridItem) => {
           GridItem() {
-            this.IconChoice('', false)
-          }
-          GridItem() {
-            this.ItemIconAddButton()
-          }
-          LazyForEach(this.user_icon_data, (path: string) => {
-            GridItem() {
-              this.IconChoice(path, true)
+            if (item.type === IconGridItemType.ADD) {
+              this.ItemIconAddButton()
+            } else {
+              this.IconChoice(item.path, item.removable)
             }
-          }, (path: string) => path)
-        }
-        LazyForEach(dataSource, (path: string) => {
-          GridItem() {
-            this.IconChoice(path, false)
           }
-        }, (path: string) => path)
+        }, (item: IconGridItem) => item.key)
       }
       .columnsTemplate('repeat(auto-fit, 56vp)')
       .columnsGap(LengthMetrics.vp(12).value)
@@ -341,13 +441,13 @@ export struct IconPicker {
     }
   }
 
-  @Builder
+  @LocalBuilder
   TabBuilder(title: ResourceStr, index: number) {
     Column() {
       Text(title)
         .fontSize(LengthMetrics.vp(14).value)
-        .fontWeight(this.currentPackIndex === index ? FontWeight.Medium : FontWeight.Normal)
-        .fontColor(this.currentPackIndex === index ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
+        .fontWeight(this.activePackIndex === index ? FontWeight.Medium : FontWeight.Normal)
+        .fontColor(this.activePackIndex === index ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .constraintSize({ maxWidth: LengthMetrics.vp(80).value })
@@ -359,39 +459,29 @@ export struct IconPicker {
   build() {
     Column() {
       if (this.showSearch) {
-        Search({ placeholder: $r('app.string.dialog_icon_search_placeholder'), value: this.searchText })
+        Search({ placeholder: $r('app.string.dialog_icon_search_placeholder'), value: this.localSearchText })
           .width('100%')
           .onChange((value: string) => {
-            this.searchText = value;
+            this.updateSearchText(value);
           })
           .onSubmit((value: string) => {
-            this.searchText = value;
+            this.updateSearchText(value);
           })
       }
 
       if (TokenIconPacks.aegis_icon_packs.length === 0) {
-        if (this.searchText === '') {
-          this.LazyIconGrid(this.default_icon_data, this.iconScrollers[0])
-        } else {
-          this.LazyIconGrid(this.filtered_default_icon_data, this.iconScrollers[0])
-        }
+        this.LazyIconGrid(this.defaultGridData, this.iconScrollers[0])
       } else if (this.showPackTabs) {
         Tabs({ barPosition: BarPosition.Start }) {
           TabContent() {
-            if (this.searchText === '') {
-              this.LazyIconGrid(this.default_icon_data, this.iconScrollers[0])
-            } else {
-              this.LazyIconGrid(this.filtered_default_icon_data, this.iconScrollers[0])
-            }
+            this.LazyIconGrid(this.defaultGridData, this.iconScrollers[0])
           }
           .tabBar(this.TabBuilder(TokenIconPacks.default_icon_pack.name, 0))
 
           ForEach(TokenIconPacks.aegis_icon_packs, (aegisIconPack: AegisIconPack, index: number) => {
             TabContent() {
-              if (this.searchText === '' && index < this.aegis_icon_data.length) {
-                this.LazyIconGrid(this.aegis_icon_data[index], this.iconScrollers[index + 1])
-              } else {
-                this.LazyIconGrid(this.filtered_aegis_icon_data[index], this.iconScrollers[index + 1])
+              if (index < this.aegisGridData.length) {
+                this.LazyIconGrid(this.aegisGridData[index], this.iconScrollers[index + 1])
               }
             }
             .tabBar(this.TabBuilder(aegisIconPack.name, index + 1))
@@ -403,23 +493,13 @@ export struct IconPicker {
         .layoutWeight(1)
         .animationDuration(200)
         .onChange((index: number) => {
-          this.currentPackIndex = index;
+          this.activePackIndex = index;
           this.onPackChange(index);
         })
-      } else if (this.currentPackIndex === 0) {
-        if (this.searchText === '') {
-          this.LazyIconGrid(this.default_icon_data, this.iconScrollers[0])
-        } else {
-          this.LazyIconGrid(this.filtered_default_icon_data, this.iconScrollers[0])
-        }
-      } else if (this.currentPackIndex - 1 < this.aegis_icon_data.length) {
-        if (this.searchText === '') {
-          this.LazyIconGrid(this.aegis_icon_data[this.currentPackIndex - 1],
-            this.iconScrollers[this.currentPackIndex])
-        } else {
-          this.LazyIconGrid(this.filtered_aegis_icon_data[this.currentPackIndex - 1],
-            this.iconScrollers[this.currentPackIndex])
-        }
+      } else if (this.currentPack() === 0) {
+        this.LazyIconGrid(this.defaultGridData, this.iconScrollers[0])
+      } else if (this.currentPack() - 1 < this.aegisGridData.length) {
+        this.LazyIconGrid(this.aegisGridData[this.currentPack() - 1], this.iconScrollers[this.currentPack()])
       }
 
       Flex({ justifyContent: FlexAlign.SpaceAround }) {
@@ -444,7 +524,7 @@ export struct IconPicker {
               interactive: true,
               lightEffect: { color: Color.White }
             }))
-            .onClick(() => this.confirm(this.selected_icon_path))
+            .onClick(() => this.confirm(this.selectedIconPath))
             .layoutWeight(1)
         } else {
           Button($r('app.string.dialog_btn_confirm'))
@@ -452,7 +532,7 @@ export struct IconPicker {
             .backgroundColor($r('app.color.button_blue'))
             .height(48)
             .borderRadius(24)
-            .onClick(() => this.confirm(this.selected_icon_path))
+            .onClick(() => this.confirm(this.selectedIconPath))
             .layoutWeight(1)
         }
       }
@@ -471,101 +551,33 @@ export struct IconPicker {
   }
 }
 
-class BasicDataSource implements IDataSource {
+class IconGridDataSource implements IDataSource {
   private listeners: DataChangeListener[] = [];
-  private originDataArray: string[] = [];
+  private items: IconGridItem[] = [];
 
-  public totalCount(): number {
-    return 0;
+  totalCount(): number {
+    return this.items.length;
   }
 
-  public getData(index: number): string {
-    return this.originDataArray[index];
+  getData(index: number): IconGridItem {
+    return this.items[index];
   }
 
   registerDataChangeListener(listener: DataChangeListener): void {
-    if (this.listeners.indexOf(listener) < 0) {
-      hilog.info(0, 'IconPicker', 'add listener');
+    if (!this.listeners.includes(listener)) {
       this.listeners.push(listener);
     }
   }
 
   unregisterDataChangeListener(listener: DataChangeListener): void {
-    const pos = this.listeners.indexOf(listener);
-    if (pos >= 0) {
-      hilog.info(0, 'IconPicker', 'remove listener');
-      this.listeners.splice(pos, 1);
+    const index = this.listeners.indexOf(listener);
+    if (index >= 0) {
+      this.listeners.splice(index, 1);
     }
   }
 
-  notifyDataReload(): void {
-    this.listeners.forEach(listener => {
-      listener.onDataReloaded();
-    })
-  }
-
-  notifyDataAdd(index: number): void {
-    this.listeners.forEach(listener => {
-      listener.onDataAdd(index);
-    })
-  }
-
-  notifyDataChange(index: number): void {
-    this.listeners.forEach(listener => {
-      listener.onDataChange(index);
-    })
-  }
-
-  notifyDataDelete(index: number): void {
-    this.listeners.forEach(listener => {
-      listener.onDataDelete(index);
-    })
-  }
-
-  notifyDataMove(from: number, to: number): void {
-    this.listeners.forEach(listener => {
-      listener.onDataMove(from, to);
-    })
-  }
-
-  notifyDatasetChange(operations: DataOperation[]): void {
-    this.listeners.forEach(listener => {
-      listener.onDatasetChange(operations);
-    })
-  }
-}
-
-class MyDataSource extends BasicDataSource {
-  private dataArray: string[] = [];
-
-  public totalCount(): number {
-    return this.dataArray.length;
-  }
-
-  public getData(index: number): string {
-    return this.dataArray[index];
-  }
-
-  public toArray(): string[] {
-    return this.dataArray.slice();
-  }
-
-  public replaceData(data: string[]): void {
-    this.dataArray = data.filter((path: string, index: number, paths: string[]) =>
-      path !== undefined && paths.indexOf(path) === index);
-    this.notifyDataReload();
-  }
-
-  public pushData(data: string): void {
-    if (this.dataArray.findIndex(_ => _ === data) < 0) {
-      this.dataArray.push(data);
-      this.notifyDataAdd(this.dataArray.length - 1);
-    }
-  }
-
-  public removeData(data: string): void {
-    const index = this.dataArray.findIndex(_ => _ === data);
-    this.dataArray = this.dataArray.filter(_ => _ !== data);
-    this.notifyDataDelete(index);
+  replaceData(items: IconGridItem[]): void {
+    this.items = items;
+    this.listeners.forEach((listener: DataChangeListener) => listener.onDataReloaded());
   }
 }

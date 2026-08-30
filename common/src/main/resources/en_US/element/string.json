@@ -45,6 +45,14 @@
       "value": "Me"
     },
     {
+      "name": "responsive_token_placeholder_title",
+      "value": "Select a token"
+    },
+    {
+      "name": "responsive_token_placeholder_description",
+      "value": "Select an editable token from the list to edit it here."
+    },
+    {
       "name": "button_settings",
       "value": "Settings"
     },

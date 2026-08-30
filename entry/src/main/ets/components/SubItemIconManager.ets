@@ -252,7 +252,7 @@ export struct SubItemIconManager {
             }
             .margin({ bottom: 5 })
             .padding(10)
-            .borderRadius(10)
+            .borderRadius($r('sys.float.corner_radius_level5'))
             .backgroundColor($r('app.color.icon_pack_bg'))
             .width('100%')
             .justifyContent(FlexAlign.SpaceBetween)
@@ -341,7 +341,7 @@ export struct SubItemIconManager {
                   }
                 }
                 .padding(10)
-                .borderRadius(10)
+                .borderRadius($r('sys.float.corner_radius_level5'))
                 .backgroundColor($r('app.color.icon_pack_bg'))
                 .width('100%')
               }
@@ -388,7 +388,7 @@ export struct SubItemIconManager {
                 .margin({ top: 4 })
             }
             .padding(10)
-            .borderRadius(10)
+            .borderRadius($r('sys.float.corner_radius_level5'))
             .backgroundColor($r('app.color.icon_pack_bg'))
             .width('100%')
           }

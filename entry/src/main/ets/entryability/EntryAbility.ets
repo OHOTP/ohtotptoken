@@ -8,7 +8,8 @@ import {
 import { hilog, hiTraceMeter } from '@kit.PerformanceAnalysisKit';
 import { AppStorageV2, window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
-import { AppPreference, SettingColorMode, PREF_KEYS, EVENT_NAMES, AppWindowInfo, setDialogSystemMaterialProvider } from 'common';
+import { AppPreference, SettingColorMode, PREF_KEYS, EVENT_NAMES, AppWindowInfo, ResponsiveLayoutPolicy,
+  setDialogSystemMaterialProvider } from 'common';
 import { relationalStore  } from '@kit.ArkData';
 import { DeviceInfoHelper } from 'common';
 import { MaterialPolicy } from '../utils/MaterialPolicy';
@@ -28,8 +29,21 @@ export default class EntryAbility extends UIAbility {
     let heightBp: HeightBreakpoint = this.uiContext!.getWindowHeightBreakpoint();
     win.WidthBreakpoint = widthBp;
     win.HeightBreakpoint = heightBp;
-    win.Size = windowSize;
+    this.updateResponsiveWindowInfo(win, windowSize);
   };
+
+  private updateResponsiveWindowInfo(win: AppWindowInfo, size: window.Size): void {
+    if (!this.uiContext) {
+      return;
+    }
+    const layout = ResponsiveLayoutPolicy.resolve(this.uiContext, size);
+    win.Size = size;
+    win.WidthVp = layout.widthVp;
+    win.HeightVp = layout.heightVp;
+    win.HeightToWidthRatio = layout.heightToWidthRatio;
+    win.UseSideNavigation = layout.useSideNavigation;
+    win.AllowSplit = layout.allowSplit;
+  }
 
   private selectPage: string = '';
 
@@ -155,6 +169,8 @@ export default class EntryAbility extends UIAbility {
 
       win.ColorMode = this.context.config.colorMode ?? -1;
       win.Context = this.context;
+      win.IsPc = DeviceInfoHelper.getInstance().isPc();
+      win.IsPcOrTablet = DeviceInfoHelper.getInstance().isPcOrTablet();
 
       hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
 
@@ -183,7 +199,8 @@ export default class EntryAbility extends UIAbility {
         win.WindowClass = windowClass;
         this.applyWindowColors(windowClass);
 
-        windowClass.setWindowLayoutFullScreen(true)
+        windowClass.setWindowLayoutFullScreen(true);
+        windowClass.setWindowDecorVisible(false);
 
         const avoidAreaTop = windowClass.getWindowAvoidArea(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR);
         const avoidAreaBottom = windowClass.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
@@ -200,7 +217,7 @@ export default class EntryAbility extends UIAbility {
 
         const widthBp: WidthBreakpoint = this.uiContext.getWindowWidthBreakpoint();
         const heightBp: HeightBreakpoint = this.uiContext.getWindowHeightBreakpoint();
-        win.Size = windowClass.getWindowProperties().windowRect;
+        this.updateResponsiveWindowInfo(win, windowClass.getWindowProperties().windowRect);
         win.WidthBreakpoint = widthBp;
         win.HeightBreakpoint = heightBp;
         windowClass.on('windowSizeChange', this.onWindowSizeChange);

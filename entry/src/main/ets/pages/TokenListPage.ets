@@ -2,11 +2,11 @@ import { TokenItem } from "../components/TokenItem";
 import { MaterialSurface } from "../components/MaterialSurface";
 import { MaterialTheme, MaterialThickness } from "../components/MaterialTheme";
 import { QRCodeDialog } from 'uikit';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES, dialogSystemMaterial } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, dialogSystemMaterial } from 'common';
 import { otpType, TokenConfig, TokenConfigVM } from 'common';
 import { TokenStore } from 'common';
 import { convertToken2URI } from 'common';
-import { AppStorageV2, window } from "@kit.ArkUI";
+import { AppStorageV2, ListItemModifier, window } from "@kit.ArkUI";
 import { AppWindowInfo } from 'common';
 import { GenericDataSource } from 'common';
 import { showSnackBar, SnackBarNotifyType } from 'common';
@@ -14,13 +14,25 @@ import { common } from "@kit.AbilityKit";
 import { NfcSessionTokens } from "../oath/NfcSessionTokens";
 import { hilog } from "@kit.PerformanceAnalysisKit";
 import { HdsListItem } from '@kit.UIDesignKit';
-import { AddTokenPageParams } from '../components/AddTokenForm';
 
 let tkStore = TokenStore.getInstance();
+
+/** PC 主令牌列表最多容纳 3 个 400vp 的 lane。 */
+const PC_TOKEN_LIST_MAX_WIDTH: number = 1200;
 
 /** 将纯数据 TokenConfig[] 转为带刷新标识的 ViewModel 数组，供 LazyForEach 消费 */
 function toVMs(tokens: TokenConfig[]): TokenConfigVM[] {
   return tokens.map(t => new TokenConfigVM(t));
+}
+
+/** 让 HdsListItem 的系统选中背板与令牌卡片使用同一边距、圆角和裁剪区域。 */
+class TokenListItemModifier extends ListItemModifier {
+  constructor(left: number, right: number, radius: number) {
+    super();
+    this.margin({ left: left, right: right });
+    this.borderRadius(radius);
+    this.clip(true);
+  }
 }
 
 @Preview
@@ -33,6 +45,9 @@ export struct TokenListPage {
   @Require @Param pageInfos: NavPathStack = new NavPathStack();
   @Require @Param TabBarVisible: boolean = true;
   @Param listScroller: Scroller = new Scroller();
+  @Param splitSelectionMode: boolean = false;
+  @Param selectedTokenUUID: string = '';
+  @Event onSelectToken: (conf: TokenConfig) => void = () => {};
   @Event updateTokenConfig: (conf: TokenConfig, toast: boolean) => Promise<boolean> = async () => false;
   @Event updateTokenConfigs: (tokens: Array<TokenConfig>) => void = () => {};
 
@@ -120,6 +135,11 @@ export struct TokenListPage {
           LazyForEach(this.dataSource, (vm: TokenConfigVM) => {
             HdsListItem({
               customItemBuilder: (): void => { this.TokenItemContentBuilder(vm) },
+              listItemModifier: new TokenListItemModifier(
+                this.token_preference.app_appearance_token_list_item_prefix_padding,
+                this.token_preference.app_appearance_token_list_item_suffix_padding,
+                this.token_preference.app_appearance_item_radius),
+              isSelected: this.splitSelectionMode && vm.config.TokenUUID === this.selectedTokenUUID,
               swipeActionOptions: {
                 end: {
                   builder: (): void => {
@@ -132,11 +152,19 @@ export struct TokenListPage {
         }
         .contentEndOffset(this.TabBarVisible ? (80 + this.appBottomAvoidHeight) : (20 + this.appBottomAvoidHeight))
         .alignListItem(ListItemAlign.Center)
-        .lanes({ minLength: 400, maxLength: this.token_preference.app_appearance_item_max_width })
+        // ArkUI 链式动效要求显式单列且不能使用自动 lanes；仅 PC 保持自适应多列。
+        .lanes(this.window.IsPc ?
+          { minLength: 400, maxLength: this.token_preference.app_appearance_item_max_width } : 1)
         .layoutWeight(1)
         .width('100%')
+        .constraintSize({
+          // 平板恢复使用原令牌项最大宽度；PC 保持最多 3 列，手机占满可用宽度。
+          maxWidth: this.window.IsPc ? PC_TOKEN_LIST_MAX_WIDTH :
+            (this.window.IsPcOrTablet ? this.token_preference.app_appearance_item_max_width : '100%')
+        })
         .height('100%')
-        .chainAnimation(this.token_preference.app_appearance_chain_animation_enable)
+        .chainAnimation(!this.window.IsPc &&
+          this.token_preference.app_appearance_chain_animation_enable)
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
         .clip(false)
@@ -161,13 +189,7 @@ export struct TokenListPage {
   }
 
   private openEditPage(conf: TokenConfig): void {
-    if (conf.TokenType === otpType.TOTP || conf.TokenType === otpType.HOTP || conf.TokenType === undefined) {
-      this.pageInfos.pushPathByName(ROUTE_NAMES.AddTotpTokenPage, new AddTokenPageParams('', conf));
-    } else if (conf.TokenType === otpType.Forti) {
-      this.pageInfos.pushPathByName(ROUTE_NAMES.AddFortiTokenPage, new AddTokenPageParams('', conf));
-    } else if (conf.TokenType === otpType.Steam) {
-      this.pageInfos.pushPathByName(ROUTE_NAMES.AddSteamTokenPage, new AddTokenPageParams('', conf));
-    }
+    this.onSelectToken(conf);
   }
 
   /**
@@ -180,6 +202,10 @@ export struct TokenListPage {
   TokenItemContentBuilder(vm: TokenConfigVM) {
     TokenItem({
       Config: vm.config,
+      selectionMode: this.splitSelectionMode,
+      selected: vm.config.TokenUUID === this.selectedTokenUUID,
+      hdsCardMode: true,
+      Select: (conf: TokenConfig) => this.onSelectToken(conf),
       Edit: (conf: TokenConfig) => this.openEditPage(conf),
       Update: async (conf_new): Promise<boolean> => {
         return await this.updateSingleToken(conf_new, false);

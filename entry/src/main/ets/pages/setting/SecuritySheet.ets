@@ -20,6 +20,7 @@ import { MaterialTheme } from '../../components/MaterialTheme';
 @ComponentV2
 export struct SecuritySheet {
   @Require @Param scrollEffectStyle: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
+  @Param embedded: boolean = false;
   @Local token_preference: TokenPreference = AppStorageV2.connect(TokenPreference) as TokenPreference;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   @Local isDlpAntiPeepSupported: boolean = true;
@@ -161,10 +162,15 @@ export struct SecuritySheet {
         // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
         .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
       }
+      .clip(false)
+      .backgroundColor(this.embedded ? $r('app.color.window_background') :
+        MaterialTheme.surfaceBackground($r('app.color.window_background')))
       .mode(NavigationMode.Stack)
       .bindToScrollable([this.sheetScroller])
-      .titleMode(HdsNavigationTitleMode.MODAL)
+      .hideBackButton(this.embedded)
+      .titleMode(this.embedded ? HdsNavigationTitleMode.MINI : HdsNavigationTitleMode.MODAL)
       .titleBar({
+        avoidLayoutSafeArea: this.embedded,
         enableComponentSafeArea: true,
         style: {
           originalStyle: {

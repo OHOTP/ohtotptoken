@@ -1,5 +1,5 @@
-import { AppWindowInfo, base32Decode, base32Encode, otpType, ROUTE_NAMES, ScanBarCode, showSnackBar, SnackBarNotifyType,
-  stringToIntArray, TokenConfig } from 'common';
+import { AppWindowInfo, base32Decode, base32Encode, EVENT_NAMES, otpType, ROUTE_NAMES, ScanBarCode, showSnackBar,
+  SnackBarNotifyType, stringToIntArray, TokenConfig } from 'common';
 import { common } from '@kit.AbilityKit';
 import { AppStorageV2 } from '@kit.ArkUI';
 import { buffer, util } from '@kit.ArkTS';
@@ -7,7 +7,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { cryptoFramework } from '@kit.CryptoArchitectureKit';
 import { http } from '@kit.NetworkKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { hdsMaterial, HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
+import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, HdsNavDestination, ScrollEffectType } from '@kit.UIDesignKit';
 
 import { AddTokenActionButton, AddTokenHeader, AddTokenPageParams, ADD_TOKEN_BOTTOM_ACTION_INSET, ADD_TOKEN_PAGE_INSET,
   ADD_TOKEN_SECTION_PADDING, ADD_TOKEN_SECTION_RADIUS,
@@ -16,6 +16,7 @@ import { MaterialSurface } from '../components/MaterialSurface';
 import { PageScaffold } from '../components/PageScaffold';
 import { MaterialPolicy } from '../utils/MaterialPolicy';
 import { IconPickerPageParams } from './IconPickerPage';
+import { ResponsiveTokenEditStore, TokenSwitchPerf, TokenSwitchTrace } from '../utils/TokenSwitchPerf';
 
 class FortiServerError {
   error_code?: string;
@@ -37,6 +38,8 @@ export struct AddFortiTokenPage {
   @Require @Param saveToken: (conf: TokenConfig) => Promise<boolean> = async () => false;
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Param pageParams: AddTokenPageParams = new AddTokenPageParams();
+  @Event onExitFullScreen: () => void = () => {};
+  @Event onBackToPlaceholder: () => void = () => {};
 
   @Local activationCode: string = '';
   @Local deviceId: string = '';
@@ -49,19 +52,46 @@ export struct AddFortiTokenPage {
 
   private pageInfos: NavPathStack | null = null;
   private scroller: Scroller = new Scroller();
+  private activeEditConfig?: TokenConfig = undefined;
+  private appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
+  private onResponsiveTokenSelectedHandler: (config: TokenConfig, trace: TokenSwitchTrace) => void = () => {};
 
-  private filesDir: string = (AppStorage.get('appContext') as common.UIAbilityContext).filesDir;
+  private filesDir: string = this.appCtx.filesDir;
+
+  private applyEditConfig(editConfig: TokenConfig): void {
+    this.activeEditConfig = editConfig;
+    this.activationCode = editConfig.FortiToken;
+    this.deviceId = editConfig.FortiDevID;
+    this.secret = editConfig.TokenSecret;
+    this.accountName = editConfig.TokenName;
+    this.iconPath = editConfig.TokenIconPath ?? '';
+  }
 
   aboutToAppear(): void {
-    const editConfig = this.pageParams.editConfig;
+    const responsiveStore = ResponsiveTokenEditStore.getInstance();
+    const switchTrace = this.pageParams.responsiveEdit ? responsiveStore.currentTrace() : this.pageParams.switchTrace;
+    TokenSwitchPerf.mark(switchTrace, 'aboutToAppear');
+    this.onResponsiveTokenSelectedHandler = (config: TokenConfig, trace: TokenSwitchTrace): void => {
+      this.applyEditConfig(config);
+      TokenSwitchPerf.reusedReady(trace, this.getUIContext());
+    };
+    if (this.pageParams.responsiveEdit) {
+      this.appCtx.eventHub?.on(EVENT_NAMES.RESPONSIVE_TOKEN_SELECTION_CHANGED,
+        this.onResponsiveTokenSelectedHandler);
+    }
+    const editConfig = this.pageParams.responsiveEdit ?
+      (responsiveStore.currentConfig() ?? this.pageParams.editConfig) : this.pageParams.editConfig;
     if (editConfig !== undefined) {
-      this.activationCode = editConfig.FortiToken;
-      this.deviceId = editConfig.FortiDevID;
-      this.secret = editConfig.TokenSecret;
-      this.accountName = editConfig.TokenName;
-      this.iconPath = editConfig.TokenIconPath ?? '';
+      this.applyEditConfig(editConfig);
     } else if (this.deviceId === '') {
       this.generateDeviceId();
+    }
+  }
+
+  aboutToDisappear(): void {
+    if (this.pageParams.responsiveEdit) {
+      this.appCtx.eventHub?.off(EVENT_NAMES.RESPONSIVE_TOKEN_SELECTION_CHANGED,
+        this.onResponsiveTokenSelectedHandler);
     }
   }
 
@@ -183,21 +213,32 @@ export struct AddFortiTokenPage {
     if (!this.canSave()) return;
     this.isSaving = true;
     const conf = new TokenConfig(this.secret.trim(), otpType.Forti, 'Forti', this.accountName.trim(), 'SHA1', 60, 6,
-      0, this.pageParams.editConfig?.RankScore ?? 0);
-    if (this.pageParams.editConfig !== undefined) {
-      conf.TokenUUID = this.pageParams.editConfig.TokenUUID;
+      0, this.activeEditConfig?.RankScore ?? 0);
+    if (this.activeEditConfig !== undefined) {
+      conf.TokenUUID = this.activeEditConfig.TokenUUID;
     }
     conf.FortiToken = this.activationCode.trim();
     conf.FortiDevID = this.deviceId.trim();
     conf.TokenIconPath = this.iconPath;
     const ok = await this.saveToken(conf);
     this.isSaving = false;
-    if (ok) this.pageInfos?.pop();
+    if (ok && !(this.window.AllowSplit && this.pageParams.editConfig !== undefined)) {
+      this.pageInfos?.pop();
+    }
+  }
+
+  private navigateBack(): void {
+    if (this.window.AllowSplit && this.pageParams.editConfig !== undefined) {
+      this.onBackToPlaceholder();
+      return;
+    }
+    this.pageInfos?.pop();
   }
 
   build() {
     HdsNavDestination() {
-      PageScaffold() {
+      HdsNavigation() {
+        PageScaffold() {
         Column() {
           List({ space: 12, scroller: this.scroller }) {
             ListItem() {
@@ -296,7 +337,9 @@ export struct AddFortiTokenPage {
       }
     }
     .backgroundColor($r('app.color.window_background'))
-    .titleMode(HdsNavDestinationTitleMode.MODAL)
+    .mode(NavigationMode.Stack)
+    .hideBackButton(false)
+    .titleMode(HdsNavigationTitleMode.MINI)
     .titleBar({
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: true,
@@ -315,10 +358,15 @@ export struct AddFortiTokenPage {
         }
       },
       content: {
+        backIcon: {
+          label: $r('app.string.dialog_btn_cancel'),
+          icon: $r('sys.symbol.chevron_left'),
+          action: () => this.navigateBack()
+        },
         title: { mainTitle: this.pageParams.editConfig === undefined ?
           $r('app.string.tab_token_add_forti_key') : $r('app.string.edit_token_title') },
         menu: {
-          value: [{
+          value: this.window.IsPc ? [] : [{
             content: {
               label: $r('app.string.add_token_scan'),
               icon: $r('sys.symbol.qrcode'),
@@ -330,6 +378,28 @@ export struct AddFortiTokenPage {
       }
     })
     .bindToScrollable([this.scroller])
-    .onReady((context: NavDestinationContext) => this.pageInfos = context.pathStack)
+    }
+    .clip(false)
+    .hideTitleBar(true)
+    .backgroundColor($r('app.color.window_background'))
+    .onReady((context: NavDestinationContext) => {
+      this.pageInfos = context.pathStack;
+      const switchTrace = this.pageParams.responsiveEdit ?
+        ResponsiveTokenEditStore.getInstance().currentTrace() : this.pageParams.switchTrace;
+      TokenSwitchPerf.routeReady(switchTrace, this.getUIContext());
+    })
+    .onShown(() => TokenSwitchPerf.mark(this.pageParams.responsiveEdit ?
+      ResponsiveTokenEditStore.getInstance().currentTrace() : this.pageParams.switchTrace, 'shown'))
+    .onWillDisappear(() => {
+      TokenSwitchPerf.mark(this.pageParams.switchTrace, 'willDisappear');
+      this.onExitFullScreen();
+    })
+    .onBackPressed(() => {
+      if (this.window.AllowSplit && this.pageParams.editConfig !== undefined) {
+        this.onBackToPlaceholder();
+        return true;
+      }
+      return false;
+    })
   }
 }

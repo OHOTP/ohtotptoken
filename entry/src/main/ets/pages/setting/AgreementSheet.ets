@@ -17,6 +17,7 @@ import { AppStorageV2 } from '@kit.ArkUI';
 export struct AgreementSheet {
   pageInfos: NavPathStack = new NavPathStack();
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
+  @Param embedded: boolean = false;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
   private sheetScroller: Scroller = new Scroller();
 
@@ -76,13 +77,17 @@ export struct AgreementSheet {
       }
       .width('100%')
       .height('100%')
-      // 沉浸档透明透出 Sheet 材质(Phase 5.4)，其余档位保持 window_background
-      .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.window_background')))
+      // 嵌入分栏时与左侧设置列表同底色；半模态场景继续按材质策略透出背板。
+      .clip(false)
+      .backgroundColor(this.embedded ? $r('app.color.window_background') :
+        MaterialTheme.surfaceBackground($r('app.color.window_background')))
       .mode(NavigationMode.Stack)
       .navDestination(this.navDestinationBuilder)
       .bindToScrollable([this.sheetScroller])
-      .titleMode(HdsNavigationTitleMode.MODAL)
+      .hideBackButton(this.embedded)
+      .titleMode(this.embedded ? HdsNavigationTitleMode.MINI : HdsNavigationTitleMode.MODAL)
       .titleBar({
+        avoidLayoutSafeArea: this.embedded,
         enableComponentSafeArea: true,
         style: {
           originalStyle: {
