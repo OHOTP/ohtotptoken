@@ -2,7 +2,7 @@ import { systemDateTime } from '@kit.BasicServicesKit';
 import { otpType, TokenConfig, dialogSystemMaterial } from 'common';
 import { convertToken2URI, copyText, generateOTP } from 'common';
 import { SteamUtils } from 'common';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, SettingHiddenTokenType } from 'common';
 import { AppStorageV2, SymbolGlyphModifier } from '@kit.ArkUI';
 import { TOTPConfigDialog } from 'uikit';
 import { FortiConfigDialog } from 'uikit';
@@ -166,6 +166,37 @@ export struct ArcTokenItem {
     }
   }
 
+  @Builder
+  HiddenTokenDot(size: number) {
+    Circle({ width: size, height: size })
+      .fill(Color.Gray)
+  }
+
+  @Builder
+  HiddenTokenDots() {
+    if (this.token_preference.app_appearance_hidden_token_type === SettingHiddenTokenType.COMPACT) {
+      Row({ space: 6 }) {
+        this.HiddenTokenDot(8)
+        this.HiddenTokenDot(8)
+        this.HiddenTokenDot(8)
+        this.HiddenTokenDot(8)
+      }
+    } else {
+      Row({ space: 10 }) {
+        Row({ space: 4 }) {
+          this.HiddenTokenDot(6)
+          this.HiddenTokenDot(6)
+          this.HiddenTokenDot(6)
+        }
+        Row({ space: 4 }) {
+          this.HiddenTokenDot(6)
+          this.HiddenTokenDot(6)
+          this.HiddenTokenDot(6)
+        }
+      }
+    }
+  }
+
   build() {
     Row({ space: 10 }) {
       ArcTokenIcon({ issuer: this.Config.TokenIssuer })
@@ -198,12 +229,14 @@ export struct ArcTokenItem {
 
       if (this.TokenHide && this.token_preference.app_safety_hide_token_enable) {
         Stack() {
-          Text() {
-            Span("●●●●")
-          }
-          .fontColor(Color.Gray)
-          .fontSize(this.token_preference.app_appearance_token_font_size)
+          this.HiddenTokenDots()
         }
+        .responseRegion({
+          x: 0,
+          y: this.token_preference.app_appearance_hidden_token_type === SettingHiddenTokenType.COMPACT ? -20 : -21,
+          width: '100%',
+          height: 48
+        })
         .onClick(() => {
           this.TokenHide = !this.TokenHide;
           current_token_hide_map[this.Config.TokenUUID] = false;

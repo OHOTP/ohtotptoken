@@ -817,6 +817,22 @@
       "value": "布局"
     },
     {
+      "name": "hidden_token_type",
+      "value": "隐藏令牌类型"
+    },
+    {
+      "name": "hidden_token_type_desc",
+      "value": "选择紧凑的4点或标准的6点隐藏令牌样式。"
+    },
+    {
+      "name": "hidden_token_type_compact",
+      "value": "紧凑"
+    },
+    {
+      "name": "hidden_token_type_standard",
+      "value": "标准"
+    },
+    {
       "name": "custom_color",
       "value": "颜色"
     },

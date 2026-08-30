@@ -6,12 +6,14 @@ import { SubItemDivider } from '../components/SubItemDivider';
 import { SubItemToggle } from '../components/SubItemToggle';
 import { TokenItem } from '../components/TokenItem';
 import { PageScaffold } from '../components/PageScaffold';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, SettingHiddenTokenType,
+  AVAILABLE_HIDDEN_TOKEN_TYPES } from 'common';
 import { otpType, TokenConfig } from 'common';
 import { systemDateTime } from '@kit.BasicServicesKit';
 import { SubItemColor } from '../components/SubItemColor';
 import { SubItemSlider } from '../components/SubItemSlider';
 import { SubItemButton } from '../components/SubItemButton';
+import { SubItemEnumSelect } from '../components/SubItemEnumSelect';
 import { AppWindowInfo } from 'common';
 import { common } from '@kit.AbilityKit';
 import { hdsMaterial, HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
@@ -183,6 +185,20 @@ export struct AppearancePage {
 
             ListItem() {
               SettingItem({ title: $r('app.string.custom_layout') }) {
+                SubItemEnumSelect({
+                  icon: $r('sys.symbol.circle_lefthalf_inset_filled'),
+                  title: $r('app.string.hidden_token_type'),
+                  options: AVAILABLE_HIDDEN_TOKEN_TYPES,
+                  selected: this.token_preference.app_appearance_hidden_token_type ?? SettingHiddenTokenType.STANDARD,
+                  description: $r('app.string.hidden_token_type_desc'),
+                  onChange: (value: number) => {
+                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_HIDDEN_TOKEN_TYPE, value);
+                    this.token_preference.app_appearance_hidden_token_type = value;
+                  }
+                })
+
+                SubItemDivider()
+
                 SubItemSlider({
                   icon: $r('sys.symbol.slider_horizontal_2'),
                   title: $r('app.string.token_item_slider'),

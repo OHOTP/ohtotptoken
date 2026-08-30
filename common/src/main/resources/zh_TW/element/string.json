@@ -817,6 +817,22 @@
       "value": "佈局"
     },
     {
+      "name": "hidden_token_type",
+      "value": "隱藏權杖類型"
+    },
+    {
+      "name": "hidden_token_type_desc",
+      "value": "選擇緊湊的4點或標準的6點隱藏權杖樣式。"
+    },
+    {
+      "name": "hidden_token_type_compact",
+      "value": "緊湊"
+    },
+    {
+      "name": "hidden_token_type_standard",
+      "value": "標準"
+    },
+    {
       "name": "custom_color",
       "value": "顏色"
     },

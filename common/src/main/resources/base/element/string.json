@@ -809,6 +809,22 @@
       "value": "Layout"
     },
     {
+      "name": "hidden_token_type",
+      "value": "Hidden Token Style"
+    },
+    {
+      "name": "hidden_token_type_desc",
+      "value": "Choose a compact 4-dot or standard 6-dot hidden token indicator."
+    },
+    {
+      "name": "hidden_token_type_compact",
+      "value": "Compact"
+    },
+    {
+      "name": "hidden_token_type_standard",
+      "value": "Standard"
+    },
+    {
       "name": "custom_color",
       "value": "Color"
     },

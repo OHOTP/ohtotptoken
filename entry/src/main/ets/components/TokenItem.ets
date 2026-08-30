@@ -4,7 +4,7 @@ import { otpType, TokenConfig, dialogSystemMaterial } from 'common';
 import { convertToken2URI, copyText, generateOTP } from 'common';
 import { TokenIcon } from 'uikit';
 import { SteamUtils } from 'common';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, SettingHiddenTokenType } from 'common';
 import { AppStorageV2, curves, SymbolGlyphModifier } from '@kit.ArkUI';
 import { QRCodeDialog } from 'uikit';
 import { AppWindowInfo } from 'common';
@@ -347,14 +347,41 @@ export struct TokenItem {
   }
 
   @Builder
+  HiddenTokenDot(size: number) {
+    Circle({ width: size, height: size })
+      .fill(Color.Gray)
+  }
+
+  @Builder
+  HiddenTokenDots() {
+    if (this.token_preference.app_appearance_hidden_token_type === SettingHiddenTokenType.COMPACT) {
+      Row({ space: 6 }) {
+        this.HiddenTokenDot(8)
+        this.HiddenTokenDot(8)
+        this.HiddenTokenDot(8)
+        this.HiddenTokenDot(8)
+      }
+    } else {
+      Row({ space: 10 }) {
+        Row({ space: 4 }) {
+          this.HiddenTokenDot(6)
+          this.HiddenTokenDot(6)
+          this.HiddenTokenDot(6)
+        }
+        Row({ space: 4 }) {
+          this.HiddenTokenDot(6)
+          this.HiddenTokenDot(6)
+          this.HiddenTokenDot(6)
+        }
+      }
+    }
+  }
+
+  @Builder
   TokenCodeBuilder() {
     Column() {
       if (this.TokenHide && this.token_preference.app_safety_hide_token_enable) {
-        Text() {
-          Span("●●●●")
-        }
-        .fontColor(Color.Gray)
-        .fontSize(this.token_preference.app_appearance_token_font_size)
+        this.HiddenTokenDots()
       } else {
         Row({ space: 4 }) {
           Column() {
@@ -427,6 +454,13 @@ export struct TokenItem {
     }
     .alignItems(HorizontalAlign.End)
     .padding({ left: $r('sys.float.ohos_id_text_overlay_menu_button_padding_left'), right: $r('sys.float.ohos_id_text_overlay_menu_button_padding_right') })
+    .responseRegion({
+      x: 0,
+      y: this.TokenHide && this.token_preference.app_safety_hide_token_enable ?
+        (this.token_preference.app_appearance_hidden_token_type === SettingHiddenTokenType.COMPACT ? -20 : -21) : -4,
+      width: '100%',
+      height: 48
+    })
     .onClick(() => {
       if (this.token_preference.app_safety_hide_token_enable) {
         this.TokenHide = !this.TokenHide;
