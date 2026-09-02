@@ -4,7 +4,7 @@ import { ConfigurationConstant, common } from '@kit.AbilityKit';
 import { PageScaffold } from '../components/PageScaffold';
 import { SettingItem } from '../components/SettingItem';
 import { SubItemDivider } from '../components/SubItemDivider';
-import { TokenStore, TokenConfig, WearEngineClient } from 'common';
+import { TokenStore, TokenConfig, WearEngineClient, BluetoothPermissionResult } from 'common';
 import { TokenIcon } from 'uikit';
 import { showSnackBar, SnackBarNotifyType } from 'common';
 import { AppWindowInfo, CommonConstants } from 'common';
@@ -54,7 +54,26 @@ export struct WatchSyncPage {
     }).catch((err: Error) => {
       hilog.error(DOMAIN, TAG, `load tokens failed: ${err.message}`);
     });
-    this.refreshDevices();
+  }
+
+  /**
+   * 页面可见时申请 ACCESS_BLUETOOTH 权限, 授权回调中再查询设备列表(挂载在 HdsNavDestination 的 onShown 事件).
+   * 本页经 Navigation 路由加载, 生命周期为 NavDestination 组件事件, @Entry 的 onPageShow 不会触发.
+   * 约束: 权限弹窗必须在页面 UI 就绪后展示, aboutToAppear 中调用会因 Content 未加载完成而静默失败.
+   */
+  private requestPermissionAndRefreshDevices(): void {
+    WearEngineClient.getInstance().requestBluetoothPermission().then((result: BluetoothPermissionResult) => {
+      if (result === BluetoothPermissionResult.GRANTED) {
+        this.refreshDevices();
+      } else if (result === BluetoothPermissionResult.RESTRICTED) {
+        // 权限受限: 典型原因是系统蓝牙开关未开启, 引导开蓝牙而非进设置页
+        hilog.warn(DOMAIN, TAG, 'ACCESS_BLUETOOTH restricted, guide user to enable bluetooth');
+        showSnackBar($r('app.string.watch_sync_bluetooth_restricted'), SnackBarNotifyType.WARNING);
+      } else {
+        hilog.warn(DOMAIN, TAG, 'ACCESS_BLUETOOTH not granted, skip device query');
+        showSnackBar($r('app.string.watch_sync_bluetooth_permission_denied'), SnackBarNotifyType.WARNING);
+      }
+    });
   }
 
   aboutToDisappear(): void {
@@ -63,10 +82,7 @@ export struct WatchSyncPage {
   /** 刷新已连接设备列表 */
   private async refreshDevices(): Promise<void> {
     this.refreshingDevices = true;
-    // 先请求用户授权(受限权限验证; P2P 本身无需, 但为授权链路铺路)
-    WearEngineClient.getInstance().ensureAuthorized().then((authorized: boolean) => {
-      hilog.info(DOMAIN, TAG, `ensureAuthorized: ${authorized}`);
-    });
+    // P2P 设备查询无需 Wear Engine 用户授权(USER_STATUS 需 AGC 审批, 未审批时调用报 401), 直接查询
     try {
       this.devices = await WearEngineClient.getInstance().getConnectedDevices();
       hilog.info(DOMAIN, TAG, `connected devices: ${this.devices.length}`);
@@ -413,6 +429,9 @@ export struct WatchSyncPage {
     })
     .onReady((context: NavDestinationContext) => {
       this.pageInfos = context.pathStack;
+    })
+    .onShown(() => {
+      this.requestPermissionAndRefreshDevices();
     })
   }
 }

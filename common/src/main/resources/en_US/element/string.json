@@ -1125,6 +1125,14 @@
       "value": "Settings synced"
     },
     {
+      "name": "watch_sync_bluetooth_permission_denied",
+      "value": "Bluetooth permission denied, cannot get watch devices"
+    },
+    {
+      "name": "watch_sync_bluetooth_restricted",
+      "value": "Bluetooth is off, turn on Bluetooth and retry"
+    },
+    {
       "name": "watch_sync_settings",
       "value": "Sync Settings"
     },

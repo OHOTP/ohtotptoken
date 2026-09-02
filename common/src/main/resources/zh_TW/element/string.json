@@ -1125,6 +1125,14 @@
       "value": "設定已同步"
     },
     {
+      "name": "watch_sync_bluetooth_permission_denied",
+      "value": "未授權藍牙權限，無法獲取手錶設備"
+    },
+    {
+      "name": "watch_sync_bluetooth_restricted",
+      "value": "藍牙未開啟，請開啟藍牙後重試"
+    },
+    {
       "name": "watch_sync_settings",
       "value": "同步設定"
     },

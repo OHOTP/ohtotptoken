@@ -1,11 +1,12 @@
 import { wearEngine } from '@kit.WearEngine';
-import { bundleManager, common } from '@kit.AbilityKit';
+import { abilityAccessCtrl, bundleManager, common, Permissions, PermissionRequestResult } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { util } from '@kit.ArkTS';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { TokenConfig } from './TokenConfig';
 import { TokenStore } from './TokenStore';
 import { AppPreference, PREF_KEYS, SettingValue } from './AppPreference';
+import { PermissionManager } from './PermissionManager';
 import { decryptBlePayload, encryptBlePayload } from './CryptoUtils';
 
 const TAG = 'WearEngineTransfer';
@@ -75,6 +76,19 @@ export const WEAR_SYNC_PREF_KEYS: string[] = [
 interface SettingValuePair {
   key: string;
   value: SettingValue;
+}
+
+/**
+ * ACCESS_BLUETOOTH 权限申请结果.
+ * 对齐 PermissionStatus(API 20+): 0 已授权, 3 受限(如系统蓝牙开关关闭, 弹窗无法授权).
+ */
+export enum BluetoothPermissionResult {
+  /** 已授权 */
+  GRANTED = 0,
+  /** 权限受限(典型原因: 系统蓝牙开关未开启), 授权弹窗不可用, 需引导用户开启蓝牙 */
+  RESTRICTED = 3,
+  /** 未授权(用户拒绝/弹窗不可用/二次设置弹窗失败), 需引导用户前往设置 */
+  DENIED = -1
 }
 
 /** 首帧头结构 */
@@ -153,8 +167,11 @@ export class WearEngineClient {
   /**
    * 查询并请求用户授权(受限权限, 如穿戴用户状态).
    *
-   * 注: P2P 通信(设备基础信息)本身无需用户授权; 本方法用于验证授权链路,
-   * 以及为需要用户授权的 Wear Engine 能力(状态/传感器)铺路.
+   * 前置条件: 需在开发者联盟"申请接入Wear Engine服务"时勾选并通过对应权限审核,
+   * 未审批时 requestAuthorization 报 401(permissions 不在授权范围内).
+   *
+   * 注: P2P 消息通信与设备基础信息查询无需用户授权, 本方法仅供未来使用
+   * 状态/传感器等受限能力时调用, 令牌同步链路不应依赖它.
    * @returns 是否已获得 USER_STATUS 授权
    */
   public async ensureAuthorized(): Promise<boolean> {
@@ -172,7 +189,7 @@ export class WearEngineClient {
     }
     try {
       const request: wearEngine.AuthorizationRequest = {
-        permissions: [wearEngine.Permission.USER_STATUS]
+        permissions: [0]
       };
       const resp = await authClient.requestAuthorization(request);
       hilog.info(DOMAIN, TAG, `requestAuthorization result: ${resp.permissions}`);
@@ -184,8 +201,63 @@ export class WearEngineClient {
     }
   }
 
+  /**
+   * 申请 ACCESS_BLUETOOTH 权限(设备查询的前置条件).
+   * 参照 request-user-authorization 开发步骤: 先查询授权状态, 未授权则拉起弹窗向用户申请.
+   * @returns 授权结果(已授权/受限/未授权)
+   */
+  public async requestBluetoothPermission(): Promise<BluetoothPermissionResult> {
+    const permission: Permissions = 'ohos.permission.ACCESS_BLUETOOTH';
+    const granted: boolean = await PermissionManager.getInstance().checkPermissionGrantBool(permission);
+    if (granted) {
+      return BluetoothPermissionResult.GRANTED;
+    }
+    const ctx = AppStorage.get<common.UIAbilityContext>('appContext') as common.UIAbilityContext;
+    const atManager: abilityAccessCtrl.AtManager = abilityAccessCtrl.createAtManager();
+    try {
+      // 首次授权弹窗: requestPermissionsFromUser 会判断权限的授权状态来决定是否唤起弹窗
+      const data: PermissionRequestResult = await atManager.requestPermissionsFromUser(ctx, [permission]);
+      hilog.info(DOMAIN, TAG,
+        `ACCESS_BLUETOOTH request: auth=${data.authResults}, dialogShown=${data.dialogShownResults ?? 'n/a'}`);
+      const auth: number = data.authResults.length > 0 ? data.authResults[0] : -1;
+      if (auth === 0) {
+        return BluetoothPermissionResult.GRANTED;
+      }
+      // 新版系统对齐 PermissionStatus: 3 = RESTRICTED, 权限受系统管控(典型: 蓝牙开关关闭), 弹窗无法授权
+      if (auth === BluetoothPermissionResult.RESTRICTED) {
+        hilog.warn(DOMAIN, TAG, 'ACCESS_BLUETOOTH RESTRICTED, bluetooth switch may be off');
+        return BluetoothPermissionResult.RESTRICTED;
+      }
+    } catch (err) {
+      const e = err as BusinessError;
+      hilog.error(e.code, TAG, `requestPermissionsFromUser failed: ${e.message}`);
+    }
+    try {
+      // 文档约束: 用户拒绝过授权后 requestPermissionsFromUser 不再弹窗, 需用权限设置弹窗二次引导授权
+      const second: Array<abilityAccessCtrl.GrantStatus> =
+        await atManager.requestPermissionOnSetting(ctx, [permission]);
+      hilog.info(DOMAIN, TAG, `ACCESS_BLUETOOTH onSetting result: ${second}`);
+      return second.length > 0 && second[0] === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED
+        ? BluetoothPermissionResult.GRANTED : BluetoothPermissionResult.DENIED;
+    } catch (err) {
+      const e = err as BusinessError;
+      // 12100012: 权限未被用户撤销过(首次弹窗未完成用户交互), 设置弹窗不适用
+      // 12100011: 权限实际已全部授权, 重新查询真实状态
+      if (e.code === 12100011) {
+        const recheck: boolean = await PermissionManager.getInstance().checkPermissionGrantBool(permission);
+        return recheck ? BluetoothPermissionResult.GRANTED : BluetoothPermissionResult.DENIED;
+      }
+      hilog.error(e.code, TAG, `requestPermissionOnSetting failed: ${e.message}`);
+      return BluetoothPermissionResult.DENIED;
+    }
+  }
+
   /** 获取已连接穿戴设备列表(华为运动健康已配对连接) */
   public async getConnectedDevices(): Promise<Array<wearEngine.Device>> {
+    const result: BluetoothPermissionResult = await this.requestBluetoothPermission();
+    if (result !== BluetoothPermissionResult.GRANTED) {
+      throw new Error(`ACCESS_BLUETOOTH not granted: ${result}`);
+    }
     await this.ensureAppParam();
     this.ensureClients();
     return await this.deviceClient!.getConnectedDevices();
