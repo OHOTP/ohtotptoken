@@ -210,7 +210,7 @@ export struct TokenListPage {
     TokenItem({
       Config: vm.config,
       selectionMode: this.splitSelectionMode,
-      selected: vm.config.TokenUUID === this.selectedTokenUUID,
+      selected: this.splitSelectionMode && vm.config.TokenUUID === this.selectedTokenUUID,
       hdsCardMode: true,
       Select: (conf: TokenConfig) => this.onSelectToken(conf),
       Edit: (conf: TokenConfig) => this.openEditPage(conf),

@@ -53,8 +53,7 @@ export struct TokenItem {
   @Local menu_icon_copy: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.doc_text_on_doc_text')).fontSize('22vp');
   @Local menu_icon_sort: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.list_bullet')).fontSize('22vp');
 
-  private isLongPressMenuActive: boolean = false;
-  private pendingSortNavigation: boolean = false;
+  private pendingMenuAction: (() => void) | undefined = undefined;
 
   private token_steps: number = 0;
   private tokenCodeInitialized: boolean = false;
@@ -202,44 +201,37 @@ export struct TokenItem {
     this.appCtx.eventHub?.off(EVENT_NAMES.DEBUG_MODE_CHANGED, this.onDebugModeChangedHandler);
   }
 
-  private onLongPressMenuWillAppear(): void {
-    this.isLongPressMenuActive = true;
-    this.pendingSortNavigation = false;
+  private onContextMenuWillAppear(): void {
+    this.pendingMenuAction = undefined;
     this.previewDetailsVisible = false;
   }
 
-  private onLongPressMenuDidAppear(): void {
+  private onContextMenuDidAppear(): void {
     // 共享容器扩展完成后再淡入元数据，避免内容先于容器尺寸变化出现。
     this.getUIContext().animateTo({ duration: 160, curve: Curve.EaseOut }, () => {
       this.previewDetailsVisible = true;
     });
   }
 
-  private onLongPressMenuWillDisappear(): void {
+  private onContextMenuWillDisappear(): void {
     this.getUIContext().animateTo({ duration: 100, curve: Curve.EaseIn }, () => {
       this.previewDetailsVisible = false;
     });
   }
 
-  private requestTokenSort(): void {
-    // 右键菜单没有长按预览，保持原有的直接跳转行为。
-    if (!this.isLongPressMenuActive) {
-      this.appCtx.eventHub?.emit(EVENT_NAMES.START_TOKEN_SORT);
-      return;
-    }
-    this.pendingSortNavigation = true;
+  private requestContextMenuAction(action: () => void): void {
+    this.pendingMenuAction = action;
     this.previewDetailsVisible = false;
-    // 主动关闭菜单，触发 CustomBuilder 预览到原组件截图的反向一镜到底动效。
+    // close() 只发起关闭；业务动作统一等待 onDidDisappear，避免与退出动效重叠。
     this.getUIContext().getContextMenuController().close();
   }
 
-  private onLongPressMenuDidDisappear(): void {
-    this.isLongPressMenuActive = false;
-    if (!this.pendingSortNavigation) {
-      return;
+  private onContextMenuDidDisappear(): void {
+    const action = this.pendingMenuAction;
+    this.pendingMenuAction = undefined;
+    if (action !== undefined) {
+      action();
     }
-    this.pendingSortNavigation = false;
-    this.appCtx.eventHub?.emit(EVENT_NAMES.START_TOKEN_SORT);
   }
 
   private tokenTypeName(): string {
@@ -582,27 +574,27 @@ export struct TokenItem {
       // 外层系统列表项负责固定选中背板圆角，内容层圆角则随侧滑位移。
       .borderRadius(this.token_preference.app_appearance_item_radius)
       .clip(this.hdsCardMode)
-      .bindContextMenu(this.TokenRightCtxMenu, ResponseType.LongPress, {
+      .bindContextMenuWithResponse(this.TokenRightCtxMenu, {
         // 官方 hoverScale 仅在 LongPress + CustomBuilder 预览中提供原组件截图到
-        // 扩展预览的一镜到底变形；isShown 方式只会直接展示目标尺寸。
+        // 扩展预览的一镜到底变形；右键触发会忽略 preview 并显示箭头。
         preview: this.TokenMenuPreview,
         previewAnimationOptions: { hoverScale: [1.0, 1.0] },
         previewBorderRadius: this.token_preference.app_appearance_item_radius,
         hapticFeedbackMode: HapticFeedbackMode.AUTO,
+        enableArrow: true,
         onWillAppear: () => {
-          this.onLongPressMenuWillAppear();
+          this.onContextMenuWillAppear();
         },
         onDidAppear: () => {
-          this.onLongPressMenuDidAppear();
+          this.onContextMenuDidAppear();
         },
         onWillDisappear: () => {
-          this.onLongPressMenuWillDisappear();
+          this.onContextMenuWillDisappear();
         },
         onDidDisappear: () => {
-          this.onLongPressMenuDidDisappear();
+          this.onContextMenuDidDisappear();
         }
       })
-      .bindContextMenu(this.TokenRightCtxMenu, ResponseType.RightClick, { enableArrow: true })
     }
   }
 
@@ -727,70 +719,83 @@ export struct TokenItem {
     });
   }
 
+  private showDeleteDialog(): void {
+    this.getUIContext().showAlertDialog({
+      title: $r('app.string.alert_remove_title', this.Config.TokenIssuer),
+      subtitle: this.Config.TokenName,
+      message: $r('app.string.alert_remove_confirm_msg'),
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      primaryButton: {
+        defaultFocus: false,
+        value: $r('app.string.dialog_btn_cancel'),
+        action: () => {
+          return
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.dialog_btn_delete'),
+        fontColor: Color.Red,
+        action: async () => {
+          if (this.Config.TokenType === otpType.NFC_external) {
+            // 外部令牌仅存于会话存储，从会话中移除
+            NfcSessionTokens.getInstance().remove(this.Config.TokenUUID);
+          } else {
+            tkStore.deleteToken(this.Config.TokenUUID);
+          }
+        }
+      }
+    })
+  }
+
   @Builder
-  TokenRightCtxMenu() {
+  TokenRightCtxMenu(_responseType: ResponseType) {
     Menu() {
       // NFC 外部令牌为会话级、不持久化，排序（RankScore 持久化）对其无意义，故不提供排序入口
       if (this.Config.TokenType !== otpType.NFC_external) {
         MenuItem({ symbolStartIcon: this.menu_icon_sort, content: $r('app.string.token_right_menu_sort') })
           .onClick(() => {
-            this.requestTokenSort();
+            this.requestContextMenuAction(() => {
+              this.appCtx.eventHub?.emit(EVENT_NAMES.START_TOKEN_SORT);
+            });
           })
           .accessibilityText($r('app.string.token_right_menu_sort'))
       }
       MenuItem({ symbolStartIcon: this.menu_icon_copy, content: $r('app.string.token_right_menu_copy') })
         .onClick(() => {
-          copyText(this.TokenNumber, `${this.TokenNumber} copied`);
+          this.requestContextMenuAction(() => {
+            copyText(this.TokenNumber, `${this.TokenNumber} copied`);
+          });
         })
         .accessibilityText($r('app.string.token_right_menu_copy'))
       if (this.Config.TokenType !== otpType.NFC_external) {
         MenuItem({ symbolStartIcon: this.menu_icon_qrcode, content: $r('app.string.token_right_menu_show_qrcode') })
           .onClick(() => {
-            this.openQRCodeDialog();
+            this.requestContextMenuAction(() => {
+              this.openQRCodeDialog();
+            });
           })
           .accessibilityText($r('app.string.token_right_menu_show_qrcode'))
         MenuItem({ symbolStartIcon: this.menu_icon_edit, content: $r('app.string.token_right_menu_edit') })
           .onClick(() => {
-            if (this.Config.TokenType === otpType.TOTP || this.Config.TokenType === otpType.HOTP ||
-              this.Config.TokenType === undefined) { // default
-              this.Edit(this.Config);
-            } else if (this.Config.TokenType === otpType.Forti) { // forti
-              this.Edit(this.Config);
-            } else if (this.Config.TokenType === otpType.Steam) { // steam
-              this.Edit(this.Config);
-            }
+            this.requestContextMenuAction(() => {
+              if (this.Config.TokenType === otpType.TOTP || this.Config.TokenType === otpType.HOTP ||
+                this.Config.TokenType === undefined) { // default
+                this.Edit(this.Config);
+              } else if (this.Config.TokenType === otpType.Forti) { // forti
+                this.Edit(this.Config);
+              } else if (this.Config.TokenType === otpType.Steam) { // steam
+                this.Edit(this.Config);
+              }
+            });
           })
           .accessibilityText($r('app.string.token_right_menu_edit'))
       }
       MenuItem({ symbolStartIcon: this.menu_icon_trash, content: $r('app.string.token_right_menu_delete') })
         .onClick(() => {
-          this.getUIContext().showAlertDialog({
-            title: $r('app.string.alert_remove_title', this.Config.TokenIssuer),
-            subtitle: this.Config.TokenName,
-            message: $r('app.string.alert_remove_confirm_msg'),
-            autoCancel: true,
-            alignment: DialogAlignment.Center,
-            primaryButton: {
-              defaultFocus: false,
-              value: $r('app.string.dialog_btn_cancel'),
-              action: () => {
-                return
-              }
-            },
-            secondaryButton: {
-              value: $r('app.string.dialog_btn_delete'),
-              fontColor: Color.Red,
-              action: async () => {
-                if (this.Config.TokenType === otpType.NFC_external) {
-                  // 外部令牌仅存于会话存储，从会话中移除
-                  NfcSessionTokens.getInstance().remove(this.Config.TokenUUID);
-                } else {
-                  tkStore.deleteToken(this.Config.TokenUUID);
-                }
-              }
-            }
-          })
-
+          this.requestContextMenuAction(() => {
+            this.showDeleteDialog();
+          });
         })
         .contentFontColor(Color.Red)
         .accessibilityText($r('app.string.token_right_menu_delete'))

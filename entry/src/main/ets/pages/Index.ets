@@ -694,10 +694,12 @@ struct Index {
     }
 
     const params = new AddTokenPageParams('', conf, switchTrace, true);
+    // 分栏切换详情无需转场；手机 Stack 模式保留系统页面滑入动画。
+    const animated = !this.window.AllowSplit;
     if (paths.length === 0) {
-      this.pageInfos.pushPathByName(route, params, false);
+      this.pageInfos.pushPathByName(route, params, animated);
     } else {
-      this.pageInfos.replacePathByName(route, params, false);
+      this.pageInfos.replacePathByName(route, params, animated);
     }
     TokenSwitchPerf.mark(switchTrace, 'routeCommitted');
   }
@@ -1051,6 +1053,10 @@ struct Index {
         onOpenFullScreenRoute: (name: ROUTE_NAMES, param: Object | null) => this.openFullScreenRoute(name, param),
         onExitFullScreenRoute: () => {
           if (this.currentHomeTabIndex === 0) {
+            // 手机 Stack 模式返回后不保留仅供分栏详情使用的令牌选中态。
+            if (!this.window.AllowSplit) {
+              this.selectedTokenUUID = '';
+            }
             this.businessSplitEnabled = true;
           }
         },
