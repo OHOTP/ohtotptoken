@@ -1,5 +1,4 @@
 import { webview } from '@kit.ArkWeb';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 
 import { CommonConstants } from 'common';
 import { PageScaffold } from '../components/PageScaffold';
@@ -54,8 +53,8 @@ export struct WebPage {
           },
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },
       content: {

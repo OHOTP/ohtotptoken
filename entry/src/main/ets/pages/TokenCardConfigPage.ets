@@ -14,7 +14,6 @@ import {
   HdsNavDestinationTitleMode,
   ScrollEffectType
 } from '@kit.UIDesignKit';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 import { TokenIcon } from 'uikit';
 
 @Entry
@@ -146,8 +145,9 @@ export struct TokenCardConfigPage {
           scrollEffectType: this.scrollEffectType
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+          // 带 bottomBuilder 的标题栏直接启用光感，等级由系统自适应，不走应用能力降档。
+          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },
       content: {

@@ -304,8 +304,8 @@ export struct AppearanceSheet {
             scrollEffectType: this.scrollEffectType
           },
           systemMaterialEffect: {
-            materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+            materialType: hdsMaterial.MaterialType.IMMERSIVE,
+            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
           }
         },
         content: {

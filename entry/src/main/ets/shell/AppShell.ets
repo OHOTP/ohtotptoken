@@ -1,7 +1,6 @@
 import { uniformTypeDescriptor } from '@kit.ArkData';
 import { HdsNavDestination, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType, hdsMaterial } from '@kit.UIDesignKit';
 import { AppWindowInfo, ROUTE_NAMES } from 'common';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 // [冷启动优化] 以下 NavDestination 页面仅在用户导航时触发评估
 import lazy { TokenCardConfigPage } from '../pages/TokenCardConfigPage'
 import lazy { WatchSyncPage } from '../pages/WatchSyncPage'
@@ -273,8 +272,8 @@ export struct AppShell {
           scrollEffectType: this.scrollEffectType
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },
       content: {

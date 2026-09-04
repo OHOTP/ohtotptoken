@@ -1,7 +1,6 @@
 import { SettingItem } from '../../components/SettingItem';
 import { SubItemButton } from '../../components/SubItemButton';
 import { SubItemDivider } from '../../components/SubItemDivider';
-import { MaterialPolicy } from '../../utils/MaterialPolicy';
 
 import { AppWindowInfo } from 'common';
 import { bundleManager, common } from '@kit.AbilityKit';
@@ -254,8 +253,8 @@ export struct AboutSheet {
             scrollEffectType: this.scrollEffectStyle
           },
           systemMaterialEffect: {
-            materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+            materialType: hdsMaterial.MaterialType.IMMERSIVE,
+            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
           }
         },
         content: {

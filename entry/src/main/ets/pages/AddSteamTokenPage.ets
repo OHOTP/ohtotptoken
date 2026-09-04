@@ -12,7 +12,6 @@ import { AddTokenActionButton, AddTokenHeader, AddTokenPageParams, ADD_TOKEN_BOT
   AddTokenSectionTitle, AddTokenTextField } from '../components/AddTokenForm';
 import { MaterialSurface } from '../components/MaterialSurface';
 import { PageScaffold } from '../components/PageScaffold';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 import { IconPickerPageParams } from './IconPickerPage';
 import { ResponsiveTokenEditStore, TokenSwitchPerf, TokenSwitchTrace } from '../utils/TokenSwitchPerf';
 
@@ -254,8 +253,8 @@ export struct AddSteamTokenPage {
         },
         scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: this.scrollEffectType },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },
       content: {

@@ -1,5 +1,4 @@
 import { BusinessError } from '@kit.BasicServicesKit';
-import { MaterialPolicy } from '../../utils/MaterialPolicy';
 
 import { showSnackBar, SnackBarNotifyType } from 'common';
 import { SubItemToggle } from '../../components/SubItemToggle'
@@ -189,8 +188,8 @@ export struct SecuritySheet {
             scrollEffectType: this.scrollEffectStyle
           },
           systemMaterialEffect: {
-            materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+            materialType: hdsMaterial.MaterialType.IMMERSIVE,
+            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
           }
         },
         content: {

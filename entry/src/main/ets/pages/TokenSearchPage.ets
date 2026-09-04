@@ -1,5 +1,4 @@
 import { TokenItem } from "../components/TokenItem";
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 
 import { PageScaffold } from "../components/PageScaffold";
 import { MaterialSurface } from "../components/MaterialSurface";
@@ -114,45 +113,27 @@ export struct TokenSearchPage {
   @Builder
   SearchBottomBuilder() {
     Column() {
-      if (MaterialTheme.isImmersiveEffective()) {
-        // 材质直接挂到 Search，避免 MaterialSurface 的根节点被 bottomBuilder
-        // 拉伸到 56vp；Search 本身不设高度，保持系统默认尺寸。
-        Search({
-          placeholder: $r('app.string.token_search_placeholder'),
-          value: this.tokenSearchText
+      // 材质直接挂到 Search，避免 MaterialSurface 的根节点被 bottomBuilder
+      // 拉伸到 56vp；Search 本身不设高度，保持系统默认尺寸。
+      Search({
+        placeholder: $r('app.string.token_search_placeholder'),
+        value: this.tokenSearchText
+      })
+        .width('100%')
+        .defaultFocus(true)
+        .backgroundColor(Color.Transparent)
+        .systemMaterial(new uiMaterial.ImmersiveMaterial({
+          style: uiMaterial.ImmersiveStyle.THIN,
+          lightEffect: { color: Color.White }
+        }))
+        .onChange((value: string) => {
+          this.tokenSearchText = value;
+          this.filterCurrentTokens(value);
         })
-          .width('100%')
-          .defaultFocus(true)
-          .backgroundColor(Color.Transparent)
-          .systemMaterial(new uiMaterial.ImmersiveMaterial({
-            style: uiMaterial.ImmersiveStyle.THIN,
-            lightEffect: { color: Color.White }
-          }))
-          .onChange((value: string) => {
-            this.tokenSearchText = value;
-            this.filterCurrentTokens(value);
-          })
-          .onSubmit((value: string) => {
-            this.tokenSearchText = value;
-            this.filterCurrentTokens(value);
-          })
-      } else {
-        // hds/solid 档：保持现有系统默认样式，不套材质表面
-        Search({
-          placeholder: $r('app.string.token_search_placeholder'),
-          value: this.tokenSearchText
+        .onSubmit((value: string) => {
+          this.tokenSearchText = value;
+          this.filterCurrentTokens(value);
         })
-          .width('100%')
-          .defaultFocus(true)
-          .onChange((value: string) => {
-            this.tokenSearchText = value;
-            this.filterCurrentTokens(value);
-          })
-          .onSubmit((value: string) => {
-            this.tokenSearchText = value;
-            this.filterCurrentTokens(value);
-          })
-      }
     }
     .width('100%')
     .padding({ left: 16, right: 16 })
@@ -225,8 +206,9 @@ export struct TokenSearchPage {
           scrollEffectType: this.scrollEffectType,
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+          // 带 bottomBuilder 的标题栏直接启用光感，等级由系统自适应，不走应用能力降档。
+          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },
       content: {

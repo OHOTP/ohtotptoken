@@ -1,5 +1,4 @@
 import { TokenConfig, otpType, dialogSystemMaterial } from 'common';
-import { MaterialPolicy } from '../../utils/MaterialPolicy';
 
 import { BusinessError } from '@kit.BasicServicesKit';
 import { bundleManager,common } from '@kit.AbilityKit';
@@ -435,8 +434,8 @@ export struct BackupAndMigrationSheet {
             scrollEffectType: this.scrollEffectStyle
           },
           systemMaterialEffect: {
-            materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+            materialType: hdsMaterial.MaterialType.IMMERSIVE,
+            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
           }
         },
         content: {

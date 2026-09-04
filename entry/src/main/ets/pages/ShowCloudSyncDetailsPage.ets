@@ -1,5 +1,4 @@
 import { common, Want } from '@kit.AbilityKit';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 
 import { AppStorageV2, promptAction, LengthMetrics } from '@kit.ArkUI';
 import { SettingItem } from '../components/SettingItem';
@@ -488,8 +487,8 @@ export struct ShowCloudSyncDetailsPage {
           scrollEffectType: this.scrollEffectType
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },
       content: {

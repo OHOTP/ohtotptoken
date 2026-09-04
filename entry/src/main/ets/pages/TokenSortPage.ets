@@ -1,6 +1,5 @@
 import { TokenItem } from "../components/TokenItem";
 import { MaterialTheme } from '../components/MaterialTheme';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 
 import { AppPreference, TokenPreference, EVENT_NAMES } from 'common';
 import { TokenConfig } from 'common';
@@ -135,8 +134,8 @@ export struct TokenSortPage {
           scrollEffectType: this.scrollEffectType,
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },
       content: {

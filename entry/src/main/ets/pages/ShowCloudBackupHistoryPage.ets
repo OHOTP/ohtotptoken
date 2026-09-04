@@ -1,5 +1,4 @@
 import { AppStorageV2, LengthMetrics } from '@kit.ArkUI';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 
 import { CloudBackupManager } from 'common';
 import { CloudBackupRecord } from 'common';
@@ -195,8 +194,8 @@ export struct ShowCloudBackupHistoryPage {
           scrollEffectType: this.scrollEffectType
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },
       content: {

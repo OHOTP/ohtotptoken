@@ -17,7 +17,6 @@ import { IconPicker, IconPickerViewState } from 'uikit';
 import { AegisIconPack, AppWindowInfo, TokenIconPacks } from 'common';
 import { MaterialTheme, MaterialThickness } from '../components/MaterialTheme';
 import { PageScaffold } from '../components/PageScaffold';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 
 /** 添加/编辑令牌页打开图标选择页时使用的路由参数。 */
 export class IconPickerPageParams {
@@ -59,18 +58,8 @@ export struct IconPickerPage {
   private iconScrollers: Scroller[] = createIconScrollers();
   private packSegmentItems: SegmentButtonV2Items = createIconPackSegmentItems();
 
-  /**
-   * SegmentButtonV2 背景板材质跟随全局材质偏好。
-   * API 26 应用级 ENABLE 会让 SegmentButtonV2 默认启用材质，因此实体模式下
-   * 必须显式传 Material.empty；低 API/无能力设备不求值 uiMaterial 符号。
-   */
-  private segmentBackgroundMaterial(): uiMaterial.Material | undefined {
-    if (MaterialPolicy.getInstance().getTier() !== 'immersive') {
-      return undefined;
-    }
-    if (!MaterialTheme.isImmersiveEffective()) {
-      return uiMaterial.Material.empty;
-    }
+  /** 标题栏分段按钮直接使用光感材质，厚度仍沿用用户偏好。 */
+  private segmentBackgroundMaterial(): uiMaterial.Material {
     return new uiMaterial.ImmersiveMaterial({
       style: this.mapMaterialThickness(MaterialTheme.preferredThickness()),
       colorInvert: true,
@@ -103,36 +92,22 @@ export struct IconPickerPage {
   @LocalBuilder
   SearchBottomBuilder() {
     Column() {
-      if (MaterialTheme.isImmersiveEffective()) {
-        Search({
-          placeholder: $r('app.string.dialog_icon_search_placeholder'),
-          value: this.pickerViewState.searchText
+      Search({
+        placeholder: $r('app.string.dialog_icon_search_placeholder'),
+        value: this.pickerViewState.searchText
+      })
+        .width('100%')
+        .backgroundColor(Color.Transparent)
+        .systemMaterial(new uiMaterial.ImmersiveMaterial({
+          style: uiMaterial.ImmersiveStyle.THIN,
+          lightEffect: { color: Color.White }
+        }))
+        .onChange((value: string) => {
+          this.pickerViewState.searchText = value;
         })
-          .width('100%')
-          .backgroundColor(Color.Transparent)
-          .systemMaterial(new uiMaterial.ImmersiveMaterial({
-            style: uiMaterial.ImmersiveStyle.THIN,
-            lightEffect: { color: Color.White }
-          }))
-          .onChange((value: string) => {
-            this.pickerViewState.searchText = value;
-          })
-          .onSubmit((value: string) => {
-            this.pickerViewState.searchText = value;
-          })
-      } else {
-        Search({
-          placeholder: $r('app.string.dialog_icon_search_placeholder'),
-          value: this.pickerViewState.searchText
+        .onSubmit((value: string) => {
+          this.pickerViewState.searchText = value;
         })
-          .width('100%')
-          .onChange((value: string) => {
-            this.pickerViewState.searchText = value;
-          })
-          .onSubmit((value: string) => {
-            this.pickerViewState.searchText = value;
-          })
-      }
     }
     .width('100%')
     .height(56)
@@ -214,8 +189,9 @@ export struct IconPickerPage {
           scrollEffectType: this.scrollEffectType
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+          // 带 bottomBuilder 的标题栏直接启用光感，等级由系统自适应，不走应用能力降档。
+          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },
       content: {
