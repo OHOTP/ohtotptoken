@@ -10,10 +10,10 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const TAG = 'TwoFAImporter';
 /** "2FA验证器" 导出文件的魔数，用于格式校验 */
-const MAGIC_TWOFA = 1131796;
+export const MAGIC_TWOFA = 1131796;
 
 /** "2FA验证器" 导出文件中的原始令牌结构 */
-interface TwoFATokenRaw {
+export interface TwoFATokenRaw {
   id: string;
   span: number;
   rank: number;
@@ -29,7 +29,7 @@ interface TwoFATokenRaw {
 }
 
 /** "2FA验证器" 导出文件的顶层结构 */
-interface TwoFABackup {
+export interface TwoFABackup {
   magic: number;
   tokens: TwoFATokenRaw[];
   groups: Object[];
@@ -39,6 +39,81 @@ interface TwoFABackup {
   tokensEncrypted: string;
   reference: string;
   updatedAt: number;
+}
+
+/** 备份解析状态:供调用方区分失败原因并提示对应文案 */
+export enum TwoFAParseStatus {
+  OK,
+  /** JSON 解析失败或魔数不匹配 */
+  INVALID_FORMAT,
+  /** 声明已加密,暂不支持 */
+  ENCRYPTED,
+  /** 备份中没有任何令牌 */
+  EMPTY
+}
+
+/** 备份解析结果 */
+export class TwoFAParseResult {
+  status: TwoFAParseStatus = TwoFAParseStatus.INVALID_FORMAT;
+  tokens: TokenConfig[] = [];
+}
+
+/**
+ * "2FA验证器" 备份 JSON → 令牌配置 的纯映射函数。
+ *
+ * 输入为已解码的 JSON 字符串(Base32 解码与 UTF-8 解码留在 import() 链路,
+ * 依赖系统能力无法离线执行)。不抛异常,失败原因经 status 区分:
+ * 字段映射规则与历史实现对齐 —— 算法大写归一且不在支持集合时回退 SHA1、
+ * digits/span 缺省或为 0 时回退 6/30、type===0 映射 TOTP 其余映射 HOTP、
+ * secret 为 null 的条目被过滤。
+ */
+export function parseTwoFABackup(jsonStr: string): TwoFAParseResult {
+  const result = new TwoFAParseResult();
+  let backup: TwoFABackup;
+  try {
+    backup = JSON.parse(jsonStr) as TwoFABackup;
+  } catch (e) {
+    result.status = TwoFAParseStatus.INVALID_FORMAT;
+    return result;
+  }
+
+  // 魔数校验
+  if (!backup || backup.magic !== MAGIC_TWOFA) {
+    result.status = TwoFAParseStatus.INVALID_FORMAT;
+    return result;
+  }
+
+  // 加密检测
+  if (backup.tokensEncrypted && backup.tokensEncrypted.length > 0) {
+    result.status = TwoFAParseStatus.ENCRYPTED;
+    return result;
+  }
+
+  const rawTokens = backup.tokens || [];
+  if (rawTokens.length === 0) {
+    result.status = TwoFAParseStatus.EMPTY;
+    return result;
+  }
+
+  // 字段映射:TwoFATokenRaw → TokenConfig
+  const SUPPORTED_ALGOS: string[] = ['SHA1', 'SHA224', 'SHA256', 'SHA384', 'SHA512', 'SM3', 'MD5'];
+  result.tokens = rawTokens
+    .filter((raw: TwoFATokenRaw): boolean => raw !== null && raw.secret !== null && raw.secret.length > 0)
+    .map((raw: TwoFATokenRaw): TokenConfig => {
+      let token = new TokenConfig();
+      token.TokenSecret = raw.secret;
+      token.TokenIssuer = raw.issuer || 'Unknown';
+      token.TokenName = raw.label || 'Unknown';
+      const algo = (raw.algorithm || 'SHA1').toUpperCase();
+      token.TokenAlgorithm = (SUPPORTED_ALGOS.includes(algo) ? algo : 'SHA1') as HMACAlgorithm;
+      token.TokenDigits = raw.digits || 6;
+      token.TokenPeriod = raw.span || 30;
+      token.TokenType = raw.type === 0 ? otpType.TOTP : otpType.HOTP;
+      token.TokenUUID = util.generateRandomUUID();
+      return token;
+    });
+  result.status = TwoFAParseStatus.OK;
+  return result;
 }
 
 /**
@@ -69,6 +144,7 @@ export class TwoFAImporter implements TokenImporter {
   /**
    * 解析 2FA验证器 导出的 .json 备份文件
    * 流程：Base32 解码 → JSON 解析 → 魔数校验 → 加密检测 → 字段映射
+   * 其中 JSON 解析之后的校验与映射在 parseTwoFABackup 纯函数中完成
    */
   private async parseFile(uri: string, onTokensImported: (tokens: Array<TokenConfig>) => void): Promise<void> {
     try {
@@ -86,45 +162,22 @@ export class TwoFAImporter implements TokenImporter {
       const decoder = new util.TextDecoder('utf-8');
       const jsonStr = decoder.decodeWithStream(decoded, { stream: false });
 
-      const backup: TwoFABackup = JSON.parse(jsonStr);
-
-      // 魔数校验
-      if (!backup || backup.magic !== MAGIC_TWOFA) {
-        showSnackBar($r('app.string.importer_twofa_invalid_file'), SnackBarNotifyType.ERROR);
-        return;
+      const result = parseTwoFABackup(jsonStr);
+      switch (result.status) {
+        case TwoFAParseStatus.INVALID_FORMAT:
+          showSnackBar($r('app.string.importer_twofa_invalid_file'), SnackBarNotifyType.ERROR);
+          return;
+        case TwoFAParseStatus.ENCRYPTED:
+          showSnackBar($r('app.string.importer_twofa_encrypted_unsupported'), SnackBarNotifyType.WARNING);
+          return;
+        case TwoFAParseStatus.EMPTY:
+          showSnackBar($r('app.string.importer_twofa_empty'), SnackBarNotifyType.WARNING);
+          return;
+        default:
+          break;
       }
 
-      // 加密检测
-      if (backup.tokensEncrypted && backup.tokensEncrypted.length > 0) {
-        showSnackBar($r('app.string.importer_twofa_encrypted_unsupported'), SnackBarNotifyType.WARNING);
-        return;
-      }
-
-      const rawTokens = backup.tokens || [];
-      if (rawTokens.length === 0) {
-        showSnackBar($r('app.string.importer_twofa_empty'), SnackBarNotifyType.WARNING);
-        return;
-      }
-
-      // 字段映射：TwoFATokenRaw → TokenConfig
-      const SUPPORTED_ALGOS: string[] = ['SHA1', 'SHA224', 'SHA256', 'SHA384', 'SHA512', 'SM3', 'MD5'];
-      const tokens = rawTokens
-        .filter((raw: TwoFATokenRaw): boolean => raw !== null && raw.secret !== null && raw.secret.length > 0)
-        .map((raw: TwoFATokenRaw): TokenConfig => {
-          let token = new TokenConfig();
-          token.TokenSecret = raw.secret;
-          token.TokenIssuer = raw.issuer || 'Unknown';
-          token.TokenName = raw.label || 'Unknown';
-          const algo = (raw.algorithm || 'SHA1').toUpperCase();
-          token.TokenAlgorithm = (SUPPORTED_ALGOS.includes(algo) ? algo : 'SHA1') as HMACAlgorithm;
-          token.TokenDigits = raw.digits || 6;
-          token.TokenPeriod = raw.span || 30;
-          token.TokenType = raw.type === 0 ? otpType.TOTP : otpType.HOTP;
-          token.TokenUUID = util.generateRandomUUID();
-          return token;
-        });
-
-      onTokensImported(tokens);
+      onTokensImported(result.tokens);
     } catch (err) {
       const error = err as Error;
       hilog.error(0x0000, TAG, `Parse failed: ${error.message}`);

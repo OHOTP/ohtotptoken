@@ -1,6 +1,7 @@
 import { ScanBarCode } from 'common';
 import { url } from "@kit.ArkTS";
 import { otpType, TokenConfig } from 'common';
+import { parseOtpAuthUris } from 'common';
 import { readFileContent, showSelectFilePicker } from 'common';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
@@ -16,66 +17,6 @@ export struct URIConfigDialog {
   cancel?: () => void;
   confirm: (tokens: Array<TokenConfig>) => Promise<boolean> = async () => false;
 
-  createTokens(uris: Array<string>): Array<TokenConfig> {
-    let tokens: Array<TokenConfig> = [];
-    let otp_url: url.URL;
-
-    uris.forEach((uri) => {
-      let token = new TokenConfig();
-      try {
-        otp_url = url.URL.parseURL(uri)
-      } catch (error) {
-        hilog.error(0, 'URIConfigDialog', 'Invalid OTPAuth URL:', error);
-        return;
-      }
-
-      if (otp_url.protocol !== 'otpauth:') {
-        hilog.error(0, 'URIConfigDialog', 'Invalid protocol');
-        return;
-      }
-
-      const type = otp_url.host.toLowerCase();
-
-      if (type === 'totp') {
-        token.TokenType = otpType.TOTP;
-      } else if (type == 'hotp') {
-        token.TokenType = otpType.HOTP;
-      } else {
-        hilog.error(0, 'URIConfigDialog', 'Invalid type');
-        return;
-      }
-
-      const pathParts = otp_url.pathname.slice(1).split('/');
-      const labelParts = decodeURIComponent(pathParts[0]).split(':');
-      token.TokenIssuer = labelParts[0];
-      token.TokenName = labelParts[1];
-
-      const parameters: Record<string, string> = {};
-      const query = otp_url.href.split('?')[1].toLowerCase();
-      if (query) {
-        query.split('&').forEach(part => {
-          const kv: string[] = part.split('=');
-          parameters[kv[0]] = kv[1];
-        });
-      }
-      token.TokenSecret = parameters['secret'];
-      token.TokenPeriod = parseInt(parameters['period'] ?? '30');
-      token.TokenCounter = parseInt(parameters['counter'] ?? '0');
-      token.TokenDigits = parseInt(parameters['digits'] ?? '6');
-
-      // otpauth://totp/Steam:xxx?secret=XXXXXXXXXXXXXXXXXXXXXXX&issuer=Steam
-      if(token.TokenIssuer.toLowerCase()=='steam'){
-        token.TokenType = otpType.Steam;
-        token.TokenAlgorithm = 'SHA1'
-        token.TokenPeriod = 30
-        token.TokenDigits = 10
-      }
-
-      tokens.push(token);
-    });
-
-    return tokens;
-  }
 
   build() {
     Column({ space: 10 }) {
@@ -136,7 +77,7 @@ export struct URIConfigDialog {
           .backgroundColor(Color.Transparent)
           .onClick(async () => {
             if (this.controller != undefined) {
-              const ok = await this.confirm(this.createTokens(this.otp_uris))
+              const ok = await this.confirm(parseOtpAuthUris(this.otp_uris))
               if (ok) {
                 this.controller.close()
               }

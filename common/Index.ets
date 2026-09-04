@@ -37,5 +37,6 @@ export { default as Logger } from './src/main/ets/utils/Logger';
 export * from './src/main/ets/models/AppWindowInfo';
 export * from './src/main/ets/models/ResponsiveLayoutPolicy';
 export * from './src/main/ets/utils/importers/TokenImporter';
+export * from './src/main/ets/utils/OtpAuthParser';
 export * from './src/main/ets/utils/importers/TwoFAImporter';
 export * from './src/main/ets/utils/importers/URIImporter';
