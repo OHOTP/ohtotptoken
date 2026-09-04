@@ -13,7 +13,7 @@ export default function colorUtilsTest() {
       expect(colorHex(0xFFFFFFFF)).assertEqual('#ffffffff');
       // (255<<24) 为负 int32,>>>0 归一后仍正确
       expect(colorHex(setRgba(255, 255, 255, 255))).assertEqual('#ffffffff');
-      expect(colorHex(setRgba(255, 100, 0, 255))).assertEqual('#ff640000');
+      expect(colorHex(setRgba(255, 100, 0, 255))).assertEqual('#ffff6400');
     });
 
     it('hexColor_parses_rrggbb', 0, () => {

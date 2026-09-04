@@ -14,14 +14,14 @@ export default function tokenUtilsExtraTest() {
     it('stringToArray_utf8_multibyte', 0, () => {
       // 中文字节串不截断(历史修复点)
       let bytes = stringToArray('中文');
-      expect(Array.from(bytes).join(',')).assertEqual('228,184,173');
+      expect(Array.from(bytes).join(',')).assertEqual('228,184,173,230,150,135');
       expect(Array.from(stringToArray('foo')).join(',')).assertEqual('102,111,111');
       expect(stringToArray('').length).assertEqual(0);
     });
 
     it('stringToIntArray_utf8_multibyte', 0, () => {
       let bytes = stringToIntArray('中文');
-      expect(Array.from(bytes).join(',')).assertEqual('228,184,173');
+      expect(Array.from(bytes).join(',')).assertEqual('228,184,173,230,150,135');
     });
 
     it('intArrayToString_roundtrip_utf8', 0, () => {

@@ -5,10 +5,9 @@ import { generateCardOTP } from '../main/ets/widget/utils/CardOTPUtils';
  * CardOTPUtils 单元测试。
  *
  * 向量来源:RFC 4226 附录 D(secret = ASCII "12345678901234567890",
- * base32 = GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ)给出的 HOTP 截断二进制值:
- *   counter 0..5 → 1284755224 / 1094287082 / 137409008 / 1726717525 /
- *                  1640338314 / 1087423071
- * 其中 counter=1 取 8 位 = 94287082,与 RFC 6238 SHA-1 @ T=59 官方向量一致(交叉验证)。
+ * base32 = GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ)给出的 HOTP 截断二进制值。
+ * 六位截断与 RFC 4226 附录 D 一致;counter=1 取 8 位 = 94287082,
+ * 与 RFC 6238 SHA-1 @ T=59 官方向量交叉一致。
  * tokenType='2' 且 counter>=0 走确定性 HOTP 路径,不依赖时钟,可在 LocalUnit 断言。
  */
 const RFC_SECRET = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
@@ -29,20 +28,23 @@ export default function cardOTPUtilsTest() {
       expect(generateCardOTP(RFC_SECRET, 'SHA1', 8, 30, '2', 1)).assertEqual('94287082');
     });
 
-    it('leading_zero_padding', 0, () => {
-      // counter=2 的 8 位结果为 137409008 % 10^8 = 3709008,前导零必须保留
-      expect(generateCardOTP(RFC_SECRET, 'SHA1', 8, 30, '2', 2)).assertEqual('03709008');
+    it('rfc6238_leading_zero_large_counter', 0, () => {
+      // RFC 6238 SHA-1 @ T=1111111109(steps=37037036):8 位结果 07081804,
+      // 同时覆盖前导零保留与大 counter 路径
+      expect(generateCardOTP(RFC_SECRET, 'SHA1', 8, 30, '2', 37037036)).assertEqual('07081804');
     });
 
-    it('steam_variant_from_rfc_binary', 0, () => {
-      // digits=10 时截断值 1094287082(< 10^10 不变),按字符表
-      // 23456789BCDFGHJKMNPQRTVWXY 逐位取模手算 → P/V/9/M/4
-      expect(generateCardOTP(RFC_SECRET, 'SHA1', 10, 30, '3', 1)).assertEqual('PV9M4');
+    it('steam_variant_shape', 0, () => {
+      // tokenType='3' 走时钟路径(TOTP),无法离线断言具体值;
+      // 字符映射逻辑已由 SteamUtils.test.ets 的确定性用例覆盖,这里只断言形状
+      let otp = generateCardOTP(RFC_SECRET, 'SHA1', 10, 30, '3', 1);
+      expect(otp.length).assertEqual(5);
+      expect(/^[23456789BCDFGHJKMNPQRTVWXY]+$/.test(otp)).assertTrue();
     });
 
     it('sha256_algorithm_currently_falls_back_to_sha1', 0, () => {
       // 现状固化:实现中 SHA256 分支与默认分支相同,仍走 HMAC-SHA1。
-      // 若未来真正支持 SHA256,此用例应随实现一起更新。
+      // 若未来真正支持 SHA256,此用例应随实现一起更新
       expect(generateCardOTP(RFC_SECRET, 'SHA256', 6, 30, '2', 1)).assertEqual('287082');
     });
 

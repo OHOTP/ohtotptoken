@@ -13,6 +13,10 @@ class RecordingListener implements DataChangeListener {
   }
 
   onDataAdded(index: number): void {
+    this.calls.push(`added@${index}`);
+  }
+
+  onDataAdd(index: number): void {
     this.calls.push(`add@${index}`);
   }
 
@@ -33,6 +37,10 @@ class RecordingListener implements DataChangeListener {
   }
 
   onDataChanged(index: number): void {
+    this.calls.push(`changed@${index}`);
+  }
+
+  onDataChange(index: number): void {
     this.calls.push(`change@${index}`);
   }
 
