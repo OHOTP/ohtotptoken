@@ -7,7 +7,7 @@ import { describe, it, expect } from '@ohos/hypium';
 export default function smokeTest() {
   describe('smokeTest', () => {
     it('math_basics', 0, () => {
-      expect(2 + 2).assertEqual(4);
+      expect(2 + 2).assertEqual(5);
       expect(Math.floor(7 / 2)).assertEqual(3);
       expect(0x66).assertEqual(102);
     });
