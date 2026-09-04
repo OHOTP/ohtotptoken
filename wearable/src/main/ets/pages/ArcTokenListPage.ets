@@ -28,26 +28,25 @@ export struct ArcTokenListPage {
   private timestampIntervalId: number = -1;
   /** 页面可见性: 不可见时暂停广播以省电, 回前台时 force 刷新一次 */
   private appIsShow: boolean = true;
+  /** TOKEN_CHANGED 事件处理器引用(aboutToDisappear 注销) */
+  private onTokenChangedHandler: () => void = () => {};
+  /** bleStatus 3 秒复位定时器 ID(aboutToDisappear 清理) */
+  private bleStatusTimerId: number = -1;
 
   aboutToAppear(): void {
     // token 数据变更(增删改/同步完成)时全量刷新列表
     if (this.appCtx.eventHub != undefined) {
-      this.appCtx.eventHub.on(EVENT_NAMES.TOKEN_CHANGED, () => this.onTokenChanged());
+      this.onTokenChangedHandler = () => this.onTokenChanged();
+      this.appCtx.eventHub.on(EVENT_NAMES.TOKEN_CHANGED, this.onTokenChangedHandler);
     }
     // BLE 接收完成回调: 刷新列表 + 显示接收提示 3 秒后复位
     WearEngineServer.getInstance().setOnTokensSaved(async (count: number) => {
       await this.onTokenChanged();
-      this.bleStatus = $r('app.string.app_wearable_ble_received');
-      setTimeout(() => {
-        this.bleStatus = undefined;
-      }, 3000);
+      this.showBleStatus($r('app.string.app_wearable_ble_received'));
     });
     // 设置应用完成回调: 显示设置已同步提示 3 秒后复位
     WearEngineServer.getInstance().setOnSettingsApplied(() => {
-      this.bleStatus = $r('app.string.app_wearable_ble_settings_done');
-      setTimeout(() => {
-        this.bleStatus = undefined;
-      }, 3000);
+      this.showBleStatus($r('app.string.app_wearable_ble_settings_done'));
     });
     this.onTokenChanged();
 
@@ -65,6 +64,28 @@ export struct ArcTokenListPage {
       clearInterval(this.timestampIntervalId);
       this.timestampIntervalId = -1;
     }
+    if (this.bleStatusTimerId !== -1) {
+      clearTimeout(this.bleStatusTimerId);
+      this.bleStatusTimerId = -1;
+    }
+    if (this.appCtx.eventHub != undefined) {
+      this.appCtx.eventHub.off(EVENT_NAMES.TOKEN_CHANGED, this.onTokenChangedHandler);
+    }
+    // 注销 WearEngineServer 单例回调, 避免页面销毁后仍被触达
+    WearEngineServer.getInstance().setOnTokensSaved(undefined);
+    WearEngineServer.getInstance().setOnSettingsApplied(undefined);
+  }
+
+  /** 显示同步状态提示, 3 秒后复位(重复触发时重置计时) */
+  showBleStatus(status: Resource): void {
+    this.bleStatus = status;
+    if (this.bleStatusTimerId !== -1) {
+      clearTimeout(this.bleStatusTimerId);
+    }
+    this.bleStatusTimerId = setTimeout(() => {
+      this.bleStatus = undefined;
+      this.bleStatusTimerId = -1;
+    }, 3000);
   }
 
   onPageShow(): void {

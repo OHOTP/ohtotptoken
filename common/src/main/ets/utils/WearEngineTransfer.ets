@@ -363,13 +363,13 @@ export class WearEngineServer {
     return WearEngineServer.instance;
   }
 
-  /** 注册令牌入库完成回调(UI 提示用) */
-  public setOnTokensSaved(cb: (count: number) => void): void {
+  /** 注册令牌入库完成回调(UI 提示用); 传 undefined 注销 */
+  public setOnTokensSaved(cb: ((count: number) => void) | undefined): void {
     this.onTokensSaved = cb;
   }
 
-  /** 注册设置应用完成回调(UI 提示用) */
-  public setOnSettingsApplied(cb: () => void): void {
+  /** 注册设置应用完成回调(UI 提示用); 传 undefined 注销 */
+  public setOnSettingsApplied(cb: (() => void) | undefined): void {
     this.onSettingsApplied = cb;
   }
 

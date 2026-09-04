@@ -1125,32 +1125,12 @@
       "value": "Scanning…"
     },
     {
-      "name": "watch_sync_scan_hint",
-      "value": "Tap scan to find nearby watch"
-    },
-    {
       "name": "watch_sync_connect",
       "value": "Connect"
     },
     {
-      "name": "watch_sync_reconnect",
-      "value": "Reconnect"
-    },
-    {
-      "name": "watch_sync_connecting",
-      "value": "Connecting…"
-    },
-    {
       "name": "watch_sync_not_connected_warn",
       "value": "Connect a watch first"
-    },
-    {
-      "name": "watch_sync_pairing",
-      "value": "Pairing… confirm on the watch if prompted"
-    },
-    {
-      "name": "watch_sync_pair_failed",
-      "value": "Pairing failed, try again"
     },
     {
       "name": "watch_sync_token_list",
@@ -1207,10 +1187,6 @@
     {
       "name": "app_wearable_ble_settings_done",
       "value": "Settings synced"
-    },
-    {
-      "name": "app_wearable_ble_server_failed",
-      "value": "BLE receive service failed"
     },
     {
       "name": "ble_access_permission_reason",

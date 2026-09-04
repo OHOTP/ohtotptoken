@@ -1133,32 +1133,12 @@
       "value": "掃描中…"
     },
     {
-      "name": "watch_sync_scan_hint",
-      "value": "點擊掃描查找附近手錶"
-    },
-    {
       "name": "watch_sync_connect",
       "value": "連接"
     },
     {
-      "name": "watch_sync_reconnect",
-      "value": "重新連接"
-    },
-    {
-      "name": "watch_sync_connecting",
-      "value": "連接中…"
-    },
-    {
       "name": "watch_sync_not_connected_warn",
       "value": "請先連接手錶"
-    },
-    {
-      "name": "watch_sync_pairing",
-      "value": "配對中…若手錶彈出確認請在手錶上確認"
-    },
-    {
-      "name": "watch_sync_pair_failed",
-      "value": "配對失敗，請重試"
     },
     {
       "name": "watch_sync_token_list",
@@ -1215,10 +1195,6 @@
     {
       "name": "app_wearable_ble_settings_done",
       "value": "設定已同步"
-    },
-    {
-      "name": "app_wearable_ble_server_failed",
-      "value": "藍牙接收服務啟動失敗"
     },
     {
       "name": "ble_access_permission_reason",
