@@ -17,11 +17,13 @@ concurrency:
 jobs:
   localunit:
     name: ArkTS unit tests (LocalUnit)
-    # Windows only: LocalUnit executes tests inside the SDK Previewer runtime,
-    # and the Previewer component only ships in the Windows/macOS
-    # command-line-tools packages - on Linux, hvigorw test hangs after
-    # compiling (verified in run 33878317600).
-    runs-on: windows-latest
+    # macOS ARM runner: LocalUnit executes tests inside the SDK Previewer
+    # runtime, which only ships in the Windows/macOS command-line-tools
+    # packages - on Linux, hvigorw test hangs after compiling (verified in
+    # run 33878317600). macOS is preferred over Windows here: the mac-arm64
+    # runner has 3 vCPUs and APFS, so restoring the ~5 GB SDK cache from
+    # actions/cache takes ~1-2 min instead of ~4 min on 2-vCPU Windows+NTFS.
+    runs-on: macos-latest
     timeout-minutes: 30
 
     steps:
@@ -39,13 +41,13 @@ jobs:
           cache: true
 
       - name: Install project dependencies
-        run: ohpm.bat install --all --rt 5 --ri 5000
+        run: ohpm install --all --rt 5 --ri 5000
         shell: bash
 
       # hvigorw test exits 0 even when assertions fail, so the gate is
       # enforced by parsing the result file produced by GenerateUnitTestResult.
       - name: Run LocalUnit tests
-        run: hvigorw.bat test -p module=entry@default --no-daemon
+        run: hvigorw test -p module=entry@default --no-daemon
         shell: bash
 
       - name: Check test results
