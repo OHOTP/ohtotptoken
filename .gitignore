@@ -40,3 +40,7 @@ hvigorw
 # OpenSpec 本地配置
 openspec/
 /.pi/
+
+# AI 会话本地产物
+.codegenie/
+.local/

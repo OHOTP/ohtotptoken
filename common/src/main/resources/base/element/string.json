@@ -1102,7 +1102,11 @@
     },
     {
       "name": "watch_sync_title",
-      "value": "Watch Sync"
+      "value": "Watch Sync (P2P)"
+    },
+    {
+      "name": "watch_sync_title_ble",
+      "value": "Watch Sync (BLE)"
     },
     {
       "name": "watch_sync_connect_section",
@@ -1121,16 +1125,36 @@
       "value": "Scan"
     },
     {
+      "name": "watch_sync_scan_hint",
+      "value": "Tap scan to find nearby watch"
+    },
+    {
       "name": "watch_sync_scanning",
       "value": "Scanning…"
+    },
+    {
+      "name": "watch_sync_connecting",
+      "value": "Connecting…"
     },
     {
       "name": "watch_sync_connect",
       "value": "Connect"
     },
     {
+      "name": "watch_sync_pairing",
+      "value": "Pairing… confirm on the watch if prompted"
+    },
+    {
+      "name": "watch_sync_pair_failed",
+      "value": "Pairing failed, try again"
+    },
+    {
       "name": "watch_sync_not_connected_warn",
       "value": "Connect a watch first"
+    },
+    {
+      "name": "watch_sync_watch_not_ready",
+      "value": "Watch app not ready, try again"
     },
     {
       "name": "watch_sync_token_list",
@@ -1174,15 +1198,27 @@
     },
     {
       "name": "setting_watch_sync",
-      "value": "Watch Sync"
+      "value": "Watch Sync (P2P)"
+    },
+    {
+      "name": "setting_watch_sync_ble",
+      "value": "Watch Sync (BLE)"
     },
     {
       "name": "app_wearable_ble_waiting",
       "value": "Waiting for phone sync"
     },
     {
+      "name": "app_wearable_ble_receiving",
+      "value": "Receiving tokens…"
+    },
+    {
       "name": "app_wearable_ble_received",
       "value": "Tokens received, refreshing"
+    },
+    {
+      "name": "app_wearable_ble_failed",
+      "value": "Receive failed, resend from phone"
     },
     {
       "name": "app_wearable_ble_settings_done",

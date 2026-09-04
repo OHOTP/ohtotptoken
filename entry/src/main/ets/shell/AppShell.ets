@@ -5,6 +5,7 @@ import { MaterialPolicy } from '../utils/MaterialPolicy';
 // [冷启动优化] 以下 NavDestination 页面仅在用户导航时触发评估
 import lazy { TokenCardConfigPage } from '../pages/TokenCardConfigPage'
 import lazy { WatchSyncPage } from '../pages/WatchSyncPage'
+import lazy { BleWatchSyncPage } from '../pages/BleWatchSyncPage'
 import lazy { TokenSortPage } from '../pages/TokenSortPage'
 import lazy { TokenSearchPage } from '../pages/TokenSearchPage'
 import lazy { ShowDataSyncDetailsPage } from '../pages/ShowDataSyncDetailsPage';
@@ -162,6 +163,8 @@ export struct AppShell {
       })
     } else if (name === ROUTE_NAMES.WatchSyncPage) {
       WatchSyncPage({ scrollEffectType: this.scrollEffectType })
+    } else if (name === ROUTE_NAMES.BleWatchSyncPage) {
+      BleWatchSyncPage({ scrollEffectType: this.scrollEffectType })
     } else if (name.startsWith('setting/')) {
       HdsNavDestination() {
         SheetCoordinator({

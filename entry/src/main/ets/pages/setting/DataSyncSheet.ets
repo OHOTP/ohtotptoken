@@ -12,6 +12,7 @@ import { PermissionManager } from 'common';
 import { throttle } from 'common';
 import { ShowDataSyncDetailsPage } from '../ShowDataSyncDetailsPage';
 import lazy { WatchSyncPage } from '../WatchSyncPage';
+import lazy { BleWatchSyncPage } from '../BleWatchSyncPage';
 import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import { SETTING_PAGE_INSET } from '../../components/SettingStyle';
 import { MaterialTheme } from '../../components/MaterialTheme';
@@ -49,6 +50,8 @@ export struct DataSyncSheet {
       ShowDataSyncDetailsPage({ scrollEffectType: this.scrollEffectType })
     } else if (name === ROUTE_NAMES.WatchSyncPage) {
       WatchSyncPage({ scrollEffectType: this.scrollEffectType })
+    } else if (name === ROUTE_NAMES.BleWatchSyncPage) {
+      BleWatchSyncPage({ scrollEffectType: this.scrollEffectType })
     }
   }
 
@@ -85,13 +88,24 @@ export struct DataSyncSheet {
 
                 SubItemDivider()
 
-                // 手表同步: 经 Wear Engine P2P 下发令牌到手表(独立子页面, 经本 Sheet 内嵌导航栈 push)
+                // 手表同步(P2P): 经 Wear Engine 应用间消息下发令牌(独立子页面, 经本 Sheet 内嵌导航栈 push)
                 SubItemButton({
                   symbol: $r('sys.symbol.transfer'),
                   text: $r('app.string.setting_watch_sync')
                 })
                   .onClick(throttle((event) => {
                     this.pageInfos.pushPathByName(ROUTE_NAMES.WatchSyncPage, null);
+                  }, 1000))
+
+                SubItemDivider()
+
+                // 手表同步(BLE): 经 BLE GATT 通道下发令牌(独立子页面, 与 P2P 页互不依赖)
+                SubItemButton({
+                  symbol: $r('sys.symbol.transfer'),
+                  text: $r('app.string.setting_watch_sync_ble')
+                })
+                  .onClick(throttle((event) => {
+                    this.pageInfos.pushPathByName(ROUTE_NAMES.BleWatchSyncPage, null);
                   }, 1000))
               }
             }

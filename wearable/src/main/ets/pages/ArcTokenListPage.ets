@@ -1,7 +1,7 @@
 import { QRCodeDialog } from 'uikit';
 import { TokenPreference, EVENT_NAMES } from 'common';
 import { TokenConfig, TokenIconPacks } from 'common';
-import { TokenStore, WearEngineServer, convertToken2URI } from 'common';
+import { TokenStore, WearEngineServer, BleTokenServer, BleSyncStatus, WearEngineClient, BluetoothPermissionResult, convertToken2URI } from 'common';
 import { systemDateTime } from '@kit.BasicServicesKit';
 import { AppStorageV2, ArcList, ArcListItem, LengthMetrics } from "@kit.ArkUI";
 import { common } from '@kit.AbilityKit';
@@ -48,6 +48,32 @@ export struct ArcTokenListPage {
     WearEngineServer.getInstance().setOnSettingsApplied(() => {
       this.showBleStatus($r('app.string.app_wearable_ble_settings_done'));
     });
+    // BLE 通道接收状态(接收中/成功/失败): 与 P2P 回调共用 bleStatus 状态区,
+    // 语义为最后事件胜出(showBleStatus 重置 3 秒复位计时); 列表刷新由 onTokensSaved 驱动
+    BleTokenServer.getInstance().setOnTokensSaved(async (count: number) => {
+      await this.onTokenChanged();
+    });
+    BleTokenServer.getInstance().setOnSettingsApplied(() => {
+      this.showBleStatus($r('app.string.app_wearable_ble_settings_done'));
+    });
+    BleTokenServer.getInstance().setOnSyncStatus((status: BleSyncStatus) => {
+      if (status === BleSyncStatus.RECEIVING) {
+        this.showBleStatus($r('app.string.app_wearable_ble_receiving'));
+      } else if (status === BleSyncStatus.SUCCESS) {
+        this.showBleStatus($r('app.string.app_wearable_ble_received'));
+      } else {
+        this.showBleStatus($r('app.string.app_wearable_ble_failed'));
+      }
+    });
+    // BLE GATT Server 依赖 ACCESS_BLUETOOTH(user_grant): 先查后申请,
+    // 授权成功后启动(幂等, 已启动则直接返回); 失败仅记日志, 不影响 P2P 通道
+    WearEngineClient.getInstance().requestBluetoothPermission().then((result: BluetoothPermissionResult) => {
+      if (result === BluetoothPermissionResult.GRANTED) {
+        BleTokenServer.getInstance().start();
+      } else {
+        hilog.warn(0x0000, 'ArcTokenListPage', `ACCESS_BLUETOOTH result ${result}, BLE receive unavailable`);
+      }
+    });
     this.onTokenChanged();
 
     // 每秒广播时间戳事件, 驱动各 TOTP 令牌按周期刷新(参考手机端 Index 实现:
@@ -71,9 +97,12 @@ export struct ArcTokenListPage {
     if (this.appCtx.eventHub != undefined) {
       this.appCtx.eventHub.off(EVENT_NAMES.TOKEN_CHANGED, this.onTokenChangedHandler);
     }
-    // 注销 WearEngineServer 单例回调, 避免页面销毁后仍被触达
+    // 注销 WearEngineServer/BleTokenServer 单例回调, 避免页面销毁后仍被触达
     WearEngineServer.getInstance().setOnTokensSaved(undefined);
     WearEngineServer.getInstance().setOnSettingsApplied(undefined);
+    BleTokenServer.getInstance().setOnTokensSaved(undefined);
+    BleTokenServer.getInstance().setOnSettingsApplied(undefined);
+    BleTokenServer.getInstance().setOnSyncStatus(undefined);
   }
 
   /** 显示同步状态提示, 3 秒后复位(重复触发时重置计时) */
