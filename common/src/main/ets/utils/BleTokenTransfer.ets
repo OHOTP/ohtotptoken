@@ -181,8 +181,9 @@ export class BleTokenServer {
     if (this.gattServer) {
       return;
     }
-    if (this.startPromise) {
-      // 等待进行中的启动收敛(可能因蓝牙未就绪而失败), 失败则由本调用补启
+    while (this.startPromise) {
+      // 等待进行中的启动收敛(可能因蓝牙未就绪而失败); 收敛后仍就绪则返回,
+      // 失败且未被其他等待方接管时由本调用补启
       await this.startPromise;
     }
     if (this.gattServer) {
@@ -261,14 +262,7 @@ export class BleTokenServer {
         hilog.error(e.code, TAG, `BleTokenServer.start attempt ${attempt} failed: ${e.message}`);
         // 清理本次尝试已创建的实例/监听/广播, 避免重试路径泄漏
         if (server) {
-          try {
-            server.off('characteristicWrite');
-            server.off('connectionStateChange');
-            server.close();
-          } catch (cleanupErr) {
-            let ce: BusinessError = cleanupErr as BusinessError;
-            hilog.warn(ce.code, TAG, `gatt server cleanup failed: ${ce.message}`);
-          }
+          this.releaseGattServer(server);
         }
         try {
           ble.stopAdvertising();
@@ -293,14 +287,7 @@ export class BleTokenServer {
     this.gattServer = undefined;
     this.resetReceive();
     if (server) {
-      try {
-        server.off('characteristicWrite');
-        server.off('connectionStateChange');
-        server.close();
-      } catch (err) {
-        let e: BusinessError = err as BusinessError;
-        hilog.warn(e.code, TAG, `release gatt server failed: ${e.message}`);
-      }
+      this.releaseGattServer(server);
     }
     try {
       ble.stopAdvertising();
@@ -316,6 +303,28 @@ export class BleTokenServer {
     this.receive = BleTokenServer.newReceiveState();
   }
 
+  /** 释放 GattServer 实例: 逐段注销监听并 close, 单段失败不阻断其余段(防句柄滞留) */
+  private releaseGattServer(server: ble.GattServer): void {
+    try {
+      server.off('characteristicWrite');
+    } catch (err) {
+      let e: BusinessError = err as BusinessError;
+      hilog.warn(e.code, TAG, `off characteristicWrite failed: ${e.message}`);
+    }
+    try {
+      server.off('connectionStateChange');
+    } catch (err) {
+      let e: BusinessError = err as BusinessError;
+      hilog.warn(e.code, TAG, `off connectionStateChange failed: ${e.message}`);
+    }
+    try {
+      server.close();
+    } catch (err) {
+      let e: BusinessError = err as BusinessError;
+      hilog.warn(e.code, TAG, `close gatt server failed: ${e.message}`);
+    }
+  }
+
   /**
    * 分片协议接收: 首帧为头 JSON, 之后为数据分片, 收满后重组分发.
    * 头帧到达即视为新批次开始(重置接收状态), 并上报"接收中"状态.
@@ -326,11 +335,11 @@ export class BleTokenServer {
     try {
       const bytes: Uint8Array = new Uint8Array(req.value);
       if (!this.receive.inProgress) {
-        // 首帧: 头 JSON {"total":N,"count":M,"type":T}
-        const decoder = new util.TextDecoder('utf-8');
-        const header = JSON.parse(decoder.decodeToString(bytes)) as TransferHeader;
-        if (header.total <= 0 || header.total > MAX_RECEIVE) {
-          hilog.error(DOMAIN, TAG, `invalid transfer header: ${JSON.stringify(header)}`);
+        // 首帧: 头 JSON {"total":N,"count":M,"type":T}; 复用 tryParseHeader 校验
+        // (JSON 标量如 "5" 经 typeof 守卫拒绝, 避免写 total=undefined 卡住批次)
+        const header = this.tryParseHeader(bytes);
+        if (header === null) {
+          hilog.error(DOMAIN, TAG, 'invalid transfer header');
           this.resetReceive();
           this.onSyncStatus?.(BleSyncStatus.FAILED, 0);
           this.sendWriteResponse(req, false);
@@ -551,6 +560,14 @@ export class BleTokenClient {
     } catch (err) {
       let e: BusinessError = err as BusinessError;
       hilog.error(e.code, TAG, `startScan failed: ${e.message}`);
+      // 启动失败回滚已注册监听, 避免下次 startScan 重复注册
+      try {
+        ble.off('BLEDeviceFind');
+        connection.off('bondStateChange');
+      } catch (cleanupErr) {
+        let ce: BusinessError = cleanupErr as BusinessError;
+        hilog.warn(ce.code, TAG, `scan listener cleanup failed: ${ce.message}`);
+      }
       return false;
     }
   }
