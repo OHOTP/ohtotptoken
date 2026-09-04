@@ -11,8 +11,7 @@ import { AppWindowInfo, CommonConstants } from 'common';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppStorageV2 } from '@kit.ArkUI';
-import { MaterialSurface } from '../components/MaterialSurface';
-import { MaterialTheme, MaterialThickness } from '../components/MaterialTheme';
+import { MaterialTheme } from '../components/MaterialTheme';
 import { SETTING_PAGE_INSET } from '../components/SettingStyle';
 
 const TAG = 'WatchSyncPage';
@@ -191,27 +190,17 @@ export struct WatchSyncPage {
                       .layoutWeight(1)
                       .maxLines(1)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
-                    // 刷新设备列表按钮: MaterialSurface 光感材质
-                    MaterialSurface({
-                      thickness: MaterialThickness.THIN,
-                      lightEffect: true,
-                      interactive: true,
-                      materialColor: $r('app.color.button_light_gray'),
-                      radius: 8,
-                      solidColor: Color.Transparent,
-                      fillWidth: false
-                    }) {
-                      Button($r('app.string.watch_sync_scan'))
-                        .fontSize(14)
-                        .height(32)
-                        .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.button_light_gray')))
-                        .fontColor(this.is_dark_mode ? Color.White : Color.Black)
-                        .stateEffect(false)
-                        .enabled(!this.refreshingDevices)
-                        .onClick(() => {
-                          this.refreshDevices();
-                        })
-                    }
+                    // 刷新设备列表按钮: 内容区实体背景
+                    Button($r('app.string.watch_sync_scan'))
+                      .fontSize(14)
+                      .height(32)
+                      .backgroundColor($r('app.color.button_light_gray'))
+                      .fontColor(this.is_dark_mode ? Color.White : Color.Black)
+                      .stateEffect(false)
+                      .enabled(!this.refreshingDevices)
+                      .onClick(() => {
+                        this.refreshDevices();
+                      })
                   }
                   .padding(10)
 
@@ -242,26 +231,16 @@ export struct WatchSyncPage {
                           .fontSize(14)
                           .fontColor($r('sys.color.font_secondary'))
                       } else {
-                        // 选择按钮: MaterialSurface 光感材质
-                        MaterialSurface({
-                          thickness: MaterialThickness.THIN,
-                          lightEffect: true,
-                          interactive: true,
-                          materialColor: $r('app.color.button_light_gray'),
-                          radius: 8,
-                          solidColor: Color.Transparent,
-                          fillWidth: false
-                        }) {
-                          Button($r('app.string.watch_sync_connect'))
-                            .fontSize(14)
-                            .height(32)
-                            .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.button_light_gray')))
-                            .fontColor(this.is_dark_mode ? Color.White : Color.Black)
-                            .stateEffect(false)
-                            .onClick(() => {
-                              this.selectDevice(device);
-                            })
-                        }
+                        // 选择按钮: 内容区实体背景
+                        Button($r('app.string.watch_sync_connect'))
+                          .fontSize(14)
+                          .height(32)
+                          .backgroundColor($r('app.color.button_light_gray'))
+                          .fontColor(this.is_dark_mode ? Color.White : Color.Black)
+                          .stateEffect(false)
+                          .onClick(() => {
+                            this.selectDevice(device);
+                          })
                       }
                     }
                     .padding(10)
@@ -335,53 +314,33 @@ export struct WatchSyncPage {
               }
               .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
 
-              // 传输按钮: MaterialSurface 光感材质
+              // 传输按钮: 内容区实体背景
               ListItem() {
-                MaterialSurface({
-                  thickness: MaterialThickness.THIN,
-                  lightEffect: true,
-                  interactive: true,
-                  materialColor: $r('app.color.button_light_gray'),
-                  radius: 10,
-                  solidColor: Color.Transparent,
-                  fillWidth: true
-                }) {
-                  Button($r('app.string.watch_sync_transfer'))
-                    .width('100%')
-                    .height(44)
-                    .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.button_light_gray')))
-                    .fontColor(this.is_dark_mode ? Color.White : Color.Black)
-                    .stateEffect(false)
-                    .enabled(!this.transferring && this.selectedDeviceRandomId !== '')
-                    .onClick(() => {
-                      this.transfer();
-                    })
-                }
+                Button($r('app.string.watch_sync_transfer'))
+                  .width('100%')
+                  .height(44)
+                  .backgroundColor($r('app.color.button_light_gray'))
+                  .fontColor(this.is_dark_mode ? Color.White : Color.Black)
+                  .stateEffect(false)
+                  .enabled(!this.transferring && this.selectedDeviceRandomId !== '')
+                  .onClick(() => {
+                    this.transfer();
+                  })
               }
               .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
 
               // 同步设置按钮: 将手机端外观/安全设置(白名单)下发到手表
               ListItem() {
-                MaterialSurface({
-                  thickness: MaterialThickness.THIN,
-                  lightEffect: true,
-                  interactive: true,
-                  materialColor: $r('app.color.button_light_gray'),
-                  radius: 10,
-                  solidColor: Color.Transparent,
-                  fillWidth: true
-                }) {
-                  Button($r('app.string.watch_sync_settings'))
-                    .width('100%')
-                    .height(44)
-                    .backgroundColor(MaterialTheme.surfaceBackground($r('app.color.button_light_gray')))
-                    .fontColor(this.is_dark_mode ? Color.White : Color.Black)
-                    .stateEffect(false)
-                    .enabled(!this.transferring && this.selectedDeviceRandomId !== '')
-                    .onClick(() => {
-                      this.syncSettings();
-                    })
-                }
+                Button($r('app.string.watch_sync_settings'))
+                  .width('100%')
+                  .height(44)
+                  .backgroundColor($r('app.color.button_light_gray'))
+                  .fontColor(this.is_dark_mode ? Color.White : Color.Black)
+                  .stateEffect(false)
+                  .enabled(!this.transferring && this.selectedDeviceRandomId !== '')
+                  .onClick(() => {
+                    this.syncSettings();
+                  })
               }
               .padding({ left: SETTING_PAGE_INSET, right: SETTING_PAGE_INSET })
 

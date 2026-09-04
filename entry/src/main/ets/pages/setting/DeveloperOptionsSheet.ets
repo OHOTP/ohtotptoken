@@ -1,3 +1,4 @@
+import { dialogSystemMaterial } from 'common';
 import { AppStorageV2 } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
@@ -22,6 +23,7 @@ export struct DeveloperOptionsSheet {
 
   private showAddTestTokensConfirmDialog(): void {
     this.getUIContext().showAlertDialog({
+      systemMaterial: dialogSystemMaterial(),
       title: $r('app.string.developer_add_test_tokens_confirm_title'),
       message: $r('app.string.developer_add_test_tokens_confirm_message'),
       autoCancel: true,
@@ -48,6 +50,7 @@ export struct DeveloperOptionsSheet {
 
   private showRemoveTestTokensConfirmDialog(): void {
     this.getUIContext().showAlertDialog({
+      systemMaterial: dialogSystemMaterial(),
       title: $r('app.string.developer_remove_test_tokens_confirm_title'),
       message: $r('app.string.developer_remove_test_tokens_confirm_message'),
       autoCancel: true,
@@ -153,7 +156,7 @@ export struct DeveloperOptionsSheet {
             scrollEffectType: this.scrollEffectType
           },
           systemMaterialEffect: {
-            materialType: hdsMaterial.MaterialType.IMMERSIVE,
+            materialType: MaterialTheme.hdsMaterialType(),
             materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
           }
         },

@@ -1,3 +1,4 @@
+import { MaterialTheme } from '../components/MaterialTheme';
 import { AppStorageV2 } from '@kit.ArkUI';
 
 import { SettingItem } from '../components/SettingItem';
@@ -613,7 +614,7 @@ export struct AppearancePage {
           scrollEffectType: this.scrollEffectType
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialType: MaterialTheme.hdsMaterialType(),
           materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },

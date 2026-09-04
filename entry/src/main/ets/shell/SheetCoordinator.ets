@@ -1,3 +1,4 @@
+import { dialogSystemMaterial } from 'common';
 import { common } from '@kit.AbilityKit';
 import { TokenConfig } from 'common';
 // [冷启动优化] 各 Sheet 仅在用户点击对应入口时触发模块评估
@@ -156,6 +157,7 @@ export struct SheetCoordinator {
       ? $r('app.string.huawei_account_logout_cloud_backup_msg')
       : $r('app.string.huawei_account_logout_confirm_msg');
     this.getUIContext().showAlertDialog({
+      systemMaterial: dialogSystemMaterial(),
       title: $r('app.string.huawei_account_logout_confirm_title'),
       message: msg,
       autoCancel: true,

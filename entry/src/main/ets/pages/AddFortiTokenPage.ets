@@ -1,3 +1,4 @@
+import { MaterialTheme } from '../components/MaterialTheme';
 import { AppWindowInfo, base32Decode, base32Encode, EVENT_NAMES, otpType, ROUTE_NAMES, ScanBarCode, showSnackBar,
   SnackBarNotifyType, stringToIntArray, TokenConfig } from 'common';
 import { common } from '@kit.AbilityKit';
@@ -12,7 +13,6 @@ import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, HdsNavDestination, 
 import { AddTokenActionButton, AddTokenHeader, AddTokenPageParams, ADD_TOKEN_BOTTOM_ACTION_INSET, ADD_TOKEN_PAGE_INSET,
   ADD_TOKEN_SECTION_PADDING, ADD_TOKEN_SECTION_RADIUS,
   AddTokenSectionTitle, AddTokenTextField } from '../components/AddTokenForm';
-import { MaterialSurface } from '../components/MaterialSurface';
 import { PageScaffold } from '../components/PageScaffold';
 import { IconPickerPageParams } from './IconPickerPage';
 import { ResponsiveTokenEditStore, TokenSwitchPerf, TokenSwitchTrace } from '../utils/TokenSwitchPerf';
@@ -254,38 +254,38 @@ export struct AddFortiTokenPage {
               .padding({ left: ADD_TOKEN_PAGE_INSET, right: ADD_TOKEN_PAGE_INSET, top: 8 })
 
             ListItem() {
-              MaterialSurface({ radius: ADD_TOKEN_SECTION_RADIUS, applyShadow: true }) {
-                Column({ space: 14 }) {
+              Column({ space: 14 }) {
+                AddTokenTextField({
+                  label: $r('app.string.dialog_cfg_forti_token'),
+                  value: this.activationCode,
+                  maxLength: 32,
+                  onChange: (value: string) => this.activationCode = value.trim()
+                })
+                Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
+                Column({ space: 8 }) {
                   AddTokenTextField({
-                    label: $r('app.string.dialog_cfg_forti_token'),
-                    value: this.activationCode,
-                    maxLength: 32,
-                    onChange: (value: string) => this.activationCode = value.trim()
+                    label: $r('app.string.dialog_cfg_forti_dev_id'),
+                    value: this.deviceId,
+                    helper: $r('app.string.warn_forti_dev_id_popup'),
+                    maxLength: 16,
+                    onChange: (value: string) => this.deviceId = value.trim()
                   })
-                  Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
-                  Column({ space: 8 }) {
-                    AddTokenTextField({
-                      label: $r('app.string.dialog_cfg_forti_dev_id'),
-                      value: this.deviceId,
-                      helper: $r('app.string.warn_forti_dev_id_popup'),
-                      maxLength: 16,
-                      onChange: (value: string) => this.deviceId = value.trim()
-                    })
-                    AddTokenActionButton({
-                      text: $r('app.string.add_forti_regenerate_device_id'),
-                      action: () => this.generateDeviceId()
-                    })
-                  }
-                  Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
                   AddTokenActionButton({
-                    text: $r('app.string.dialog_cfg_forti_btn_gen_key'),
-                    loading: this.isRequesting,
-                    buttonEnabled: !this.isRequesting,
-                    action: () => this.requestKey()
+                    text: $r('app.string.add_forti_regenerate_device_id'),
+                    action: () => this.generateDeviceId()
                   })
                 }
-                .padding(ADD_TOKEN_SECTION_PADDING).width('100%')
+                Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
+                AddTokenActionButton({
+                  text: $r('app.string.dialog_cfg_forti_btn_gen_key'),
+                  loading: this.isRequesting,
+                  buttonEnabled: !this.isRequesting,
+                  action: () => this.requestKey()
+                })
               }
+              .padding(ADD_TOKEN_SECTION_PADDING).width('100%')
+              .borderRadius(ADD_TOKEN_SECTION_RADIUS)
+              .backgroundColor($r('app.color.item_bg'))
             }
             .padding({ left: ADD_TOKEN_PAGE_INSET, right: ADD_TOKEN_PAGE_INSET })
 
@@ -293,23 +293,23 @@ export struct AddFortiTokenPage {
               .padding({ left: ADD_TOKEN_PAGE_INSET, right: ADD_TOKEN_PAGE_INSET, top: 8 })
 
             ListItem() {
-              MaterialSurface({ radius: ADD_TOKEN_SECTION_RADIUS, applyShadow: true }) {
-                Column({ space: 14 }) {
-                  AddTokenTextField({
-                    label: $r('app.string.dialog_cfg_tk_secret'),
-                    value: this.secret,
-                    inputType: InputType.Password,
-                    onChange: (value: string) => this.secret = value
-                  })
-                  Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
-                  AddTokenTextField({
-                    label: $r('app.string.dialog_cfg_tk_name'),
-                    value: this.accountName,
-                    onChange: (value: string) => this.accountName = value
-                  })
-                }
-                .padding(ADD_TOKEN_SECTION_PADDING).width('100%')
+              Column({ space: 14 }) {
+                AddTokenTextField({
+                  label: $r('app.string.dialog_cfg_tk_secret'),
+                  value: this.secret,
+                  inputType: InputType.Password,
+                  onChange: (value: string) => this.secret = value
+                })
+                Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
+                AddTokenTextField({
+                  label: $r('app.string.dialog_cfg_tk_name'),
+                  value: this.accountName,
+                  onChange: (value: string) => this.accountName = value
+                })
               }
+              .padding(ADD_TOKEN_SECTION_PADDING).width('100%')
+              .borderRadius(ADD_TOKEN_SECTION_RADIUS)
+              .backgroundColor($r('app.color.item_bg'))
             }
             .padding({ left: ADD_TOKEN_PAGE_INSET, right: ADD_TOKEN_PAGE_INSET })
             ListItem().height(this.window.AvoidBottomHeight + 16)
@@ -352,7 +352,7 @@ export struct AddFortiTokenPage {
         },
         scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: this.scrollEffectType },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialType: MaterialTheme.hdsMaterialType(),
           materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },

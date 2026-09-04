@@ -101,6 +101,7 @@ export struct BackupAndMigrationSheet {
 
   private openEncryptionPasswordDialog(builder: CustomBuilder): void {
     this.getUIContext().getPromptAction().openCustomDialog({
+      systemMaterial: dialogSystemMaterial(),
       builder: builder,
       autoCancel: true,
       alignment: DialogAlignment.Center
@@ -316,20 +317,18 @@ export struct BackupAndMigrationSheet {
                       .onClick(() => {
                         if (importer.id === 'uri') {
                           // URI 导入需要组件上下文，在此创建 CustomDialogController
-                          if (!this.uriDialogController) {
-                            this.uriDialogController = new CustomDialogController({
-                              systemMaterial: dialogSystemMaterial(),
-                              builder: URIConfigDialog({
-                                confirm: async (tokens: Array<TokenConfig>): Promise<boolean> => {
-                                  this.backupReload(tokens);
-                                  return true;
-                                }
-                              }),
-                              autoCancel: true,
-                              customStyle: false,
-                              cornerRadius: 10,
-                            });
-                          }
+                          this.uriDialogController = new CustomDialogController({
+                            systemMaterial: dialogSystemMaterial(),
+                            builder: URIConfigDialog({
+                              confirm: async (tokens: Array<TokenConfig>): Promise<boolean> => {
+                                this.backupReload(tokens);
+                                return true;
+                              }
+                            }),
+                            autoCancel: true,
+                            customStyle: false,
+                            cornerRadius: 10,
+                          });
                           this.uriDialogController.open();
                         } else {
                           // 其他导入器（如 TwoFAImporter）使用各自的 import() 方法
@@ -434,7 +433,7 @@ export struct BackupAndMigrationSheet {
             scrollEffectType: this.scrollEffectStyle
           },
           systemMaterialEffect: {
-            materialType: hdsMaterial.MaterialType.IMMERSIVE,
+            materialType: MaterialTheme.hdsMaterialType(),
             materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
           }
         },
@@ -453,6 +452,7 @@ export struct BackupAndMigrationSheet {
 
   private showHuaweiAccountRequiredDialog(): void {
     this.getUIContext().showAlertDialog({
+      systemMaterial: dialogSystemMaterial(),
       title: $r('app.string.cloud_sync_require_huawei_account_title'),
       message: $r('app.string.cloud_sync_require_huawei_account_msg'),
       autoCancel: true,

@@ -10,12 +10,11 @@ import {
   AppStorageV2,
   SegmentButtonV2ItemOptions,
   SegmentButtonV2Items,
-  TabSegmentButtonV2,
-  uiMaterial
+  TabSegmentButtonV2
 } from '@kit.ArkUI';
 import { IconPicker, IconPickerViewState } from 'uikit';
 import { AegisIconPack, AppWindowInfo, TokenIconPacks } from 'common';
-import { MaterialTheme, MaterialThickness } from '../components/MaterialTheme';
+import { MaterialTheme } from '../components/MaterialTheme';
 import { PageScaffold } from '../components/PageScaffold';
 
 /** 添加/编辑令牌页打开图标选择页时使用的路由参数。 */
@@ -58,32 +57,6 @@ export struct IconPickerPage {
   private iconScrollers: Scroller[] = createIconScrollers();
   private packSegmentItems: SegmentButtonV2Items = createIconPackSegmentItems();
 
-  /** 标题栏分段按钮直接使用光感材质，厚度仍沿用用户偏好。 */
-  private segmentBackgroundMaterial(): uiMaterial.Material {
-    return new uiMaterial.ImmersiveMaterial({
-      style: this.mapMaterialThickness(MaterialTheme.preferredThickness()),
-      colorInvert: true,
-      interactive: true
-    });
-  }
-
-  /** MaterialThickness → uiMaterial.ImmersiveStyle（仅 API 26 材质分支调用）。 */
-  private mapMaterialThickness(thickness: MaterialThickness): uiMaterial.ImmersiveStyle {
-    switch (thickness) {
-      case MaterialThickness.ULTRA_THIN:
-        return uiMaterial.ImmersiveStyle.ULTRA_THIN;
-      case MaterialThickness.THIN:
-        return uiMaterial.ImmersiveStyle.THIN;
-      case MaterialThickness.THICK:
-        return uiMaterial.ImmersiveStyle.THICK;
-      case MaterialThickness.ULTRA_THICK:
-        return uiMaterial.ImmersiveStyle.ULTRA_THICK;
-      case MaterialThickness.REGULAR:
-      default:
-        return uiMaterial.ImmersiveStyle.REGULAR;
-    }
-  }
-
   private completeSelection(path: string): void {
     this.pageParams.onSelected(path);
     this.pageInfos?.pop();
@@ -97,11 +70,8 @@ export struct IconPickerPage {
         value: this.pickerViewState.searchText
       })
         .width('100%')
-        .backgroundColor(Color.Transparent)
-        .systemMaterial(new uiMaterial.ImmersiveMaterial({
-          style: uiMaterial.ImmersiveStyle.THIN,
-          lightEffect: { color: Color.White }
-        }))
+        .backgroundColor(MaterialTheme.surfaceBackground($r('sys.color.comp_background_tertiary')))
+        .systemMaterial(MaterialTheme.systemMaterial(true))
         .onChange((value: string) => {
           this.pickerViewState.searchText = value;
         })
@@ -121,7 +91,7 @@ export struct IconPickerPage {
       TabSegmentButtonV2({
         items: this.packSegmentItems,
         selectedIndex: this.pickerViewState.packIndex,
-        backgroundSystemMaterial: this.segmentBackgroundMaterial(),
+        backgroundSystemMaterial: MaterialTheme.systemMaterial(true),
         $selectedIndex: (index: number) => {
           this.pickerViewState.packIndex = index;
           this.iconScrollers[index]?.scrollTo({ xOffset: 0, yOffset: 0 });
@@ -156,7 +126,6 @@ export struct IconPickerPage {
           showSearch: false,
           showPackTabs: false,
           currentPackIndex: this.pickerViewState.packIndex,
-          immersiveMaterialEnabled: MaterialTheme.isImmersiveEffective(),
           iconScrollers: this.iconScrollers,
           searchText: this.pickerViewState.searchText,
           viewState: this.pickerViewState,
@@ -190,7 +159,7 @@ export struct IconPickerPage {
         },
         systemMaterialEffect: {
           // 带 bottomBuilder 的标题栏直接启用光感，等级由系统自适应，不走应用能力降档。
-          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialType: MaterialTheme.hdsMaterialType(),
           materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },

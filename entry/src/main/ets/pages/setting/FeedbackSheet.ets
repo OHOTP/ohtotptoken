@@ -112,7 +112,7 @@ export struct FeedbackSheet {
             scrollEffectType: this.scrollEffectType
           },
           systemMaterialEffect: {
-            materialType: hdsMaterial.MaterialType.IMMERSIVE,
+            materialType: MaterialTheme.hdsMaterialType(),
             materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
           }
         },

@@ -1265,32 +1265,20 @@
       "value": "Immersive Gradient Blur"
     },
     {
-      "name": "setting_material_mode",
-      "value": "Material Mode"
+      "name": "setting_immersive_enable",
+      "value": "Enable immersive material"
     },
     {
-      "name": "setting_material_mode_desc",
-      "value": "Immersive light-sense material for cards and surfaces, requires device support."
-    },
-    {
-      "name": "setting_material_mode_auto",
-      "value": "Auto"
-    },
-    {
-      "name": "setting_material_mode_immersive",
-      "value": "Immersive"
-    },
-    {
-      "name": "setting_material_mode_solid",
-      "value": "Solid"
+      "name": "setting_immersive_enable_desc",
+      "value": "Applies to supported title bars, bottom tabs, dialogs and controls; not content cards."
     },
     {
       "name": "setting_immersive_style",
-      "value": "Material Thickness"
+      "value": "Material thickness"
     },
     {
       "name": "setting_immersive_style_desc",
-      "value": "Thickness of the immersive material."
+      "value": "Adjust translucency; excludes HDS bars."
     },
     {
       "name": "setting_immersive_style_ultra_thin",
@@ -1335,46 +1323,6 @@
     {
       "name": "setting_group_support_about",
       "value": "Support & About"
-    },
-    {
-      "name": "setting_token_item_material",
-      "value": "List Item Material"
-    },
-    {
-      "name": "setting_token_item_material_desc",
-      "value": "Enable immersive material for each token list item."
-    },
-    {
-      "name": "setting_light_effect_mode",
-      "value": "Light Feedback"
-    },
-    {
-      "name": "setting_light_effect_mode_desc",
-      "value": "Show light spot feedback on material surfaces when touched."
-    },
-    {
-      "name": "setting_light_effect_mode_default",
-      "value": "Follow components"
-    },
-    {
-      "name": "setting_light_effect_mode_all",
-      "value": "Always on"
-    },
-    {
-      "name": "setting_token_item_material_solid",
-      "value": "Solid"
-    },
-    {
-      "name": "setting_token_item_material_immersive",
-      "value": "Immersive"
-    },
-    {
-      "name": "token_item_material_confirm_title",
-      "value": "Enable Immersive Material for List Items?"
-    },
-    {
-      "name": "token_item_material_confirm_msg",
-      "value": "Enabling immersive material for every token list item requires the background to be re-sampled per item on each frame while scrolling, which increases performance and power cost and may cause scrolling jank with many tokens or on low-end devices.\n\nThe effect only applies when the device supports immersive material and Material Mode is not set to Solid. Enable it anyway?"
     },
     {
       "name": "setting_bottom_tabs_type",

@@ -1,3 +1,4 @@
+import { dialogSystemMaterial } from 'common';
 import { common } from '@kit.AbilityKit';
 import { fileIo as fs } from '@kit.CoreFileKit';
 import { showSelectFilePicker } from 'common';
@@ -315,6 +316,7 @@ export struct SubItemIconManager {
                     .width('10%')
                     .onClick(() => {
                       this.getUIContext().showAlertDialog({
+                        systemMaterial: dialogSystemMaterial(),
                         message: $r('app.string.alert_icon_pack_remove_confirm_msg', item.name),
                         autoCancel: true,
                         alignment: DialogAlignment.Center,

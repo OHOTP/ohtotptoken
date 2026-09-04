@@ -1,3 +1,4 @@
+import { dialogSystemMaterial } from './MaterialStyleBridge';
 import { AppStorageV2 } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppWindowInfo } from '../models/AppWindowInfo';
@@ -30,6 +31,7 @@ let impl: ShowSnackBarImpl = (message: ResourceStr, _type: SnackBarNotifyType, o
   try {
     const windowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
     windowInfo.uiContext?.getPromptAction().showToast({
+      systemMaterial: dialogSystemMaterial(),
       message,
       duration: options.duration ?? 2000
     });

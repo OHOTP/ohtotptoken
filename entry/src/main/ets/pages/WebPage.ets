@@ -1,3 +1,4 @@
+import { MaterialTheme } from '../components/MaterialTheme';
 import { webview } from '@kit.ArkWeb';
 
 import { CommonConstants } from 'common';
@@ -53,7 +54,7 @@ export struct WebPage {
           },
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialType: MaterialTheme.hdsMaterialType(),
           materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },

@@ -1,7 +1,6 @@
+import { dialogSystemMaterial } from 'common';
 import { AppPreference, PREF_KEYS, TokenConfig } from 'common';
 import { TokenIcon } from 'uikit';
-import { MaterialSurface } from './MaterialSurface';
-import { MaterialTheme, MaterialThickness } from './MaterialTheme';
 import { TokenSwitchTrace } from '../utils/TokenSwitchPerf';
 
 /** 添加令牌页面统一视觉常量：克制、清晰、适合表单，不复用旧 Dialog 布局。 */
@@ -31,9 +30,7 @@ export class AddTokenPageParams {
 /**
  * 添加令牌页统一操作按钮。
  *
- * 实体档保持蓝底白字；沉浸档由 MaterialSurface 切换为系统材质，并跟随
- * 设置页的材质模式、厚度和光源反馈选项。Button 自身背景在沉浸档透明，
- * 避免遮住材质层。
+ * 内容区按钮不在沉浸光感生效范围，保持蓝底白字。
  */
 @Preview
 @ComponentV2
@@ -44,35 +41,24 @@ export struct AddTokenActionButton {
   @Event action: () => void = () => {};
 
   build() {
-    MaterialSurface({
-      thickness: MaterialThickness.THIN,
-      interactive: this.buttonEnabled,
-      lightEffect: this.buttonEnabled,
-      materialColor: this.buttonEnabled ? $r('app.color.button_blue') : Color.Gray,
-      // 高度 48vp，圆角取高度一半保持胶囊形
-      radius: 24,
-      solidColor: Color.Transparent
-    }) {
-      Button() {
-        Row({ space: 8 }) {
-          if (this.loading) {
-            LoadingProgress().width(20).height(20).color(Color.White)
-          }
-          Text(this.text)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(Color.White)
-            .maxLines(1)
+    Button() {
+      Row({ space: 8 }) {
+        if (this.loading) {
+          LoadingProgress().width(20).height(20).color(Color.White)
         }
+        Text(this.text)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(Color.White)
+          .maxLines(1)
       }
-      .type(ButtonType.ROUNDED_RECTANGLE)
-      .width('100%')
-      .height(48)
-      .backgroundColor(MaterialTheme.surfaceBackground(
-        this.buttonEnabled ? $r('app.color.button_blue') : Color.Gray))
-      .stateEffect(false)
-      .enabled(this.buttonEnabled)
-      .onClick(() => this.action())
     }
+    .type(ButtonType.ROUNDED_RECTANGLE)
+    .width('100%')
+    .height(48)
+    .backgroundColor(this.buttonEnabled ? $r('app.color.button_blue') : Color.Gray)
+    .stateEffect(false)
+    .enabled(this.buttonEnabled)
+    .onClick(() => this.action())
   }
 }
 
@@ -118,6 +104,7 @@ export struct AddTokenHeader {
       })
       .accessibilityText($r('app.string.add_token_choose_icon'))
       .bindPopup(this.iconGuidePopup, {
+        systemMaterial: dialogSystemMaterial(),
         placement: Placement.Bottom,
         message: this.getUIContext().getHostContext()?.resourceManager
           .getStringSync($r('app.string.add_token_icon_guide').id),

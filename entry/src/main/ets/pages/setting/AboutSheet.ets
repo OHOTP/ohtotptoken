@@ -253,7 +253,7 @@ export struct AboutSheet {
             scrollEffectType: this.scrollEffectStyle
           },
           systemMaterialEffect: {
-            materialType: hdsMaterial.MaterialType.IMMERSIVE,
+            materialType: MaterialTheme.hdsMaterialType(),
             materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
           }
         },

@@ -105,6 +105,7 @@ function TokenAddMenuBuilder(host: Index) {
       })
       .accessibilityText($r('app.string.menu_add_nfc_read'))
   }
+  .systemMaterial(dialogSystemMaterial())
 }
 
 @Builder
@@ -123,6 +124,7 @@ function TokenActionsMenuBuilder(host: Index) {
   .width(host.getTokenActionsMenuWidth())
   // 使用原生内嵌展开，让排序选项在“排序方式”下方显示。
   .subMenuExpandingMode(SubMenuExpandingMode.EMBEDDED_EXPAND)
+  .systemMaterial(dialogSystemMaterial())
 }
 
 @Builder
@@ -164,6 +166,7 @@ function TokenSortMenuBuilder(host: Index) {
       })
       .accessibilityText($r('app.string.menu_token_sort_token_name_descending'))
   }
+  .systemMaterial(dialogSystemMaterial())
 }
 
 @Entry
@@ -225,7 +228,10 @@ struct Index {
     events: [this.eventId]
   };
   //拖拽文件弹框
-  private DropFilesDialogController: CustomDialogController | null = new CustomDialogController({
+  private DropFilesDialogController: CustomDialogController | null = null;
+
+  private createDropFilesDialog(): CustomDialogController {
+    return new CustomDialogController({
     systemMaterial: dialogSystemMaterial(),
     builder: DropFilesDialog({}),
     cancel: () => {},
@@ -256,7 +262,8 @@ struct Index {
     gridCount: 4,
     customStyle: false,
     cornerRadius: 10,
-  })
+    });
+  }
 
   private backup_select_uri: string = '';
   private readonly addTokenMenuTargetId: string = 'app_ua_add_token';
@@ -450,6 +457,7 @@ struct Index {
 
   private openEncryptionPasswordDialog(): void {
     this.getUIContext().getPromptAction().openCustomDialog({
+      systemMaterial: dialogSystemMaterial(),
       builder: () => {
         this.EncryptionPasswordDialogBuilder();
       },
@@ -516,6 +524,7 @@ struct Index {
       return;
     }
     this.getUIContext().showAlertDialog({
+      systemMaterial: dialogSystemMaterial(),
       title: $r('app.string.master_key_deprecation_title'),
       message: $r('app.string.master_key_deprecation_message'),
       autoCancel: false,
@@ -941,6 +950,7 @@ struct Index {
       return;
     }
     this.dialog_nfc_read = new CustomDialogController({
+      systemMaterial: dialogSystemMaterial(),
       builder: NFCReadDialog({
         onSuccess: (result: OathReadResult) => {
           const count = NfcSessionTokens.getInstance().applyResult(result);
@@ -1127,7 +1137,8 @@ struct Index {
         onDragEnterFile: () => {
           if (!this.DropFilesDialogIsOpen) {
             this.DropFilesDialogIsOpen = true;
-            this.DropFilesDialogController?.open();
+            this.DropFilesDialogController = this.createDropFilesDialog();
+            this.DropFilesDialogController.open();
           }
         },
         onDragLeaveFile: () => {

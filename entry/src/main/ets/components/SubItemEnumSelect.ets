@@ -1,3 +1,4 @@
+import { MaterialTheme } from './MaterialTheme';
 import {EnumSelectOption} from 'common';
 import { SETTING_ROW_MIN_HEIGHT, SETTING_ROW_PADDING } from './SettingStyle';
 
@@ -83,6 +84,8 @@ export struct SubItemEnumSelect {
           .enabled(!this.disable)
           .value(this.options.find((opt: EnumSelectOption) => opt.value === this.selected)?.label as string ?? '')
           .selected(this.options.findIndex((opt: EnumSelectOption) => opt.value === this.selected))
+          .systemMaterial(MaterialTheme.systemMaterial(true))
+          .menuSystemMaterial(MaterialTheme.systemMaterial())
           .onSelect((index: number) => {
             const selectedValue = this.options[index]?.value;
             if (selectedValue !== undefined) {

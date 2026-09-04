@@ -1,3 +1,4 @@
+import { MaterialTheme } from '../components/MaterialTheme';
 import { AppStorageV2 } from '@kit.ArkUI';
 
 import { TopNavigationView } from '../components/TopNavigationView';
@@ -161,7 +162,7 @@ export struct ShowDataSyncDetailsPage {
           scrollEffectType: this.scrollEffectType
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialType: MaterialTheme.hdsMaterialType(),
           materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },

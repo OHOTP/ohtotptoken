@@ -1,6 +1,5 @@
+import { dialogSystemMaterial } from 'common';
 import { TokenItem } from "../components/TokenItem";
-import { MaterialSurface } from "../components/MaterialSurface";
-import { MaterialThickness } from "../components/MaterialTheme";
 import { QRCodeDialog } from 'uikit';
 import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
 import { otpType, TokenConfig, TokenConfigVM } from 'common';
@@ -187,6 +186,7 @@ export struct TokenListPage {
 
   showQRCodeDialog(conf: TokenConfig): void {
     this.getUIContext().getPromptAction().openCustomDialog({
+      systemMaterial: dialogSystemMaterial(),
       builder: () => {
         this.QRCodeDialogBuilder(conf);
       }
@@ -219,6 +219,7 @@ export struct TokenListPage {
       }
     })
       .bindPopup(this.token_copy_guide_popup && vm.config.TokenUUID === this.dataSource.getData(0)?.config.TokenUUID, {
+        systemMaterial: dialogSystemMaterial(),
         placement: Placement.Left,
         message: this.getUIContext().getHostContext()?.resourceManager
           .getStringSync($r('app.string.token_copy_guide_popup').id),
@@ -243,107 +244,79 @@ export struct TokenListPage {
   @Builder
   TokenItemSwipeEnd(vm: TokenConfigVM) {
     Row({ space: 10 }) {
-      // 侧滑操作按钮：透明背景完整透出沉浸材质与光感反馈；
-      // 删除操作使用红色光感，其余操作沿用默认白色光感。
+      // 内容区侧滑按钮使用实体语义色，不应用无效的材质。
       // NFC 外部令牌无持久化 URI，不提供二维码入口
       if (vm.config.TokenType !== otpType.NFC_external) {
-        MaterialSurface({
-          thickness: MaterialThickness.THIN,
-          lightEffect: true,
-          interactive: true,
-          radius: '50%',
-          solidColor: Color.Transparent,
-          fillWidth: false
-        }) {
-          Button({ type: ButtonType.Circle }) {
-            Text() {
-              SymbolSpan($r('sys.symbol.qrcode'))
-                .fontSize(30)
-                .fontWeight(FontWeight.Medium)
-                .fontColor([Color.White])
-            }
-          }
-          .backgroundColor(Color.Transparent)
-          .padding(10)
-          .onClick(() => {
-            this.showQRCodeDialog(vm.config);
-          })
-        }
-      }
-
-      if (this.TabBarVisible && vm.config.TokenType !== otpType.NFC_external) {
-        MaterialSurface({
-          thickness: MaterialThickness.THIN,
-          lightEffect: true,
-          interactive: true,
-          radius: '50%',
-          solidColor: Color.Transparent,
-          fillWidth: false
-        }) {
-          Button({ type: ButtonType.Circle }) {
-            Text() {
-              SymbolSpan($r('sys.symbol.square_and_pencil_fill'))
-                .fontSize(30)
-                .fontWeight(FontWeight.Medium)
-                .fontColor([Color.White])
-            }
-          }
-          .backgroundColor(Color.Transparent)
-          .padding(10)
-          .onClick(() => {
-            this.openEditPage(vm.config);
-          })
-        }
-      }
-
-      MaterialSurface({
-        thickness: MaterialThickness.THIN,
-        lightEffect: true,
-        lightEffectColor: Color.Red,
-        interactive: true,
-        radius: '50%',
-        solidColor: Color.Transparent,
-        fillWidth: false
-      }) {
         Button({ type: ButtonType.Circle }) {
           Text() {
-            SymbolSpan($r('sys.symbol.trash_fill'))
+            SymbolSpan($r('sys.symbol.qrcode'))
               .fontSize(30)
               .fontWeight(FontWeight.Medium)
               .fontColor([Color.White])
           }
         }
-        .backgroundColor(Color.Transparent)
+        .backgroundColor(Color.Orange)
         .padding(10)
-        .onClick(async () => {
-          AlertDialog.show({
-            title: $r('app.string.alert_remove_title', vm.config.TokenIssuer),
-            subtitle: vm.config.TokenName,
-            message: $r('app.string.alert_remove_confirm_msg'),
-            autoCancel: true,
-            alignment: DialogAlignment.Center,
-            primaryButton: {
-              defaultFocus: false,
-              value: $r('app.string.dialog_btn_cancel'),
-              action: () => {
-                return
-              }
-            },
-            secondaryButton: {
-              value: $r('app.string.dialog_btn_delete'),
-              fontColor: Color.Red,
-              action: async () => {
-                if (vm.config.TokenType === otpType.NFC_external) {
-                  // 外部令牌仅存于会话存储，从会话中移除
-                  NfcSessionTokens.getInstance().remove(vm.config.TokenUUID);
-                } else {
-                  tkStore.deleteToken(vm.config.TokenUUID);
-                }
-              }
-            }
-          })
+        .onClick(() => {
+          this.showQRCodeDialog(vm.config);
         })
       }
+
+      if (this.TabBarVisible && vm.config.TokenType !== otpType.NFC_external) {
+        Button({ type: ButtonType.Circle }) {
+          Text() {
+            SymbolSpan($r('sys.symbol.square_and_pencil_fill'))
+              .fontSize(30)
+              .fontWeight(FontWeight.Medium)
+              .fontColor([Color.White])
+          }
+        }
+        .backgroundColor(Color.Gray)
+        .padding(10)
+        .onClick(() => {
+          this.openEditPage(vm.config);
+        })
+      }
+
+      Button({ type: ButtonType.Circle }) {
+        Text() {
+          SymbolSpan($r('sys.symbol.trash_fill'))
+            .fontSize(30)
+            .fontWeight(FontWeight.Medium)
+            .fontColor([Color.White])
+        }
+      }
+      .backgroundColor(Color.Red)
+      .padding(10)
+      .onClick(async () => {
+        AlertDialog.show({
+          systemMaterial: dialogSystemMaterial(),
+          title: $r('app.string.alert_remove_title', vm.config.TokenIssuer),
+          subtitle: vm.config.TokenName,
+          message: $r('app.string.alert_remove_confirm_msg'),
+          autoCancel: true,
+          alignment: DialogAlignment.Center,
+          primaryButton: {
+            defaultFocus: false,
+            value: $r('app.string.dialog_btn_cancel'),
+            action: () => {
+              return
+            }
+          },
+          secondaryButton: {
+            value: $r('app.string.dialog_btn_delete'),
+            fontColor: Color.Red,
+            action: async () => {
+              if (vm.config.TokenType === otpType.NFC_external) {
+                // 外部令牌仅存于会话存储，从会话中移除
+                NfcSessionTokens.getInstance().remove(vm.config.TokenUUID);
+              } else {
+                tkStore.deleteToken(vm.config.TokenUUID);
+              }
+            }
+          }
+        })
+      })
     }
     .margin({ left: 10, right: this.token_preference.app_appearance_token_list_item_suffix_padding })
   }

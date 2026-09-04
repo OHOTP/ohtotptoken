@@ -1,3 +1,4 @@
+import { MaterialTheme } from '../components/MaterialTheme';
 import { AppWindowInfo, EVENT_NAMES, maFile, otpType, readFileContent, ROUTE_NAMES, ScanBarCode,
   showSelectFilePicker, showSnackBar, SnackBarNotifyType, TokenConfig } from 'common';
 import { AppStorageV2 } from '@kit.ArkUI';
@@ -10,7 +11,6 @@ import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, HdsNavDestination, 
 import { AddTokenActionButton, AddTokenHeader, AddTokenPageParams, ADD_TOKEN_BOTTOM_ACTION_INSET, ADD_TOKEN_PAGE_INSET,
   ADD_TOKEN_SECTION_PADDING, ADD_TOKEN_SECTION_RADIUS,
   AddTokenSectionTitle, AddTokenTextField } from '../components/AddTokenForm';
-import { MaterialSurface } from '../components/MaterialSurface';
 import { PageScaffold } from '../components/PageScaffold';
 import { IconPickerPageParams } from './IconPickerPage';
 import { ResponsiveTokenEditStore, TokenSwitchPerf, TokenSwitchTrace } from '../utils/TokenSwitchPerf';
@@ -188,29 +188,29 @@ export struct AddSteamTokenPage {
               .padding({ left: ADD_TOKEN_PAGE_INSET, right: ADD_TOKEN_PAGE_INSET, top: 8 })
 
             ListItem() {
-              MaterialSurface({ radius: ADD_TOKEN_SECTION_RADIUS, applyShadow: true }) {
-                Column({ space: 14 }) {
-                  AddTokenTextField({
-                    label: $r('app.string.dialog_cfg_tk_secret'),
-                    value: this.secret,
-                    inputType: InputType.Password,
-                    onChange: (value: string) => this.secret = value
-                  })
-                  Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
-                  AddTokenTextField({
-                    label: $r('app.string.dialog_cfg_tk_issuer'),
-                    value: this.issuer,
-                    onChange: (value: string) => this.issuer = value
-                  })
-                  Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
-                  AddTokenTextField({
-                    label: $r('app.string.dialog_cfg_tk_name'),
-                    value: this.accountName,
-                    onChange: (value: string) => this.accountName = value
-                  })
-                }
-                .padding(ADD_TOKEN_SECTION_PADDING).width('100%')
+              Column({ space: 14 }) {
+                AddTokenTextField({
+                  label: $r('app.string.dialog_cfg_tk_secret'),
+                  value: this.secret,
+                  inputType: InputType.Password,
+                  onChange: (value: string) => this.secret = value
+                })
+                Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
+                AddTokenTextField({
+                  label: $r('app.string.dialog_cfg_tk_issuer'),
+                  value: this.issuer,
+                  onChange: (value: string) => this.issuer = value
+                })
+                Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
+                AddTokenTextField({
+                  label: $r('app.string.dialog_cfg_tk_name'),
+                  value: this.accountName,
+                  onChange: (value: string) => this.accountName = value
+                })
               }
+              .padding(ADD_TOKEN_SECTION_PADDING).width('100%')
+              .borderRadius(ADD_TOKEN_SECTION_RADIUS)
+              .backgroundColor($r('app.color.item_bg'))
             }
             .padding({ left: ADD_TOKEN_PAGE_INSET, right: ADD_TOKEN_PAGE_INSET })
             ListItem().height(this.window.AvoidBottomHeight + 16)
@@ -253,7 +253,7 @@ export struct AddSteamTokenPage {
         },
         scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: this.scrollEffectType },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialType: MaterialTheme.hdsMaterialType(),
           materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },

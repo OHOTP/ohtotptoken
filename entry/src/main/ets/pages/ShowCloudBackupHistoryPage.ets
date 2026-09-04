@@ -1,3 +1,5 @@
+import { dialogSystemMaterial } from 'common';
+import { MaterialTheme } from '../components/MaterialTheme';
 import { AppStorageV2, LengthMetrics } from '@kit.ArkUI';
 
 import { CloudBackupManager } from 'common';
@@ -194,7 +196,7 @@ export struct ShowCloudBackupHistoryPage {
           scrollEffectType: this.scrollEffectType
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialType: MaterialTheme.hdsMaterialType(),
           materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },
@@ -330,6 +332,7 @@ export struct ShowCloudBackupHistoryPage {
   /** 恢复确认弹窗：底部 AlertDialog，确认后调用 triggerRestore 解密并写入令牌 */
   private showRestoreConfirmDialog(record: CloudBackupRecord): void {
     this.getUIContext().showAlertDialog({
+      systemMaterial: dialogSystemMaterial(),
       title: $r('app.string.cloud_backup_restore_confirm_title'),
       message: $r('app.string.cloud_backup_restore_confirm_msg', record.date),
       autoCancel: true,
@@ -356,6 +359,7 @@ export struct ShowCloudBackupHistoryPage {
   /** 删除确认弹窗：仅当前设备的备份可删除，底部 AlertDialog 二次确认 */
   private showDeleteConfirmDialog(record: CloudBackupRecord): void {
     this.getUIContext().showAlertDialog({
+      systemMaterial: dialogSystemMaterial(),
       title: $r('app.string.cloud_backup_delete_confirm_title'),
       message: $r('app.string.cloud_backup_delete_confirm_msg', record.date),
       autoCancel: true,
