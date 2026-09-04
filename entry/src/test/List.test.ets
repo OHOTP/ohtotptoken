@@ -8,6 +8,8 @@ import syncTimeHelperTest from './SyncTimeHelper.test';
 import colorUtilsTest from './ColorUtils.test';
 import commonUtilsTest from './CommonUtils.test';
 import genericDataSourceTest from './GenericDataSource.test';
+import otpAuthParserTest from './OtpAuthParser.test';
+import twoFaBackupTest from './TwoFABackup.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -20,4 +22,6 @@ export default function testsuite() {
   colorUtilsTest();
   commonUtilsTest();
   genericDataSourceTest();
+  otpAuthParserTest();
+  twoFaBackupTest();
 }
