@@ -130,6 +130,8 @@ export struct BleWatchSyncPage {
         hilog.warn(DOMAIN, TAG, 'ACCESS_BLUETOOTH not granted, skip scan');
         showSnackBar($r('app.string.watch_sync_bluetooth_permission_denied'), SnackBarNotifyType.WARNING);
       }
+    }).catch((err: Error) => {
+      hilog.error(DOMAIN, TAG, `requestBluetoothPermission failed: ${err.message}`);
     });
   }
 

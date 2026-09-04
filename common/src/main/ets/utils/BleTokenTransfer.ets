@@ -73,6 +73,12 @@ const MAX_RECEIVE = 512 * 1024;
  * 由调用方提示用户重试. 收尾帧应答延后到处理完成, 5 秒同样覆盖解密/入库耗时.
  */
 const GATT_OP_TIMEOUT_MS = 5000;
+/**
+ * 收尾帧超时(ms): 收尾帧的写应答延后到手表端重组/解密/入库完成, 大批次
+ * (逐条 upsert 含 ASSET 双写)耗时超过单帧 5 秒, 放宽到 15 秒; 超时仍判失败,
+ * 用户重发为幂等覆盖, 无脏数据.
+ */
+const GATT_FINAL_OP_TIMEOUT_MS = 15000;
 
 /**
  * 带超时的 Promise 封装: 超时或操作完成/失败均清理定时器,
@@ -132,6 +138,8 @@ export enum BleSyncStatus {
 export class BleTokenServer {
   private static instance: BleTokenServer;
   private gattServer: ble.GattServer | undefined = undefined;
+  /** 进行中的启动流程(单飞: 并发 start 共享同一结果, 收敛后按需补启) */
+  private startPromise: Promise<void> | undefined = undefined;
   private receive: ReceiveState = BleTokenServer.newReceiveState();
   private onTokensSaved: ((count: number) => void) | undefined = undefined;
   private onSettingsApplied: (() => void) | undefined = undefined;
@@ -166,15 +174,39 @@ export class BleTokenServer {
 
   /**
    * 启动 GATT Server 并开始广播. 幂等: 已启动则直接返回.
-   * 启动竞态保护: 蓝牙权限/开关未就绪时以 5 次 × 1 秒延时重试, 全部失败仅记日志
-   * (调用方 P2P/BLE 并行启动, BLE 失败不得影响 P2P 接收).
-   * 每次失败尝试均注销/close 已创建的 GattServer, 避免重试路径泄漏监听与实例.
+   * 单飞保护: initDataSync 启动重试与页面授权后启动可能并发, 共享同一次启动流程,
+   * 收敛后仍未就绪(如先前无权限、现已授权)再补启, 避免双 GattServer/双广播竞态.
    */
   public async start(): Promise<void> {
     if (this.gattServer) {
       return;
     }
+    if (this.startPromise) {
+      // 等待进行中的启动收敛(可能因蓝牙未就绪而失败), 失败则由本调用补启
+      await this.startPromise;
+    }
+    if (this.gattServer) {
+      return;
+    }
+    this.startPromise = this.doStart();
+    try {
+      await this.startPromise;
+    } finally {
+      this.startPromise = undefined;
+    }
+  }
+
+  /**
+   * 启动重试主体: 蓝牙权限/开关未就绪时以 5 次 × 1 秒延时重试, 全部失败仅记日志
+   * (调用方 P2P/BLE 并行启动, BLE 失败不得影响 P2P 接收).
+   * 每次失败尝试均注销/close 已创建的 GattServer; 每轮尝试前复核就绪态,
+   * 防止并发路径已启动后本循环重复创建覆盖.
+   */
+  private async doStart(): Promise<void> {
     for (let attempt = 0; attempt < 5; attempt++) {
+      if (this.gattServer) {
+        return;
+      }
       let server: ble.GattServer | undefined = undefined;
       try {
         server = ble.createGattServer();
@@ -253,21 +285,29 @@ export class BleTokenServer {
 
   /**
    * 停止广播并释放监听(与 start 注册一一成对注销).
+   * 先置空引用再分段清理: 单段失败(如未广播时 stop 抛错)不影响其余段执行,
+   * 避免滞留死实例使后续 start() 的幂等检查短路.
    */
   public async stop(): Promise<void> {
+    const server = this.gattServer;
+    this.gattServer = undefined;
+    this.resetReceive();
+    if (server) {
+      try {
+        server.off('characteristicWrite');
+        server.off('connectionStateChange');
+        server.close();
+      } catch (err) {
+        let e: BusinessError = err as BusinessError;
+        hilog.warn(e.code, TAG, `release gatt server failed: ${e.message}`);
+      }
+    }
     try {
       ble.stopAdvertising();
       connection.off('bondStateChange');
-      if (this.gattServer) {
-        this.gattServer.off('characteristicWrite');
-        this.gattServer.off('connectionStateChange');
-        this.gattServer.close();
-        this.gattServer = undefined;
-      }
-      this.resetReceive();
     } catch (err) {
       let e: BusinessError = err as BusinessError;
-      hilog.error(e.code, TAG, `BleTokenServer.stop failed: ${e.message}`);
+      hilog.warn(e.code, TAG, `stop advertising failed: ${e.message}`);
     }
   }
 
@@ -296,17 +336,21 @@ export class BleTokenServer {
           this.sendWriteResponse(req, false);
           return;
         }
-        this.receive = {
-          inProgress: true, total: header.total, count: header.count,
-          type: header.type ?? MSG_TYPE_TOKENS, received: 0, chunks: []
-        };
-        this.onSyncStatus?.(BleSyncStatus.RECEIVING, 0);
-        hilog.info(DOMAIN, TAG, `receive start: total=${header.total}, count=${header.count}, type=${this.receive.type}`);
+        this.startBatch(header);
       } else {
-        this.receive.chunks.push(bytes);
-        this.receive.received += bytes.byteLength;
-        if (this.receive.received >= this.receive.total) {
-          batchComplete = true;
+        // 批次中途检测新头帧: 手机端超时中断后立即重试时, 上一半批残留 inProgress,
+        // 新头帧若被当数据分片并入会致本次重试必败; 数据分片为加密随机字节,
+        // 不可能解析出合法头, 解析成功即视为新批次开始(残留丢弃, 干净重启)
+        const retryHeader = this.tryParseHeader(bytes);
+        if (retryHeader !== null) {
+          hilog.warn(DOMAIN, TAG, `stale batch discarded, new batch header received: total=${retryHeader.total}`);
+          this.startBatch(retryHeader);
+        } else {
+          this.receive.chunks.push(bytes);
+          this.receive.received += bytes.byteLength;
+          if (this.receive.received >= this.receive.total) {
+            batchComplete = true;
+          }
         }
       }
       if (batchComplete) {
@@ -323,6 +367,30 @@ export class BleTokenServer {
       this.onSyncStatus?.(BleSyncStatus.FAILED, 0);
       this.sendWriteResponse(req, false);
     }
+  }
+
+  /** 开启新批次: 重置接收状态机并上报"接收中" */
+  private startBatch(header: TransferHeader): void {
+    this.receive = {
+      inProgress: true, total: header.total, count: header.count,
+      type: header.type ?? MSG_TYPE_TOKENS, received: 0, chunks: []
+    };
+    this.onSyncStatus?.(BleSyncStatus.RECEIVING, 0);
+    hilog.info(DOMAIN, TAG, `receive start: total=${header.total}, count=${header.count}, type=${this.receive.type}`);
+  }
+
+  /** 尝试把帧解析为合法传输头(批次中途新头帧检测用); 非头帧/非法头返回 null */
+  private tryParseHeader(bytes: Uint8Array): TransferHeader | null {
+    try {
+      const decoder = new util.TextDecoder('utf-8');
+      const header = JSON.parse(decoder.decodeToString(bytes)) as TransferHeader;
+      if (header && typeof header.total === 'number' && header.total > 0 && header.total <= MAX_RECEIVE) {
+        return header;
+      }
+    } catch (err) {
+      // 加密数据分片解码/解析必然失败, 属正常路径
+    }
+    return null;
   }
 
   /** 回发写应答: status 0 表示成功, 非 0 使手机端写入失败(真实结果反馈) */
@@ -663,19 +731,19 @@ export class BleTokenClient {
     const headerBytes: Uint8Array = encoder.encodeInto(JSON.stringify({ total: total, count: count, type: type }));
     await this.writeFrame(headerBytes);
 
-    // 数据分片
+    // 数据分片(收尾帧用放宽超时: 其应答延后到手表端处理完成)
     let offset: number = 0;
     while (offset < total) {
       const end: number = Math.min(offset + MAX_CHUNK, total);
       const chunk: Uint8Array = new Uint8Array(end - offset);
       chunk.set(encrypted.subarray(offset, end));
-      await this.writeFrame(chunk);
+      await this.writeFrame(chunk, offset + chunk.byteLength >= total);
       offset = end;
     }
     hilog.info(DOMAIN, TAG, `sendPayload done: type=${type}, count=${count}, ${total} encrypted bytes`);
   }
 
-  private async writeFrame(data: Uint8Array): Promise<void> {
+  private async writeFrame(data: Uint8Array, isFinal: boolean = false): Promise<void> {
     const buf: ArrayBuffer = new ArrayBuffer(data.byteLength);
     new Uint8Array(buf).set(data);
     const characteristic: ble.BLECharacteristic = {
@@ -688,7 +756,7 @@ export class BleTokenClient {
     // 无超时会让主线程 await 冻结(THREAD_BLOCK_6S ANR); 超时即失败中断整次传输
     await withTimeout(
       this.gattClient!.writeCharacteristicValue(characteristic, ble.GattWriteType.WRITE),
-      GATT_OP_TIMEOUT_MS,
+      isFinal ? GATT_FINAL_OP_TIMEOUT_MS : GATT_OP_TIMEOUT_MS,
       'BLE write timeout');
   }
 }

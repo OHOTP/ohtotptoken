@@ -66,13 +66,15 @@ export struct ArcTokenListPage {
       }
     });
     // BLE GATT Server 依赖 ACCESS_BLUETOOTH(user_grant): 先查后申请,
-    // 授权成功后启动(幂等, 已启动则直接返回); 失败仅记日志, 不影响 P2P 通道
+    // 授权成功后启动(幂等, 已启动/启动中则收敛); 失败仅记日志, 不影响 P2P 通道
     WearEngineClient.getInstance().requestBluetoothPermission().then((result: BluetoothPermissionResult) => {
       if (result === BluetoothPermissionResult.GRANTED) {
         BleTokenServer.getInstance().start();
       } else {
         hilog.warn(0x0000, 'ArcTokenListPage', `ACCESS_BLUETOOTH result ${result}, BLE receive unavailable`);
       }
+    }).catch((err: BusinessError) => {
+      hilog.error(err.code, 'ArcTokenListPage', `requestBluetoothPermission failed: ${err.message}`);
     });
     this.onTokenChanged();
 
