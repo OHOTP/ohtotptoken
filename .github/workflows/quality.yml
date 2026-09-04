@@ -31,7 +31,7 @@ jobs:
           submodules: true
 
       - name: Setup HarmonyOS CLI tools
-        uses: ErBWs/setup-ohos@v1
+        uses: ErBWs/setup-ohos@v2
         with:
           version: latest
           cache: true
