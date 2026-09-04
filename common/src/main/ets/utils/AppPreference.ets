@@ -499,6 +499,8 @@ export enum ROUTE_NAMES {
   AddSteamTokenPage = 'AddSteamTokenPage',
   /** 添加/编辑令牌时使用的独立图标选择页面 */
   IconPickerPage = 'IconPickerPage',
+  /** 手表同步页面 */
+  WatchSyncPage = 'WatchSyncPage',
   /** “我的”页华为账号详情 */
   SettingAccount = 'setting/account',
   /** “我的”页备份与迁移详情 */
@@ -707,8 +709,10 @@ export class AppPreference {
   /**
    * 加载Token外观设置到AppStorageV2
    * 从偏好设置中读取外观相关配置并更新到TokenPreference对象
+   *
+   * 公开供手表端 BLE 接收设置后调用, 使手表 UI 即时按新设置重绘.
    */
-  private static loadTokenAppearance(): void {
+  public static loadTokenAppearance(): void {
     let token_appearance: TokenPreference = AppStorageV2.connect(TokenPreference, () => new TokenPreference())!;
     token_appearance.app_safety_hide_token_enable =
       AppPreference.getPreference(PREF_KEYS.SAFETY_HIDE_TOKEN_ENABLE) as boolean;

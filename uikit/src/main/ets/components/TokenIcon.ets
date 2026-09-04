@@ -133,7 +133,9 @@ export struct TokenIcon {
 
   build() {
     Stack() {
-      if (this.token_preference.app_appearance_logo_background && !this.bypassLogoBackground) {
+      // 图标背景仅在暗色模式下显示: 亮色背景下图标自带对比度, 背景色块反而累赘
+      if (this.token_preference.app_appearance_logo_background &&
+        this.is_dark_mode && !this.bypassLogoBackground) {
         Shape() {}
         .align(Alignment.Center)
         .backgroundColor(this.token_preference.app_appearance_logo_background_color)

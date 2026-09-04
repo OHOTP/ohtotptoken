@@ -1109,6 +1109,122 @@
       "value": "从其他设备同步令牌"
     },
     {
+      "name": "watch_sync_title",
+      "value": "手表同步"
+    },
+    {
+      "name": "watch_sync_connect_section",
+      "value": "连接手表"
+    },
+    {
+      "name": "watch_sync_connected",
+      "value": "已连接"
+    },
+    {
+      "name": "watch_sync_not_connected",
+      "value": "未连接"
+    },
+    {
+      "name": "watch_sync_scan",
+      "value": "扫描"
+    },
+    {
+      "name": "watch_sync_scanning",
+      "value": "扫描中…"
+    },
+    {
+      "name": "watch_sync_scan_hint",
+      "value": "点击扫描查找附近手表"
+    },
+    {
+      "name": "watch_sync_connect",
+      "value": "连接"
+    },
+    {
+      "name": "watch_sync_reconnect",
+      "value": "重连"
+    },
+    {
+      "name": "watch_sync_connecting",
+      "value": "连接中…"
+    },
+    {
+      "name": "watch_sync_not_connected_warn",
+      "value": "请先连接手表"
+    },
+    {
+      "name": "watch_sync_pairing",
+      "value": "配对中…若手表弹出确认请在手表上确认"
+    },
+    {
+      "name": "watch_sync_pair_failed",
+      "value": "配对失败，请重试"
+    },
+    {
+      "name": "watch_sync_token_list",
+      "value": "选择要同步的令牌"
+    },
+    {
+      "name": "watch_sync_no_token_hint",
+      "value": "当前没有可用令牌"
+    },
+    {
+      "name": "watch_sync_no_tokens",
+      "value": "请先选择令牌"
+    },
+    {
+      "name": "watch_sync_transfer",
+      "value": "传输到手表"
+    },
+    {
+      "name": "watch_sync_transfer_done",
+      "value": "传输完成"
+    },
+    {
+      "name": "watch_sync_transfer_failed",
+      "value": "传输失败，请重试"
+    },
+    {
+      "name": "watch_sync_settings_done",
+      "value": "设置已同步"
+    },
+    {
+      "name": "watch_sync_bluetooth_permission_denied",
+      "value": "未授权蓝牙权限，无法获取手表设备"
+    },
+    {
+      "name": "watch_sync_bluetooth_restricted",
+      "value": "蓝牙未开启，请打开蓝牙后重试"
+    },
+    {
+      "name": "watch_sync_settings",
+      "value": "同步设置"
+    },
+    {
+      "name": "setting_watch_sync",
+      "value": "手表同步"
+    },
+    {
+      "name": "app_wearable_ble_waiting",
+      "value": "等待手机端同步"
+    },
+    {
+      "name": "app_wearable_ble_received",
+      "value": "已接收令牌，正在刷新"
+    },
+    {
+      "name": "app_wearable_ble_settings_done",
+      "value": "设置已同步"
+    },
+    {
+      "name": "app_wearable_ble_server_failed",
+      "value": "蓝牙接收服务启动失败"
+    },
+    {
+      "name": "ble_access_permission_reason",
+      "value": "用于通过蓝牙与手表配对并安全同步令牌"
+    },
+    {
       "name": "setting_top_effect_type",
       "value": "顶部模糊类型"
     },
@@ -1755,6 +1871,10 @@
     {
       "name": "toast_no_test_tokens",
       "value": "没有可移除的测试令牌"
+    },
+    {
+      "name": "watch_sync_no_device_hint",
+      "value": "未检测到已连接设备，请确认手机与手表已在华为运动健康中配对连接"
     }
   ]
 }

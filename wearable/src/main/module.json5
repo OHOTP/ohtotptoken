@@ -7,6 +7,12 @@
     "deviceTypes": [
       "wearable"
     ],
+    "metadata": [
+      {
+        "name": "client_id",
+        "value": "112342101"
+      }
+    ],
     "requestPermissions": [
       {
         "name": "ohos.permission.INTERNET"
@@ -23,6 +29,26 @@
           "when": "always"
         },
         "reason": "$string:app_name"
+      },
+      {
+        "name": "ohos.permission.ACCESS_BLUETOOTH",
+        "usedScene": {
+          "abilities": [
+            "EntryAbility"
+          ],
+          "when": "inuse"
+        },
+        "reason": "$string:ble_access_permission_reason"
+      },
+      {
+        "name": "ohos.permission.DISTRIBUTED_DATASYNC",
+        "reason": "$string:distributed_data_sync",
+        "usedScene": {
+          "abilities": [
+            "EntryAbility"
+          ],
+          "when": "always"
+        }
       }
     ],
     "deliveryWithInstall": true,
@@ -38,6 +64,20 @@
         "startWindowIcon": "$media:startIcon",
         "startWindowBackground": "$color:start_window_background",
         "exported": true,
+        "metadata": [
+          {
+            "name": "wearEngineRemoteAppNameList",
+            "value": "smartcityshenzhen.yylx.totptoken"
+          },
+          {
+            "name": "wearEngineUIAbilityName",
+            "value": "EntryAbility"
+          },
+          {
+            "name": "wearEngineAwaitRegisterReceiver",
+            "value": "true"
+          }
+        ],
         "skills": [
           {
             "entities": [

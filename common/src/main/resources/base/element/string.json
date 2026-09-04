@@ -1101,6 +1101,122 @@
       "value": "Sync tokens from other devices"
     },
     {
+      "name": "watch_sync_title",
+      "value": "Watch Sync"
+    },
+    {
+      "name": "watch_sync_connect_section",
+      "value": "Connect Watch"
+    },
+    {
+      "name": "watch_sync_connected",
+      "value": "Connected"
+    },
+    {
+      "name": "watch_sync_not_connected",
+      "value": "Not Connected"
+    },
+    {
+      "name": "watch_sync_scan",
+      "value": "Scan"
+    },
+    {
+      "name": "watch_sync_scanning",
+      "value": "Scanning…"
+    },
+    {
+      "name": "watch_sync_scan_hint",
+      "value": "Tap scan to find nearby watch"
+    },
+    {
+      "name": "watch_sync_connect",
+      "value": "Connect"
+    },
+    {
+      "name": "watch_sync_reconnect",
+      "value": "Reconnect"
+    },
+    {
+      "name": "watch_sync_connecting",
+      "value": "Connecting…"
+    },
+    {
+      "name": "watch_sync_not_connected_warn",
+      "value": "Connect a watch first"
+    },
+    {
+      "name": "watch_sync_pairing",
+      "value": "Pairing… confirm on the watch if prompted"
+    },
+    {
+      "name": "watch_sync_pair_failed",
+      "value": "Pairing failed, try again"
+    },
+    {
+      "name": "watch_sync_token_list",
+      "value": "Select tokens to sync"
+    },
+    {
+      "name": "watch_sync_no_token_hint",
+      "value": "No tokens available"
+    },
+    {
+      "name": "watch_sync_no_tokens",
+      "value": "Select at least one token"
+    },
+    {
+      "name": "watch_sync_transfer",
+      "value": "Transfer to Watch"
+    },
+    {
+      "name": "watch_sync_transfer_done",
+      "value": "Transfer complete"
+    },
+    {
+      "name": "watch_sync_transfer_failed",
+      "value": "Transfer failed, try again"
+    },
+    {
+      "name": "watch_sync_settings_done",
+      "value": "Settings synced"
+    },
+    {
+      "name": "watch_sync_bluetooth_permission_denied",
+      "value": "Bluetooth permission denied, cannot get watch devices"
+    },
+    {
+      "name": "watch_sync_bluetooth_restricted",
+      "value": "Bluetooth is off, turn on Bluetooth and retry"
+    },
+    {
+      "name": "watch_sync_settings",
+      "value": "Sync Settings"
+    },
+    {
+      "name": "setting_watch_sync",
+      "value": "Watch Sync"
+    },
+    {
+      "name": "app_wearable_ble_waiting",
+      "value": "Waiting for phone sync"
+    },
+    {
+      "name": "app_wearable_ble_received",
+      "value": "Tokens received, refreshing"
+    },
+    {
+      "name": "app_wearable_ble_settings_done",
+      "value": "Settings synced"
+    },
+    {
+      "name": "app_wearable_ble_server_failed",
+      "value": "BLE receive service failed"
+    },
+    {
+      "name": "ble_access_permission_reason",
+      "value": "Used to pair with wearable devices and securely sync tokens"
+    },
+    {
       "name": "feedback_survey",
       "value": "Survey Feedback"
     },
@@ -1755,6 +1871,10 @@
     {
       "name": "toast_no_test_tokens",
       "value": "No test tokens to remove"
+    },
+    {
+      "name": "watch_sync_no_device_hint",
+      "value": "No connected device found. Please confirm the phone and watch are paired in Huawei Health."
     }
   ]
 }

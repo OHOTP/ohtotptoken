@@ -167,3 +167,89 @@ export async function decryptStringData(data: Uint8Array, symKeyBlob: cryptoFram
     return null;
   }
 }
+
+// ---- BLE 传输加密 (AES-256-GCM) ----
+// 载荷格式: [BLE_MAGIC(4)] [iv(12)] [authTag(16)] [ciphertext]
+//
+// 安全模型(与"系统 BLE 配对 + 应用层纵深防御"决策一致):
+// - 主防线: 系统 BLE 配对(LE Secure Connections), 链路层由系统 LTK 加密
+// - 本层: 常量派生密钥的 AES-256-GCM, 防止链路被降级/未加密时被动嗅探与内容篡改(tag 校验)
+// - 局限: 常量可从任一安装包提取, 不防逆向分析者, 仅作纵深防御, 不承担认证职责
+const BLE_MAGIC = new Uint8Array([0x4F, 0x54, 0x50, 0x05]); // "OTP\x05"
+const BLE_IV_LEN = 12;
+const BLE_TAG_LEN = 16;
+const BLE_HEADER_SIZE = 4 + BLE_IV_LEN + BLE_TAG_LEN; // MAGIC + iv + authTag = 32
+const BLE_AAD = new Uint8Array(buffer.from('ohtotptoken-ble-aad-v1').buffer);
+const BLE_KEY_CONST = 'ohtotptoken-ble-transport-v1';
+
+let bleTransportKey: cryptoFramework.SymKey | undefined = undefined;
+
+async function getBleTransportKey(): Promise<cryptoFramework.SymKey> {
+  if (bleTransportKey === undefined) {
+    let md = cryptoFramework.createMd('SHA256');
+    await md.update({ data: new Uint8Array(buffer.from(BLE_KEY_CONST).buffer) });
+    let digest: cryptoFramework.DataBlob = await md.digest();
+    let keyGen = cryptoFramework.createSymKeyGenerator('AES256');
+    bleTransportKey = keyGen.convertKeySync(digest);
+  }
+  return bleTransportKey;
+}
+
+/**
+ * 加密 BLE 传输载荷(手机端).
+ *
+ * GCM 加密模式下 authTag 的获取: 个别 SDK 版本由 doFinal(null) 返回,
+ * 部分版本以副作用写入 gcmParams.authTag, 此处双保险读取.
+ */
+export async function encryptBlePayload(plain: Uint8Array): Promise<Uint8Array> {
+  let iv = randomBytes(BLE_IV_LEN);
+  let key = await getBleTransportKey();
+  let gcmParams: cryptoFramework.GcmParamsSpec = {
+    algName: 'GcmParamsSpec',
+    iv: { data: iv },
+    aad: { data: BLE_AAD },
+    authTag: { data: new Uint8Array(BLE_TAG_LEN) }
+  };
+  let cipher = cryptoFramework.createCipher('AES256|GCM|NoPadding');
+  cipher.initSync(cryptoFramework.CryptoMode.ENCRYPT_MODE, key, gcmParams);
+  // 官方指南行为: update(明文) 返回 ciphertext, doFinal(null) 返回 authTag
+  let enc: cryptoFramework.DataBlob = cipher.updateSync({ data: plain });
+  let tagData: cryptoFramework.DataBlob = cipher.doFinalSync(null);
+  // 双保险: 优先取 doFinal(null) 返回的完整 tag, 否则取副作用写入的 gcmParams.authTag
+  let tag: Uint8Array = tagData.data.length === BLE_TAG_LEN ? tagData.data : gcmParams.authTag.data;
+  let ciphertext: Uint8Array = new Uint8Array(enc.data);
+  let out = new Uint8Array(BLE_HEADER_SIZE + ciphertext.length);
+  out.set(BLE_MAGIC, 0);
+  out.set(iv, 4);
+  out.set(tag, 4 + BLE_IV_LEN);
+  out.set(ciphertext, BLE_HEADER_SIZE);
+  return out;
+}
+
+/**
+ * 解密 BLE 传输载荷(手表端). 任何失败(MAGIC 不符/长度不符/tag 校验失败)返回 null,
+ * 调用方应视为"数据被篡改或密钥版本不匹配"而丢弃, 不得入库.
+ */
+export async function decryptBlePayload(data: Uint8Array): Promise<Uint8Array | null> {
+  try {
+    if (data.length < BLE_HEADER_SIZE || !startsWith(data, BLE_MAGIC)) {
+      return null;
+    }
+    let iv = data.slice(4, 4 + BLE_IV_LEN);
+    let tag = data.slice(4 + BLE_IV_LEN, BLE_HEADER_SIZE);
+    let ciphertext = data.slice(BLE_HEADER_SIZE);
+    let key = await getBleTransportKey();
+    let gcmParams: cryptoFramework.GcmParamsSpec = {
+      algName: 'GcmParamsSpec',
+      iv: { data: iv },
+      aad: { data: BLE_AAD },
+      authTag: { data: tag }
+    };
+    let cipher = cryptoFramework.createCipher('AES256|GCM|NoPadding');
+    cipher.initSync(cryptoFramework.CryptoMode.DECRYPT_MODE, key, gcmParams);
+    let dec = cipher.doFinalSync({ data: ciphertext });
+    return new Uint8Array(dec.data);
+  } catch (e) {
+    return null;
+  }
+}

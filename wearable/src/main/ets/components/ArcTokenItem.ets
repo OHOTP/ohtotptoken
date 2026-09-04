@@ -2,7 +2,7 @@ import { BusinessError, systemDateTime } from '@kit.BasicServicesKit';
 import { otpType, TokenConfig } from 'common';
 import { convertToken2URI, copyText, generateOTP } from 'common';
 import { SteamUtils } from 'common';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, SettingHiddenTokenType } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
 import { AppStorageV2, SymbolGlyphModifier } from '@kit.ArkUI';
 import { QRCodeDialog } from 'uikit';
 import { AppWindowInfo } from 'common';
@@ -11,6 +11,9 @@ import { ConfigurationConstant, common } from '@kit.AbilityKit';
 import { AppFonts } from 'common';
 import { ArcTokenIcon } from './ArcTokenIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+
+/** 手表端验证码字号上限: 手表屏幕小, 手机端同步的字号(默认 30)过大, 封顶 22 */
+const WATCH_TOKEN_FONT_SIZE_MAX = 22;
 
 let current_token_hide_map: Map<string, boolean> = new Map();
 let tkStore = TokenStore.getInstance();
@@ -30,6 +33,21 @@ export struct ArcTokenItem {
   @Local TokenLeftPeriod: number = 0;
   @Local btn_hotp_clicked: number = 0;
   @Local TokenHide: boolean = current_token_hide_map[this.Config.TokenUUID] ?? true;
+
+  /**
+   * 隐藏令牌设置开启时重置本令牌为隐藏态.
+   *
+   * TokenHide 是 @Local 状态(默认隐藏, 用户点击验证码后切换为显示并缓存到
+   * current_token_hide_map). 若用户此前手动显示了验证码, 手机端同步"隐藏令牌"
+   * 设置开启后 TokenHide 残留 false, 显示逻辑 (TokenHide && enable) 为 false
+   * 导致设置不生效——监听设置变化, 开启时统一回到隐藏态.
+   */
+  @Monitor('token_preference.app_safety_hide_token_enable')
+  onHideTokenEnableChanged(monitor: IMonitor): void {
+    if (this.token_preference.app_safety_hide_token_enable) {
+      this.TokenHide = true;
+    }
+  }
 
   @Local menu_icon_trash: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.trash')).fontSize('22vp').fontColor([Color.Red]);
   @Local menu_icon_qrcode: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.qrcode')).fontSize('22vp');
@@ -158,58 +176,10 @@ export struct ArcTokenItem {
     }
   }
 
-  @Builder
-  HiddenTokenDot(size: number) {
-    Circle({ width: size, height: size })
-      .fill(Color.Gray)
-  }
-
-  @Builder
-  HiddenTokenDots() {
-    if (this.token_preference.app_appearance_hidden_token_type === SettingHiddenTokenType.COMPACT) {
-      Row({ space: 6 }) {
-        this.HiddenTokenDot(8)
-        this.HiddenTokenDot(8)
-        this.HiddenTokenDot(8)
-        this.HiddenTokenDot(8)
-      }
-    } else {
-      Row({ space: 10 }) {
-        Row({ space: 4 }) {
-          this.HiddenTokenDot(6)
-          this.HiddenTokenDot(6)
-          this.HiddenTokenDot(6)
-        }
-        Row({ space: 4 }) {
-          this.HiddenTokenDot(6)
-          this.HiddenTokenDot(6)
-          this.HiddenTokenDot(6)
-        }
-      }
-    }
-  }
-
   build() {
     Row({ space: 10 }) {
       ArcTokenIcon({ issuer: this.Config.TokenIssuer })
-      Column() {
-        Text(this.token_preference.app_appearance_swap_host_user_enable ? this.Config.TokenName : this.Config.TokenIssuer)
-          .textOverflow({ overflow: TextOverflow.MARQUEE })
-          .maxLines(1)
-          .fontSize(this.token_preference.app_appearance_issuer_font_size)
-          .fontWeight(this.token_preference.app_appearance_issuer_font_weight)
-          .fontColor('#ffe0e0e0')
-        Text(this.token_preference.app_appearance_swap_host_user_enable ? this.Config.TokenIssuer : this.Config.TokenName)
-          .textOverflow({ overflow: TextOverflow.MARQUEE })
-          .maxLines(1)
-          .fontSize(this.token_preference.app_appearance_user_name_font_size)
-          .fontWeight(this.token_preference.app_appearance_user_name_font_weight)
-          .fontColor($r('app.color.str_gray'))
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
-
-      Blank()
+      // 手表屏幕小: 不显示用户名/主机名, 内容区占据图标后全部剩余空间
 
       if (AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON)) {
         Text(this.Config.RankScore.toString())
@@ -220,12 +190,27 @@ export struct ArcTokenItem {
       }
 
       if (this.TokenHide && this.token_preference.app_safety_hide_token_enable) {
-        Stack() {
-          this.HiddenTokenDots()
+        // 隐藏验证码时显示名称与主机名(替代遮罩, 便于识别令牌), 点击仍可切回显示
+        // (手表小屏用名称识别令牌; 保留 dev 侧 responseRegion 扩大点击热区)
+        Column() {
+          Text(this.Config.TokenName)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.MARQUEE })
+            .fontSize(16)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#ffe0e0e0')
+          Text(this.Config.TokenIssuer)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.MARQUEE })
+            .fontSize(12)
+            .fontColor($r('app.color.str_gray'))
         }
+        // 与验证码区一致的居中布局: 占据图标后全部剩余空间
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Center)
         .responseRegion({
           x: 0,
-          y: this.token_preference.app_appearance_hidden_token_type === SettingHiddenTokenType.COMPACT ? -20 : -21,
+          y: -20,
           width: '100%',
           height: 48
         })
@@ -237,11 +222,11 @@ export struct ArcTokenItem {
       } else {
         Column() {
           Text(this.TokenNumber)
-            .textAlign(TextAlign.End)
+            .textAlign(TextAlign.Center)
             .textOverflow({ overflow: TextOverflow.MARQUEE })
             .maxLines(1)
             .fontColor('#ffe0e0e0')
-            .fontSize(this.token_preference.app_appearance_token_font_size)
+            .fontSize(Math.min(this.token_preference.app_appearance_token_font_size, WATCH_TOKEN_FONT_SIZE_MAX))
             .fontWeight(this.token_preference.app_appearance_token_font_weight)
             .fontFamily(AppFonts.CODE_FONT)
             .gesture(
@@ -252,14 +237,14 @@ export struct ArcTokenItem {
             )
           if (this.Config.TokenType == otpType.HOTP) {
             Text(this.TokenCounter + (this.token_preference.app_appearance_show_next_token_enable ? ":" + this.TokenNumberNext : ""))
-              .textAlign(TextAlign.End)
+              .textAlign(TextAlign.Center)
               .textOverflow({ overflow: TextOverflow.MARQUEE })
               .maxLines(1)
               .fontColor($r('app.color.str_gray'))
               .fontSize(10)
           } else if (this.token_preference.app_appearance_show_next_token_enable) {
             Text(this.TokenNumberNext)
-              .textAlign(TextAlign.End)
+              .textAlign(TextAlign.Center)
               .textOverflow({ overflow: TextOverflow.MARQUEE })
               .maxLines(1)
               .fontColor($r('app.color.str_gray'))
@@ -267,6 +252,9 @@ export struct ArcTokenItem {
               .fontFamily(AppFonts.CODE_FONT)
           }
         }
+        // 验证码区: 占据图标后全部剩余空间, 当前令牌与下一令牌水平居中相互对齐
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Center)
         .onClick(() => {
           if (this.token_preference.app_safety_hide_token_enable) {
             this.TokenHide = !this.TokenHide;
