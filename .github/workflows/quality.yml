@@ -33,7 +33,9 @@ jobs:
       - name: Setup HarmonyOS CLI tools
         uses: ErBWs/setup-ohos@v2
         with:
-          version: latest
+          # v2 does gh release download <version> and does not resolve
+          # "latest"; a concrete tag from ErBWs/ohos-sdk releases is required.
+          version: 26.0.0.821
           cache: true
 
       - name: Install project dependencies
