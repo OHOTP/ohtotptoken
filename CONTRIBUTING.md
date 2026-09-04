@@ -67,6 +67,33 @@ ohtotptoken/
 
 ---
 
+## 测试与 CI 门禁
+
+项目使用 Hypium 作为单元测试框架,单元测试(LocalUnit)在 PC 上运行,无需设备。
+
+### 运行测试
+
+```bash
+hvigorw test -p module=entry@default --no-daemon
+```
+
+- 测试代码位于 `entry/src/test/`,结果写入 `entry/.test/default/intermediates/test/coverage_data/test_result.txt`,末行 `Tests run: N, Failure: N, ...` 为汇总。
+- 注意:`hvigorw test` 在断言失败时构建仍显示成功(退出码 0),请以 `Tests run` 汇总或结果文件为准。
+- 依赖系统能力(cryptoFramework、文件、蓝牙等)或原生库(.so)的代码不适用 LocalUnit,这类验证通过 `entry/src/ohosTest/`(需真机/模拟器)进行。
+
+### 编写测试
+
+- 测试文件放在 `entry/src/test/`,命名为 `<被测单元名>.test.ets`,并在 `entry/src/test/List.test.ets` 中注册(测试套名全局唯一)。
+- 只通过被测单元的公共 API 断言行为;禁止读取源码/工作流/文档文本做断言。
+- 优先使用标准向量(RFC 4226/6238/4648 等);对实现的可疑行为按现状固化并注释,行为变更走独立修复。
+- 系统能力在 LocalUnit 中不可用(`url.URL`、`util.TextDecoder`、`util.generateRandomUUID`、`cryptoFramework` 均已验证),相关逻辑应拆分为可独立测试的纯函数。
+
+### CI 门禁
+
+PR 会触发 `Quality` 工作流(GitHub Actions)执行全部 LocalUnit 测试,**检查通过后 PR 才能合并**,解析逻辑见 `.github/workflows/quality.yml`。
+
+---
+
 ## 提交规范
 
 本项目遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范。每个 commit 的 message 格式：
@@ -102,6 +129,7 @@ ohtotptoken/
 - [ ] 已基于**最新 `dev` 分支**创建工作分支（`git checkout dev && git pull upstream dev`）
 - [ ] **PR 目标分支（base）选择的是 `dev`**，不是 `main`
 - [ ] 本地构建通过：`hvigorw assembleHap` 或在 DevEco Studio 中 Build
+- [ ] `hvigorw test` 全绿(`Tests run: N, Failure: 0, Error: 0`)
 - [ ] 涉及功能已在真机或模拟器上测试
 - [ ] commit message 符合 [提交规范](#提交规范)
 - [ ] 没有提交 `build-profile.json5` 的本地签名配置（每位开发者的签名路径不同）
