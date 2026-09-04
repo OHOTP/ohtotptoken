@@ -17,7 +17,11 @@ concurrency:
 jobs:
   localunit:
     name: ArkTS unit tests (LocalUnit)
-    runs-on: ubuntu-latest
+    # Windows only: LocalUnit executes tests inside the SDK Previewer runtime,
+    # and the Previewer component only ships in the Windows/macOS
+    # command-line-tools packages - on Linux, hvigorw test hangs after
+    # compiling (verified in run 33878317600).
+    runs-on: windows-latest
     timeout-minutes: 30
 
     steps:
@@ -33,14 +37,17 @@ jobs:
           cache: true
 
       - name: Install project dependencies
-        run: ohpm install --all --rt 5 --ri 5000
+        run: ohpm.bat install --all --rt 5 --ri 5000
+        shell: bash
 
       # hvigorw test exits 0 even when assertions fail, so the gate is
       # enforced by parsing the result file produced by GenerateUnitTestResult.
       - name: Run LocalUnit tests
-        run: hvigorw test -p module=entry@default --no-daemon
+        run: hvigorw.bat test -p module=entry@default --no-daemon
+        shell: bash
 
       - name: Check test results
+        shell: bash
         run: |
           RESULT_FILE=$(find . -name test_result.txt -path "*test*" | head -n 1)
           if [ -z "$RESULT_FILE" ]; then
