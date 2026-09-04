@@ -549,6 +549,18 @@
       "value": "Add Token"
     },
     {
+      "name": "menu_token_actions",
+      "value": "More options"
+    },
+    {
+      "name": "menu_token_sort_method",
+      "value": "Sort by"
+    },
+    {
+      "name": "menu_token_multi_select",
+      "value": "Multi-select"
+    },
+    {
       "name": "menu_token_sort_default",
       "value": "Default"
     },

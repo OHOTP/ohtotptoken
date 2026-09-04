@@ -296,23 +296,23 @@ export struct AppShell {
             },
             {
               content: {
-                label: $r('app.string.token_right_menu_sort'),
-                icon: $r('sys.symbol.list_bullet'),
-                isEnabled: true,
-                componentId: this.sortTokenMenuTargetId,
-                action: () => {
-                  this.openTokenSortMenu();
-                }
-              }
-            },
-            {
-              content: {
                 label: $r('app.string.app_ua_add_token'),
                 icon: $r('sys.symbol.plus'),
                 isEnabled: true,
                 componentId: this.addTokenMenuTargetId,
                 action: () => {
                   this.openAddTokenMenu();
+                }
+              }
+            },
+            {
+              content: {
+                label: $r('app.string.menu_token_actions'),
+                icon: $r('sys.symbol.dot_grid_2x2'),
+                isEnabled: true,
+                componentId: this.sortTokenMenuTargetId,
+                action: () => {
+                  this.openTokenSortMenu();
                 }
               }
             }

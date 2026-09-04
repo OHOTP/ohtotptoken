@@ -553,6 +553,18 @@
       "value": "新增密鑰"
     },
     {
+      "name": "menu_token_actions",
+      "value": "更多選項"
+    },
+    {
+      "name": "menu_token_sort_method",
+      "value": "排序方式"
+    },
+    {
+      "name": "menu_token_multi_select",
+      "value": "多選"
+    },
+    {
       "name": "menu_token_sort_default",
       "value": "預設"
     },

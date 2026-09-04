@@ -553,6 +553,18 @@
       "value": "添加密钥"
     },
     {
+      "name": "menu_token_actions",
+      "value": "更多选项"
+    },
+    {
+      "name": "menu_token_sort_method",
+      "value": "排序方式"
+    },
+    {
+      "name": "menu_token_multi_select",
+      "value": "多选"
+    },
+    {
       "name": "menu_token_sort_default",
       "value": "默认"
     },

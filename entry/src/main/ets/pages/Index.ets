@@ -108,6 +108,24 @@ function TokenAddMenuBuilder(host: Index) {
 }
 
 @Builder
+function TokenActionsMenuBuilder(host: Index) {
+  Menu() {
+    MenuItem({
+      content: $r('app.string.menu_token_sort_method'),
+      // 子菜单延迟构建时必须绑定组件上下文，不能以普通函数直接调用全局 @Builder。
+      builder: TokenSortMenuBuilder.bind(host, host)
+    })
+      .accessibilityText($r('app.string.menu_token_sort_method'))
+    MenuItem({ content: $r('app.string.menu_token_multi_select') })
+      .enabled(false)
+      .accessibilityText($r('app.string.menu_token_multi_select'))
+  }
+  .width(host.getTokenActionsMenuWidth())
+  // 使用原生内嵌展开，让排序选项在“排序方式”下方显示。
+  .subMenuExpandingMode(SubMenuExpandingMode.EMBEDDED_EXPAND)
+}
+
+@Builder
 function TokenSortMenuBuilder(host: Index) {
   Menu() {
     MenuItem({ content: $r('app.string.menu_token_sort_default') })
@@ -838,10 +856,39 @@ struct Index {
     }
   }
 
+  getTokenActionsMenuWidth(): number | undefined {
+    const uiContext = this.getUIContext();
+    const measure = uiContext.getMeasureUtils();
+    const labels: Resource[] = [
+      $r('app.string.menu_token_sort_method'),
+      $r('app.string.menu_token_multi_select'),
+      $r('app.string.menu_token_sort_default'),
+      $r('app.string.menu_token_sort_username_ascending'),
+      $r('app.string.menu_token_sort_token_name_ascending'),
+      $r('app.string.menu_token_sort_username_descending'),
+      $r('app.string.menu_token_sort_token_name_descending')
+    ];
+    let textWidthPx: number = 0;
+    for (const label of labels) {
+      const width = measure.measureText({
+        textContent: label,
+        fontSize: '16fp',
+        fontWeight: FontWeight.Medium
+      });
+      if (!width) {
+        return undefined;
+      }
+      textWidthPx = Math.max(textWidthPx, width);
+    }
+    // 仅预留原生菜单的非文本空间：外边距8、内嵌缩进24、项内边距32、勾选图标及间距32vp。
+    // 每次打开按当前语言和系统字号测量；屏幕最大宽度仍由原生 Menu 约束。
+    return Math.ceil(uiContext.px2vp(textWidthPx)) + 8 + 24 + 32 + 32;
+  }
+
   private openTokenSortMenu(): void {
     const uiContext = this.getUIContext();
     const promptAction = uiContext.getPromptAction();
-    const contentNode = new ComponentContent(uiContext, wrapBuilder(TokenSortMenuBuilder), this);
+    const contentNode = new ComponentContent(uiContext, wrapBuilder(TokenActionsMenuBuilder), this);
     try {
       promptAction.openMenu(contentNode, { id: this.sortTokenMenuTargetId }, {});
     } catch (error) {
