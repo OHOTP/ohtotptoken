@@ -5,7 +5,7 @@ import { PageScaffold } from "../components/PageScaffold";
 import { MaterialSurface } from "../components/MaterialSurface";
 import { MaterialTheme, MaterialThickness } from "../components/MaterialTheme";
 import { QRCodeDialog } from 'uikit';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES, dialogSystemMaterial } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES } from 'common';
 import { otpType, TokenConfig, TokenConfigVM } from 'common';
 import { TokenStore } from 'common';
 import { convertToken2URI } from 'common';
@@ -15,6 +15,7 @@ import { GenericDataSource } from 'common';
 import { showSnackBar, SnackBarNotifyType } from 'common';
 import { common } from "@kit.AbilityKit";
 import { hilog } from "@kit.PerformanceAnalysisKit";
+import { BusinessError } from '@kit.BasicServicesKit';
 import {
   BottomBuilderShowType,
   HdsListItem,
@@ -44,7 +45,6 @@ export struct TokenSearchPage {
   @Local token_copy_guide_popup: boolean = false;
 
   private searchListScroller: Scroller = new Scroller();
-  private dialog_qrcode?: CustomDialogController;
   private pageInfos: NavPathStack | null = null;
   private appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
   private onTokenChangedHandler: () => void = () => {};
@@ -245,15 +245,22 @@ export struct TokenSearchPage {
     .onWillDisappear(() => this.onExitFullScreen())
   }
 
+  @Builder
+  QRCodeDialogBuilder(conf: TokenConfig): void {
+    QRCodeDialog({
+      content: convertToken2URI(conf),
+      winSize: this.window.Size
+    })
+  }
+
   showQRCodeDialog(conf: TokenConfig): void {
-    this.dialog_qrcode = new CustomDialogController({
-      systemMaterial: dialogSystemMaterial(),
-      builder: QRCodeDialog({
-        content: convertToken2URI(conf),
-        winSize: this.window.Size
-      })
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: () => {
+        this.QRCodeDialogBuilder(conf);
+      }
+    }).catch((error: BusinessError) => {
+      hilog.error(error.code, 'TokenSearchPage', `open QR code dialog failed: ${error.message}`);
     });
-    this.dialog_qrcode.open();
   }
 
   private openEditPage(conf: TokenConfig): void {

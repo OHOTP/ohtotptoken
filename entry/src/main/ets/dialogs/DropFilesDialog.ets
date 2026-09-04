@@ -10,6 +10,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 export struct DropFilesDialog {
   @State triggerValueReplace: number = 0;
   @State replaceFlag:boolean =false;
+  @StorageLink('background_blur_flag') backgroundBlurFlag: boolean = false;
   controller?: CustomDialogController;
   private appCtx = AppStorage.get<common.UIAbilityContext>('appContext') as common.UIAbilityContext;
   build() {
@@ -55,5 +56,9 @@ export struct DropFilesDialog {
 
     }
     .borderRadius(10)
+    .foregroundBlurStyle(this.backgroundBlurFlag ? BlurStyle.Thin : BlurStyle.NONE, {
+      colorMode: ThemeColorMode.SYSTEM,
+      adaptiveColor: AdaptiveColor.DEFAULT
+    })
   }
 }

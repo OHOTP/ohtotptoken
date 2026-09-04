@@ -1,18 +1,16 @@
-import { systemDateTime } from '@kit.BasicServicesKit';
-import { otpType, TokenConfig, dialogSystemMaterial } from 'common';
+import { BusinessError, systemDateTime } from '@kit.BasicServicesKit';
+import { otpType, TokenConfig } from 'common';
 import { convertToken2URI, copyText, generateOTP } from 'common';
 import { SteamUtils } from 'common';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, SettingHiddenTokenType } from 'common';
 import { AppStorageV2, SymbolGlyphModifier } from '@kit.ArkUI';
-import { TOTPConfigDialog } from 'uikit';
-import { FortiConfigDialog } from 'uikit';
-import { SteamConfigDialog } from 'uikit';
 import { QRCodeDialog } from 'uikit';
 import { AppWindowInfo } from 'common';
 import { TokenStore } from 'common';
 import { ConfigurationConstant, common } from '@kit.AbilityKit';
 import { AppFonts } from 'common';
 import { ArcTokenIcon } from './ArcTokenIcon';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 
 let current_token_hide_map: Map<string, boolean> = new Map();
 let tkStore = TokenStore.getInstance();
@@ -35,13 +33,7 @@ export struct ArcTokenItem {
 
   @Local menu_icon_trash: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.trash')).fontSize('22vp').fontColor([Color.Red]);
   @Local menu_icon_qrcode: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.qrcode')).fontSize('22vp');
-  @Local menu_icon_edit: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.square_and_pencil')).fontSize('22vp');
   @Local menu_icon_copy: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.doc_text_on_doc_text')).fontSize('22vp');
-
-  private dialog_totp_config?: CustomDialogController;
-  private dialog_forti_config?: CustomDialogController;
-  private dialog_steam_config?: CustomDialogController;
-  private dialog_qrcode?: CustomDialogController;
 
   private token_steps: number = 0;
   // 使用 AppStorage 获取 context，避免在 aboutToAppear（build 之前）调用 getUIContext()
@@ -166,6 +158,37 @@ export struct ArcTokenItem {
     }
   }
 
+  @Builder
+  HiddenTokenDot(size: number) {
+    Circle({ width: size, height: size })
+      .fill(Color.Gray)
+  }
+
+  @Builder
+  HiddenTokenDots() {
+    if (this.token_preference.app_appearance_hidden_token_type === SettingHiddenTokenType.COMPACT) {
+      Row({ space: 6 }) {
+        this.HiddenTokenDot(8)
+        this.HiddenTokenDot(8)
+        this.HiddenTokenDot(8)
+        this.HiddenTokenDot(8)
+      }
+    } else {
+      Row({ space: 10 }) {
+        Row({ space: 4 }) {
+          this.HiddenTokenDot(6)
+          this.HiddenTokenDot(6)
+          this.HiddenTokenDot(6)
+        }
+        Row({ space: 4 }) {
+          this.HiddenTokenDot(6)
+          this.HiddenTokenDot(6)
+          this.HiddenTokenDot(6)
+        }
+      }
+    }
+  }
+
   build() {
     Row({ space: 10 }) {
       ArcTokenIcon({ issuer: this.Config.TokenIssuer })
@@ -198,12 +221,14 @@ export struct ArcTokenItem {
 
       if (this.TokenHide && this.token_preference.app_safety_hide_token_enable) {
         Stack() {
-          Text() {
-            Span("●●●●")
-          }
-          .fontColor(Color.Gray)
-          .fontSize(this.token_preference.app_appearance_token_font_size)
+          this.HiddenTokenDots()
         }
+        .responseRegion({
+          x: 0,
+          y: this.token_preference.app_appearance_hidden_token_type === SettingHiddenTokenType.COMPACT ? -20 : -21,
+          width: '100%',
+          height: 48
+        })
         .onClick(() => {
           this.TokenHide = !this.TokenHide;
           current_token_hide_map[this.Config.TokenUUID] = false;
@@ -286,6 +311,24 @@ export struct ArcTokenItem {
   }
 
   @Builder
+  QRCodeDialogBuilder(): void {
+    QRCodeDialog({
+      content: convertToken2URI(this.Config),
+      winSize: this.window.Size
+    })
+  }
+
+  private openQRCodeDialog(): void {
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: () => {
+        this.QRCodeDialogBuilder();
+      }
+    }).catch((error: BusinessError) => {
+      hilog.error(error.code, 'ArcTokenItem', `open QR code dialog failed: ${error.message}`);
+    });
+  }
+
+  @Builder
   TokenRightCtxMenu() {
     Menu() {
       MenuItem({ symbolStartIcon: this.menu_icon_copy, content: $r('app.string.token_right_menu_copy') })
@@ -295,55 +338,9 @@ export struct ArcTokenItem {
         .accessibilityText($r('app.string.token_right_menu_copy'))
       MenuItem({ symbolStartIcon: this.menu_icon_qrcode, content: $r('app.string.token_right_menu_show_qrcode') })
         .onClick(() => {
-          this.dialog_qrcode = new CustomDialogController({
-            systemMaterial: dialogSystemMaterial(),
-            builder: QRCodeDialog({
-              content: convertToken2URI(this.Config),
-              winSize: this.window.Size
-            })
-          });
-          this.dialog_qrcode.open();
+          this.openQRCodeDialog();
         })
         .accessibilityText($r('app.string.token_right_menu_show_qrcode'))
-      MenuItem({ symbolStartIcon: this.menu_icon_edit, content: $r('app.string.token_right_menu_edit') })
-        .onClick(() => {
-          if (this.Config.TokenType === otpType.TOTP || this.Config.TokenType === otpType.HOTP ||
-            this.Config.TokenType === undefined) { // default
-            this.dialog_totp_config = new CustomDialogController({
-              systemMaterial: dialogSystemMaterial(),
-              builder: TOTPConfigDialog({
-                conf_json: JSON.stringify(this.Config),
-                confirm: async (new_conf): Promise<boolean> => {
-                  return await this.Update(JSON.parse(new_conf))
-                }
-              })
-            })
-            this.dialog_totp_config.open()
-          } else if (this.Config.TokenType === otpType.Forti) { // forti
-            this.dialog_forti_config = new CustomDialogController({
-              systemMaterial: dialogSystemMaterial(),
-              builder: FortiConfigDialog({
-                conf_json: JSON.stringify(this.Config),
-                confirm: async (new_conf): Promise<boolean> => {
-                  return await this.Update(JSON.parse(new_conf))
-                }
-              })
-            })
-            this.dialog_forti_config.open()
-          } else if (this.Config.TokenType === otpType.Steam) { // steam
-            this.dialog_steam_config = new CustomDialogController({
-              systemMaterial: dialogSystemMaterial(),
-              builder: SteamConfigDialog({
-                conf_json: JSON.stringify(this.Config),
-                confirm: async (new_conf): Promise<boolean> => {
-                  return await this.Update(JSON.parse(new_conf))
-                }
-              })
-            })
-            this.dialog_steam_config.open()
-          }
-        })
-        .accessibilityText($r('app.string.token_right_menu_edit'))
       MenuItem({ symbolStartIcon: this.menu_icon_trash, content: $r('app.string.token_right_menu_delete') })
         .onClick(() => {
           this.getUIContext().showAlertDialog({

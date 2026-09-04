@@ -1,5 +1,5 @@
 import { QRCodeDialog } from 'uikit';
-import { TokenPreference, EVENT_NAMES, dialogSystemMaterial } from 'common';
+import { TokenPreference, EVENT_NAMES } from 'common';
 import { TokenConfig, TokenIconPacks } from 'common';
 import { TokenStore } from 'common';
 import { convertToken2URI } from 'common';
@@ -11,6 +11,7 @@ import { AppStorageV2, ArcList, ArcListItem,
   LengthUnit} from "@kit.ArkUI";
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { BusinessError } from '@kit.BasicServicesKit';
 import { AppWindowInfo } from 'common';
 import { ArcTokenItem } from "../components/ArcTokenItem";
 
@@ -28,7 +29,6 @@ export struct ArcTokenListPage {
   @Local loading: boolean = false;
 
   private listScroller: Scroller = new Scroller();
-  private dialog_qrcode?: CustomDialogController;
 
   aboutToAppear(): void {
     // token 数据变更(增删改/同步完成)时全量刷新列表
@@ -134,6 +134,24 @@ export struct ArcTokenListPage {
   }
 
   @Builder
+  QRCodeDialogBuilder(conf: TokenConfig): void {
+    QRCodeDialog({
+      content: convertToken2URI(conf),
+      winSize: this.window.Size
+    })
+  }
+
+  private openQRCodeDialog(conf: TokenConfig): void {
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: () => {
+        this.QRCodeDialogBuilder(conf);
+      }
+    }).catch((error: BusinessError) => {
+      hilog.error(error.code, 'ArcTokenListPage', `open QR code dialog failed: ${error.message}`);
+    });
+  }
+
+  @Builder
   TokenItemStart(conf: TokenConfig, index: number) {
     Row({ space: 10 }) {
       Button({ type: ButtonType.Circle }) {
@@ -147,14 +165,7 @@ export struct ArcTokenListPage {
       .backgroundColor(Color.Orange)
       .padding(10)
       .onClick(() => {
-        this.dialog_qrcode = new CustomDialogController({
-          systemMaterial: dialogSystemMaterial(),
-          builder: QRCodeDialog({
-            content: convertToken2URI(conf),
-            winSize: this.window.Size
-          })
-        });
-        this.dialog_qrcode.open();
+        this.openQRCodeDialog(conf);
       })
     }
     .margin({ right: 10 })

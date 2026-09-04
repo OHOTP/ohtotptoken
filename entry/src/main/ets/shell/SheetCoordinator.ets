@@ -10,7 +10,7 @@ import lazy { AgreementSheet } from '../pages/setting/AgreementSheet'
 import lazy { AboutSheet } from '../pages/setting/AboutSheet'
 import lazy { FeedbackSheet } from '../pages/setting/FeedbackSheet'
 import { showSnackBar, SnackBarNotifyType } from 'common';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES } from 'common';
+import { AppPreference, AppWindowInfo, TokenPreference, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES } from 'common';
 import { AppStorageV2 } from '@kit.ArkUI';
 import { HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import lazy { HuaweiAccountManager, HuaweiUserInfo, HuaweiAccountLoginError } from 'common';
@@ -61,6 +61,7 @@ export struct SheetCoordinator {
   @Local huaweiUser: HuaweiUserInfo | null = null;
   @Local debug_mode_is_on: boolean = AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON) as boolean;
   @Local token_preference: TokenPreference = AppStorageV2.connect(TokenPreference) as TokenPreference;
+  @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
 
   private appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
   private onAccountStateChanged: () => void = () => {};
@@ -192,6 +193,10 @@ export struct SheetCoordinator {
       backupReload: this.backupReload
     })
       .height('100%')
+      .foregroundBlurStyle(this.window.BackgroundBlurActive ? BlurStyle.Thin : BlurStyle.NONE, {
+        colorMode: ThemeColorMode.SYSTEM,
+        adaptiveColor: AdaptiveColor.DEFAULT
+      })
   }
 
   @Builder
@@ -201,6 +206,10 @@ export struct SheetCoordinator {
       embedded: embedded
     })
       .height('100%')
+      .foregroundBlurStyle(this.window.BackgroundBlurActive ? BlurStyle.Thin : BlurStyle.NONE, {
+        colorMode: ThemeColorMode.SYSTEM,
+        adaptiveColor: AdaptiveColor.DEFAULT
+      })
   }
 
   @Builder
@@ -210,6 +219,10 @@ export struct SheetCoordinator {
       embedded: embedded
     })
       .height('100%')
+      .foregroundBlurStyle(this.window.BackgroundBlurActive ? BlurStyle.Thin : BlurStyle.NONE, {
+        colorMode: ThemeColorMode.SYSTEM,
+        adaptiveColor: AdaptiveColor.DEFAULT
+      })
   }
 
   @Builder
@@ -222,6 +235,10 @@ export struct SheetCoordinator {
       removeTestTokens: () => this.removeTestTokens()
     })
       .height('100%')
+      .foregroundBlurStyle(this.window.BackgroundBlurActive ? BlurStyle.Thin : BlurStyle.NONE, {
+        colorMode: ThemeColorMode.SYSTEM,
+        adaptiveColor: AdaptiveColor.DEFAULT
+      })
   }
 
   @Builder
@@ -231,6 +248,10 @@ export struct SheetCoordinator {
       embedded: embedded
     })
       .height('100%')
+      .foregroundBlurStyle(this.window.BackgroundBlurActive ? BlurStyle.Thin : BlurStyle.NONE, {
+        colorMode: ThemeColorMode.SYSTEM,
+        adaptiveColor: AdaptiveColor.DEFAULT
+      })
   }
 
   @Builder
@@ -240,6 +261,10 @@ export struct SheetCoordinator {
       embedded: embedded
     })
       .height('100%')
+      .foregroundBlurStyle(this.window.BackgroundBlurActive ? BlurStyle.Thin : BlurStyle.NONE, {
+        colorMode: ThemeColorMode.SYSTEM,
+        adaptiveColor: AdaptiveColor.DEFAULT
+      })
   }
 
   @Builder
@@ -250,6 +275,10 @@ export struct SheetCoordinator {
       debugModeChanged: (isOn: boolean) => this.updateDebugMode(isOn)
     })
       .height('100%')
+      .foregroundBlurStyle(this.window.BackgroundBlurActive ? BlurStyle.Thin : BlurStyle.NONE, {
+        colorMode: ThemeColorMode.SYSTEM,
+        adaptiveColor: AdaptiveColor.DEFAULT
+      })
   }
 
   @Builder
@@ -259,6 +288,10 @@ export struct SheetCoordinator {
       embedded: embedded
     })
       .height('100%')
+      .foregroundBlurStyle(this.window.BackgroundBlurActive ? BlurStyle.Thin : BlurStyle.NONE, {
+        colorMode: ThemeColorMode.SYSTEM,
+        adaptiveColor: AdaptiveColor.DEFAULT
+      })
   }
 
   @Builder
@@ -337,6 +370,10 @@ export struct SheetCoordinator {
     .padding({ left: $r('sys.float.padding_level8'), right: $r('sys.float.padding_level8') })
     .width('100%')
     .height('100%')
+    .foregroundBlurStyle(this.window.BackgroundBlurActive ? BlurStyle.Thin : BlurStyle.NONE, {
+      colorMode: ThemeColorMode.SYSTEM,
+      adaptiveColor: AdaptiveColor.DEFAULT
+    })
   }
 
   @Builder

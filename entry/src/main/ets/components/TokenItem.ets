@@ -1,10 +1,11 @@
-import { systemDateTime } from '@kit.BasicServicesKit';
+import { BusinessError, systemDateTime } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { otpType, TokenConfig, dialogSystemMaterial } from 'common';
+import { otpType, TokenConfig } from 'common';
 import { convertToken2URI, copyText, generateOTP } from 'common';
 import { TokenIcon } from 'uikit';
 import { SteamUtils } from 'common';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, SettingHiddenTokenType,
+  SettingTokenProgressType } from 'common';
 import { AppStorageV2, curves, SymbolGlyphModifier } from '@kit.ArkUI';
 import { QRCodeDialog } from 'uikit';
 import { AppWindowInfo } from 'common';
@@ -44,6 +45,7 @@ export struct TokenItem {
   @Local debugModeIsOn: boolean = AppPreference.getPreference(PREF_KEYS.DEBUG_MODE_ON) as boolean;
   @Local tokenCodeOpacity: number = 1;
   @Local tokenCodeOffsetY: number = 0;
+  @Local tokenNumberWidth: number = 0;
 
   @Local menu_icon_trash: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.trash')).fontSize('22vp').fontColor([Color.Red]);
   @Local menu_icon_qrcode: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.qrcode')).fontSize('22vp');
@@ -51,7 +53,6 @@ export struct TokenItem {
   @Local menu_icon_copy: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.doc_text_on_doc_text')).fontSize('22vp');
   @Local menu_icon_sort: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.list_bullet')).fontSize('22vp');
 
-  private dialog_qrcode?: CustomDialogController;
   private isLongPressMenuActive: boolean = false;
   private pendingSortNavigation: boolean = false;
 
@@ -347,14 +348,69 @@ export struct TokenItem {
   }
 
   @Builder
+  HiddenTokenDot(size: number) {
+    Circle({ width: size, height: size })
+      .fill(Color.Gray)
+  }
+
+  @Builder
+  HiddenTokenDots() {
+    if (this.token_preference.app_appearance_hidden_token_type === SettingHiddenTokenType.COMPACT) {
+      Row({ space: 6 }) {
+        this.HiddenTokenDot(8)
+        this.HiddenTokenDot(8)
+        this.HiddenTokenDot(8)
+        this.HiddenTokenDot(8)
+      }
+    } else {
+      Row({ space: 10 }) {
+        Row({ space: 4 }) {
+          this.HiddenTokenDot(6)
+          this.HiddenTokenDot(6)
+          this.HiddenTokenDot(6)
+        }
+        Row({ space: 4 }) {
+          this.HiddenTokenDot(6)
+          this.HiddenTokenDot(6)
+          this.HiddenTokenDot(6)
+        }
+      }
+    }
+  }
+
+  @Builder
+  TokenProgressBuilder() {
+    Stack() {
+      Text(this.TokenLeftPeriod.toString())
+      if (this.token_preference.app_appearance_token_progress_type === SettingTokenProgressType.SCALE_RING) {
+        Progress({ value: this.TokenLeftPeriod, total: this.Config.TokenPeriod, type: ProgressType.ScaleRing })
+          .style({ strokeWidth: 8, scaleCount: this.Config.TokenPeriod, scaleWidth: 1 })
+          .width(40)
+          .height(40)
+          .color(this.TokenLeftPeriod <= this.token_color_change_threshold ?
+            (this.is_dark_mode ?
+              this.token_preference.app_appearance_token_counter_next_dark_color_end :
+              this.token_preference.app_appearance_token_counter_next_light_color_end) :
+            (this.is_dark_mode ?
+              this.token_preference.app_appearance_token_counter_dark_color_end :
+              this.token_preference.app_appearance_token_counter_light_color_end))
+      } else {
+        Progress({ value: this.TokenLeftPeriod, total: this.Config.TokenPeriod, type: ProgressType.Ring })
+          .style({ strokeWidth: 8 })
+          .width(40)
+          .height(40)
+          .color(this.TokenLeftPeriod <= this.token_color_change_threshold ?
+            this.token_progress_color_near_next :
+            this.token_progress_color_normal)
+      }
+    }
+  }
+
+  @Builder
   TokenCodeBuilder() {
     Column() {
       if (this.TokenHide && this.token_preference.app_safety_hide_token_enable) {
-        Text() {
-          Span("●●●●")
-        }
-        .fontColor(Color.Gray)
-        .fontSize(this.token_preference.app_appearance_token_font_size)
+        this.HiddenTokenDots()
       } else {
         Row({ space: 4 }) {
           Column() {
@@ -368,12 +424,28 @@ export struct TokenItem {
               .fontSize(this.token_preference.app_appearance_token_font_size)
               .fontWeight(this.token_preference.app_appearance_token_font_weight)
               .fontFamily(AppFonts.CODE_FONT)
+              .onAreaChange((_oldValue: Area, newValue: Area) => {
+                const width = Number(newValue.width);
+                if (width > 0 && width !== this.tokenNumberWidth) {
+                  this.tokenNumberWidth = width;
+                }
+              })
               .gesture(
                 LongPressGesture()
                   .onAction(() => {
                     copyText(this.TokenNumber, `token ${this.TokenNumber} `+ this.getUIContext().getHostContext()?.resourceManager.getStringSync($r('app.string.token_copied').id));
                   })
               )
+            if (this.Config.TokenType !== otpType.HOTP && this.Config.TokenType !== otpType.NFC_external &&
+              this.token_preference.app_appearance_token_progress_type === SettingTokenProgressType.LINEAR) {
+              Progress({ value: this.TokenLeftPeriod, total: this.Config.TokenPeriod, type: ProgressType.Linear })
+                .style({ strokeWidth: 3 })
+                .width(this.tokenNumberWidth)
+                .margin({ top: 2, bottom: 1 })
+                .color(this.TokenLeftPeriod <= this.token_color_change_threshold ?
+                  this.token_progress_color_near_next :
+                  this.token_progress_color_normal)
+            }
             if (this.Config.TokenType == otpType.HOTP) {
               Text(this.TokenCounter + (this.token_preference.app_appearance_show_next_token_enable ? ":" + this.TokenNumberNext : ""))
                 .textAlign(TextAlign.End)
@@ -410,23 +482,22 @@ export struct TokenItem {
               })
           } else if (this.Config.TokenType == otpType.NFC_external) {
             // 外部令牌静态展示：不显示倒计时环
-          } else {
-            Stack() {
-              Text(this.TokenLeftPeriod.toString())
-              Progress({ value: this.TokenLeftPeriod, total: this.Config.TokenPeriod, type: ProgressType.Ring })
-                .style({ strokeWidth: 8 })
-                .width(40)
-                .height(40)
-                .color(this.TokenLeftPeriod <= this.token_color_change_threshold ?
-                  this.token_progress_color_near_next :
-                  this.token_progress_color_normal)
-            }
+          } else if (this.token_preference.app_appearance_token_progress_type !==
+            SettingTokenProgressType.LINEAR) {
+            this.TokenProgressBuilder()
           }
         }
       }
     }
     .alignItems(HorizontalAlign.End)
     .padding({ left: $r('sys.float.ohos_id_text_overlay_menu_button_padding_left'), right: $r('sys.float.ohos_id_text_overlay_menu_button_padding_right') })
+    .responseRegion({
+      x: 0,
+      y: this.TokenHide && this.token_preference.app_safety_hide_token_enable ?
+        (this.token_preference.app_appearance_hidden_token_type === SettingHiddenTokenType.COMPACT ? -20 : -21) : -4,
+      width: '100%',
+      height: 48
+    })
     .onClick(() => {
       if (this.token_preference.app_safety_hide_token_enable) {
         this.TokenHide = !this.TokenHide;
@@ -639,6 +710,24 @@ export struct TokenItem {
   }
 
   @Builder
+  QRCodeDialogBuilder(): void {
+    QRCodeDialog({
+      content: convertToken2URI(this.Config),
+      winSize: this.window.Size
+    })
+  }
+
+  private openQRCodeDialog(): void {
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: () => {
+        this.QRCodeDialogBuilder();
+      }
+    }).catch((error: BusinessError) => {
+      hilog.error(error.code, 'TokenItem', `open QR code dialog failed: ${error.message}`);
+    });
+  }
+
+  @Builder
   TokenRightCtxMenu() {
     Menu() {
       // NFC 外部令牌为会话级、不持久化，排序（RankScore 持久化）对其无意义，故不提供排序入口
@@ -657,14 +746,7 @@ export struct TokenItem {
       if (this.Config.TokenType !== otpType.NFC_external) {
         MenuItem({ symbolStartIcon: this.menu_icon_qrcode, content: $r('app.string.token_right_menu_show_qrcode') })
           .onClick(() => {
-            this.dialog_qrcode = new CustomDialogController({
-              systemMaterial: dialogSystemMaterial(),
-              builder: QRCodeDialog({
-                content: convertToken2URI(this.Config),
-                winSize: this.window.Size
-              })
-            });
-            this.dialog_qrcode.open();
+            this.openQRCodeDialog();
           })
           .accessibilityText($r('app.string.token_right_menu_show_qrcode'))
         MenuItem({ symbolStartIcon: this.menu_icon_edit, content: $r('app.string.token_right_menu_edit') })

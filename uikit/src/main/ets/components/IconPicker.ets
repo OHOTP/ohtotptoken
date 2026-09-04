@@ -93,7 +93,7 @@ export struct IconPicker {
   /**
    * 确认按钮是否启用沉浸光感材质（跟随设置里的材质模式选项）。
    * uikit 无法依赖 entry 侧 MaterialTheme，由调用方（entry 页面）求值后传入；
-   * 默认 false 保持实体蓝底（SelectIconDialog 等未传入场景行为不变）。
+   * 默认 false 保持实体蓝底（未传入场景行为不变）。
    */
   @Param immersiveMaterialEnabled: boolean = false;
   @Param iconScrollers: Scroller[] = [];

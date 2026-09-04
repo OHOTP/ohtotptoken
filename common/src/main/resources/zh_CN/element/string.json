@@ -553,6 +553,26 @@
       "value": "添加密钥"
     },
     {
+      "name": "menu_token_sort_default",
+      "value": "默认"
+    },
+    {
+      "name": "menu_token_sort_username_ascending",
+      "value": "A-Z（用户名）"
+    },
+    {
+      "name": "menu_token_sort_token_name_ascending",
+      "value": "A-Z（令牌名）"
+    },
+    {
+      "name": "menu_token_sort_username_descending",
+      "value": "Z-A（用户名）"
+    },
+    {
+      "name": "menu_token_sort_token_name_descending",
+      "value": "Z-A（令牌名）"
+    },
+    {
       "name": "app_ua_search_token",
       "value": "搜索密钥"
     },
@@ -795,6 +815,42 @@
     {
       "name": "custom_layout",
       "value": "布局"
+    },
+    {
+      "name": "hidden_token_type",
+      "value": "隐藏令牌类型"
+    },
+    {
+      "name": "hidden_token_type_desc",
+      "value": "选择紧凑的4点或标准的6点隐藏令牌样式。"
+    },
+    {
+      "name": "hidden_token_type_compact",
+      "value": "紧凑"
+    },
+    {
+      "name": "hidden_token_type_standard",
+      "value": "标准"
+    },
+    {
+      "name": "token_progress_type",
+      "value": "倒计时进度样式"
+    },
+    {
+      "name": "token_progress_type_desc",
+      "value": "选择令牌倒计时进度条的显示样式。"
+    },
+    {
+      "name": "token_progress_type_ring",
+      "value": "环形"
+    },
+    {
+      "name": "token_progress_type_linear",
+      "value": "线性"
+    },
+    {
+      "name": "token_progress_type_scale_ring",
+      "value": "刻度环形"
     },
     {
       "name": "custom_color",

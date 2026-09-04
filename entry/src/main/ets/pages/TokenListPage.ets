@@ -1,8 +1,8 @@
 import { TokenItem } from "../components/TokenItem";
 import { MaterialSurface } from "../components/MaterialSurface";
-import { MaterialTheme, MaterialThickness } from "../components/MaterialTheme";
+import { MaterialThickness } from "../components/MaterialTheme";
 import { QRCodeDialog } from 'uikit';
-import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, dialogSystemMaterial } from 'common';
+import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS } from 'common';
 import { otpType, TokenConfig, TokenConfigVM } from 'common';
 import { TokenStore } from 'common';
 import { convertToken2URI } from 'common';
@@ -13,6 +13,7 @@ import { showSnackBar, SnackBarNotifyType } from 'common';
 import { common } from "@kit.AbilityKit";
 import { NfcSessionTokens } from "../oath/NfcSessionTokens";
 import { hilog } from "@kit.PerformanceAnalysisKit";
+import { BusinessError } from '@kit.BasicServicesKit';
 import { HdsListItem } from '@kit.UIDesignKit';
 
 let tkStore = TokenStore.getInstance();
@@ -64,7 +65,6 @@ export struct TokenListPage {
     this.dataSource.updateData(toVMs(monitor.value()?.now as TokenConfig[]));
   }
 
-  private dialog_qrcode?: CustomDialogController;
   private appCtx: common.UIAbilityContext = AppStorage.get('appContext') as common.UIAbilityContext;
   private onSingleTokenUpdatedHandler: (token: TokenConfig) => void = () => {};
 
@@ -177,15 +177,22 @@ export struct TokenListPage {
     }
   }
 
+  @Builder
+  QRCodeDialogBuilder(conf: TokenConfig): void {
+    QRCodeDialog({
+      content: convertToken2URI(conf),
+      winSize: this.appWindowSize
+    })
+  }
+
   showQRCodeDialog(conf: TokenConfig): void {
-    this.dialog_qrcode = new CustomDialogController({
-      systemMaterial: dialogSystemMaterial(),
-      builder: QRCodeDialog({
-        content: convertToken2URI(conf),
-        winSize: this.appWindowSize
-      })
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: () => {
+        this.QRCodeDialogBuilder(conf);
+      }
+    }).catch((error: BusinessError) => {
+      hilog.error(error.code, 'TokenListPage', `open QR code dialog failed: ${error.message}`);
     });
-    this.dialog_qrcode.open();
   }
 
   private openEditPage(conf: TokenConfig): void {
@@ -236,15 +243,14 @@ export struct TokenListPage {
   @Builder
   TokenItemSwipeEnd(vm: TokenConfigVM) {
     Row({ space: 10 }) {
-      // 侧滑操作按钮(Phase 5.7): MaterialSurface 承载语义色材质 + 光感反馈
-      // + 按压形变; 按钮背景按档位映射(沉浸档透明透出材质, 其余档语义色)
+      // 侧滑操作按钮：透明背景完整透出沉浸材质与光感反馈；
+      // 删除操作使用红色光感，其余操作沿用默认白色光感。
       // NFC 外部令牌无持久化 URI，不提供二维码入口
       if (vm.config.TokenType !== otpType.NFC_external) {
         MaterialSurface({
           thickness: MaterialThickness.THIN,
           lightEffect: true,
           interactive: true,
-          materialColor: Color.Orange,
           radius: '50%',
           solidColor: Color.Transparent,
           fillWidth: false
@@ -257,7 +263,7 @@ export struct TokenListPage {
                 .fontColor([Color.White])
             }
           }
-          .backgroundColor(MaterialTheme.surfaceBackground(Color.Orange))
+          .backgroundColor(Color.Transparent)
           .padding(10)
           .onClick(() => {
             this.showQRCodeDialog(vm.config);
@@ -270,7 +276,6 @@ export struct TokenListPage {
           thickness: MaterialThickness.THIN,
           lightEffect: true,
           interactive: true,
-          materialColor: Color.Gray,
           radius: '50%',
           solidColor: Color.Transparent,
           fillWidth: false
@@ -283,7 +288,7 @@ export struct TokenListPage {
                 .fontColor([Color.White])
             }
           }
-          .backgroundColor(MaterialTheme.surfaceBackground(Color.Gray))
+          .backgroundColor(Color.Transparent)
           .padding(10)
           .onClick(() => {
             this.openEditPage(vm.config);
@@ -294,8 +299,8 @@ export struct TokenListPage {
       MaterialSurface({
         thickness: MaterialThickness.THIN,
         lightEffect: true,
+        lightEffectColor: Color.Red,
         interactive: true,
-        materialColor: Color.Red,
         radius: '50%',
         solidColor: Color.Transparent,
         fillWidth: false
@@ -308,7 +313,7 @@ export struct TokenListPage {
               .fontColor([Color.White])
           }
         }
-        .backgroundColor(MaterialTheme.surfaceBackground(Color.Red))
+        .backgroundColor(Color.Transparent)
         .padding(10)
         .onClick(async () => {
           AlertDialog.show({

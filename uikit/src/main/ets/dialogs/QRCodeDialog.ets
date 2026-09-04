@@ -3,52 +3,52 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { image } from '@kit.ImageKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { copyText } from 'common';
-import { window } from '@kit.ArkUI';
+import { CustomContentDialogV2, window } from '@kit.ArkUI';
 
 @Preview
-@CustomDialog
+@ComponentV2
 export struct QRCodeDialog {
-  controller?: CustomDialogController;
-  @Prop content: string = '';
-  @Prop winSize: window.Size;
-  @State pixelMap: image.PixelMap | undefined = undefined
-  @State qrSize: number = 0;
+  @Require @Param content: string = '';
+  @Require @Param winSize: window.Size = { width: 0, height: 0 };
+  @Local pixelMap: image.PixelMap | undefined = undefined;
+  @Local qrSize: number = 0;
 
-  aboutToAppear(): void {
-  }
-
-  // onDidBuild 在 build() 完成后调用，此时 getUIContext() 保证可用；qrSize 计算完毕后再生成二维码
+  // onDidBuild 时 getUIContext() 已可用；仅初始化一次，避免状态刷新后重复生成二维码。
   onDidBuild(): void {
+    if (this.qrSize > 0) {
+      return;
+    }
     this.qrSize = this.getUIContext().px2vp(Math.min(this.winSize.width, this.winSize.height)) * 0.8;
     this.createQRCode();
   }
 
   aboutToDisappear(): void {
     this.pixelMap?.release();
+    this.pixelMap = undefined;
   }
 
-  createQRCode() {
+  private createQRCode(): void {
     this.pixelMap = undefined;
     try {
-      let options: generateBarcode.CreateOptions = {
+      const options: generateBarcode.CreateOptions = {
         scanType: scanCore.ScanType.QR_CODE,
         height: this.qrSize,
         width: this.qrSize
-      }
-      // 码图生成接口，成功返回PixelMap格式图片
+      };
       generateBarcode.createBarcode(this.content, options).then((pixelMap: image.PixelMap) => {
         this.pixelMap = pixelMap;
       }).catch((error: BusinessError) => {
         hilog.error(0x0001, '[generateBarcode]',
           `Failed to get PixelMap by promise with options. Code: ${error.code}, message: ${error.message}`);
-      })
+      });
     } catch (error) {
       hilog.error(0x0001, '[generateBarcode]',
         `Failed to createBarcode by promise with options. Code: ${error.code}, message: ${error.message}`);
     }
   }
 
-  build() {
+  @Builder
+  contentBuilder(): void {
     Column({ space: 10 }) {
       if (this.pixelMap !== undefined) {
         Image(this.pixelMap)
@@ -79,11 +79,17 @@ export struct QRCodeDialog {
       .fontSize(10)
       .fontColor($r('app.color.str_gray'))
       .onClick(() => {
-        copyText(this.content, "uri copied");
+        copyText(this.content, 'uri copied');
       })
-
     }
-    .padding(20)
     .width('100%')
+  }
+
+  build() {
+    CustomContentDialogV2({
+      contentBuilder: () => {
+        this.contentBuilder();
+      }
+    })
   }
 }

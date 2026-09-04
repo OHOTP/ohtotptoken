@@ -553,6 +553,26 @@
       "value": "Add Token"
     },
     {
+      "name": "menu_token_sort_default",
+      "value": "Default"
+    },
+    {
+      "name": "menu_token_sort_username_ascending",
+      "value": "A-Z (Username)"
+    },
+    {
+      "name": "menu_token_sort_token_name_ascending",
+      "value": "A-Z (Token Name)"
+    },
+    {
+      "name": "menu_token_sort_username_descending",
+      "value": "Z-A (Username)"
+    },
+    {
+      "name": "menu_token_sort_token_name_descending",
+      "value": "Z-A (Token Name)"
+    },
+    {
       "name": "app_ua_search_token",
       "value": "Search Token"
     },
@@ -795,6 +815,42 @@
     {
       "name": "custom_layout",
       "value": "Layout"
+    },
+    {
+      "name": "hidden_token_type",
+      "value": "Hidden Token Style"
+    },
+    {
+      "name": "hidden_token_type_desc",
+      "value": "Choose a compact 4-dot or standard 6-dot hidden token indicator."
+    },
+    {
+      "name": "hidden_token_type_compact",
+      "value": "Compact"
+    },
+    {
+      "name": "hidden_token_type_standard",
+      "value": "Standard"
+    },
+    {
+      "name": "token_progress_type",
+      "value": "Countdown Progress Style"
+    },
+    {
+      "name": "token_progress_type_desc",
+      "value": "Choose how token countdown progress is displayed."
+    },
+    {
+      "name": "token_progress_type_ring",
+      "value": "Ring"
+    },
+    {
+      "name": "token_progress_type_linear",
+      "value": "Linear"
+    },
+    {
+      "name": "token_progress_type_scale_ring",
+      "value": "ScaleRing"
     },
     {
       "name": "custom_color",

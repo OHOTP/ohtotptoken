@@ -553,6 +553,26 @@
       "value": "新增密鑰"
     },
     {
+      "name": "menu_token_sort_default",
+      "value": "預設"
+    },
+    {
+      "name": "menu_token_sort_username_ascending",
+      "value": "A-Z（使用者名稱）"
+    },
+    {
+      "name": "menu_token_sort_token_name_ascending",
+      "value": "A-Z（令牌名稱）"
+    },
+    {
+      "name": "menu_token_sort_username_descending",
+      "value": "Z-A（使用者名稱）"
+    },
+    {
+      "name": "menu_token_sort_token_name_descending",
+      "value": "Z-A（令牌名稱）"
+    },
+    {
       "name": "app_ua_search_token",
       "value": "搜索密鑰"
     },
@@ -795,6 +815,42 @@
     {
       "name": "custom_layout",
       "value": "佈局"
+    },
+    {
+      "name": "hidden_token_type",
+      "value": "隱藏權杖類型"
+    },
+    {
+      "name": "hidden_token_type_desc",
+      "value": "選擇緊湊的4點或標準的6點隱藏權杖樣式。"
+    },
+    {
+      "name": "hidden_token_type_compact",
+      "value": "緊湊"
+    },
+    {
+      "name": "hidden_token_type_standard",
+      "value": "標準"
+    },
+    {
+      "name": "token_progress_type",
+      "value": "倒計時進度樣式"
+    },
+    {
+      "name": "token_progress_type_desc",
+      "value": "選擇權杖倒計時進度條的顯示樣式。"
+    },
+    {
+      "name": "token_progress_type_ring",
+      "value": "環形"
+    },
+    {
+      "name": "token_progress_type_linear",
+      "value": "線性"
+    },
+    {
+      "name": "token_progress_type_scale_ring",
+      "value": "刻度環形"
     },
     {
       "name": "custom_color",
