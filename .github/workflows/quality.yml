@@ -1,0 +1,70 @@
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  localunit:
+    name: ArkTS unit tests (LocalUnit)
+    # macOS ARM runner: LocalUnit executes tests inside the SDK Previewer
+    # runtime, which only ships in the Windows/macOS command-line-tools
+    # packages - on Linux, hvigorw test hangs after compiling (verified in
+    # run 33878317600). macOS is preferred over Windows here: the mac-arm64
+    # runner has 3 vCPUs and APFS, so restoring the ~5 GB SDK cache from
+    # actions/cache takes ~1-2 min instead of ~4 min on 2-vCPU Windows+NTFS.
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Setup HarmonyOS CLI tools
+        uses: ErBWs/setup-ohos@v2
+        with:
+          # v2 does gh release download <version> and does not resolve
+          # "latest"; a concrete tag from ErBWs/ohos-sdk releases is required.
+          version: 26.0.0.821
+          cache: true
+
+      - name: Install project dependencies
+        run: ohpm install --all --rt 5 --ri 5000
+        shell: bash
+
+      # hvigorw test exits 0 even when assertions fail, so the gate is
+      # enforced by parsing the result file produced by GenerateUnitTestResult.
+      - name: Run LocalUnit tests
+        run: hvigorw test -p module=entry@default --no-daemon
+        shell: bash
+
+      - name: Check test results
+        shell: bash
+        run: |
+          RESULT_FILE=$(find . -name test_result.txt -path "*test*" | head -n 1)
+          if [ -z "$RESULT_FILE" ]; then
+            echo "::error::test_result.txt not found - LocalUnit produced no results"
+            exit 1
+          fi
+          echo "Result file: $RESULT_FILE"
+          cat "$RESULT_FILE"
+          SUMMARY=$(grep '^Tests run:' "$RESULT_FILE" | tail -n 1)
+          FAILURES=$(echo "$SUMMARY" | sed -E 's/.*Failure: ([0-9]+).*/\1/')
+          ERRORS=$(echo "$SUMMARY" | sed -E 's/.*Error: ([0-9]+).*/\1/')
+          if [ "$FAILURES" != "0" ] || [ "$ERRORS" != "0" ]; then
+            echo "::error::LocalUnit tests failed - $SUMMARY"
+            exit 1
+          fi
+          echo "All LocalUnit tests passed - $SUMMARY"
