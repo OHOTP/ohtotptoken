@@ -128,6 +128,17 @@ export struct AppShell {
   }
 
   @Computed
+  get fixedNavBarWidth(): number {
+    const contentWidth = this.window.WidthVp -
+      (this.embedGroupSidebar && this.canShowGroupSidebar && this.groupSidebarOpen ? 240 : 0);
+    const maxWidth = this.window.IsPc ?
+      HOME_SIDE_TAB_WIDTH + PC_TOKEN_LIST_MAX_CONTENT_WIDTH : DEFAULT_NAV_BAR_MAX_WIDTH;
+    return Math.min(Math.max(0, contentWidth - 300), maxWidth,
+      Math.max(HOME_SIDE_TAB_WIDTH + TOKEN_LIST_MIN_CONTENT_WIDTH,
+        contentWidth * (this.window.WidthVp < 1200 ? 0.5 : 0.36)));
+  }
+
+  @Computed
   get tokenGroupTitle(): ResourceStr {
     if (this.groupState.selectedId === ALL_TOKEN_GROUPS) {
       return $r('app.string.tab_token');
@@ -325,15 +336,14 @@ export struct AppShell {
     .mode(this.window.AllowSplit && (this.currentHomeTabIndex === 1 || this.businessSplitEnabled) ?
       NavigationMode.Split : NavigationMode.Stack)
     // lg 的三段式布局先保证主列表可用宽度，超宽窗口再收敛为约 1:2。
-    .navBarWidth(this.window.WidthVp < 1200 ? '50%' : '36%')
-    // NavBar 同时包含 96vp 纵向页签与令牌列表，最小值需为两者之和。
+    .navBarWidth(this.fixedNavBarWidth)
+    // 上下限相同，禁止通过分割线调宽；窗口变化时仍按原比例自适应。
     .navBarWidthRange({
-      minWidth: HOME_SIDE_TAB_WIDTH + TOKEN_LIST_MIN_CONTENT_WIDTH,
-      maxWidth: this.window.IsPc ?
-        HOME_SIDE_TAB_WIDTH + PC_TOKEN_LIST_MAX_CONTENT_WIDTH : DEFAULT_NAV_BAR_MAX_WIDTH
+      minWidth: this.fixedNavBarWidth,
+      maxWidth: this.fixedNavBarWidth
     })
     .minContentWidth(300)
-    .enableDragBar(this.window.AllowSplit && (this.currentHomeTabIndex === 1 || this.businessSplitEnabled))
+    .enableDragBar(false)
     .splitPlaceholder(this.splitPlaceholder)
     .onNavBarStateChange((isVisible: boolean) => {
       if (isVisible) {
@@ -458,8 +468,9 @@ export struct AppShell {
       },
       sideBarContainerType: this.embedGroupSidebar ? SideBarContainerType.Embed : SideBarContainerType.Overlay,
       sideBarWidth: this.embedGroupSidebar ? 240 : Math.min(380, this.window.WidthVp * 0.78),
-      minSideBarWidth: Math.min(200, Math.max(0, this.window.WidthVp - 56)),
-      maxSideBarWidth: 380,
+      minSideBarWidth: this.embedGroupSidebar ? 240 : Math.min(380, this.window.WidthVp * 0.78),
+      maxSideBarWidth: this.embedGroupSidebar ? 240 : Math.min(380, this.window.WidthVp * 0.78),
+      autoHide: false,
       minContentWidth: this.embedGroupSidebar ?
         HOME_SIDE_TAB_WIDTH + TOKEN_LIST_MIN_CONTENT_WIDTH + 300 : Math.min(360, this.window.WidthVp),
       contentAreaMask: true,
