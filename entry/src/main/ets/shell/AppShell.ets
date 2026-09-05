@@ -195,7 +195,6 @@ export struct AppShell {
     Column() {
       TokenGroupSidePanel({
         tokens: this.tokens,
-        onClose: () => this.$groupSidebarOpen(false),
         onAdd: () => this.openNewGroupDialog(),
         onSelect: (id: string) => {
           this.onSelectGroup(id);
@@ -207,7 +206,7 @@ export struct AppShell {
     }
     .width('100%')
     .height('100%')
-    .padding({ top: this.window.AvoidTopHeight, bottom: this.window.AvoidBottomHeight })
+    .padding({ bottom: this.window.AvoidBottomHeight })
   }
 
   @LocalBuilder
@@ -329,9 +328,6 @@ export struct AppShell {
     .backgroundColor($r('app.color.window_background'))
     .width('100%')
     .height('100%')
-    .translate({ x: !this.embedGroupSidebar && this.canShowGroupSidebar && this.groupSidebarOpen ?
-      Math.min(304, this.window.WidthVp - 56) : 0 })
-    .animation({ duration: 250, curve: Curve.EaseInOut })
     .hideTitleBar(this.isLoading)
     .mode(this.window.AllowSplit && (this.currentHomeTabIndex === 1 || this.businessSplitEnabled) ?
       NavigationMode.Split : NavigationMode.Stack)
@@ -358,7 +354,7 @@ export struct AppShell {
       this.currentHomeTabIndex === 0 ? this.tokenListScroller : this.settingEntryScroller
     ])
     .titleMode(HdsNavigationTitleMode.MINI)
-    .hideBackButton(!this.canShowGroupSidebar)
+    .hideBackButton(true)
     .titleBar({
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: true,
@@ -402,13 +398,6 @@ export struct AppShell {
         }
       },
       content: {
-        backIcon: {
-          icon: this.groupSidebarOpen ? $r('sys.symbol.open_sidebar') : $r('sys.symbol.close_sidebar'),
-          label: this.groupSidebarOpen ? $r('app.string.token_group_close_sidebar') :
-            $r('app.string.token_group_open_sidebar'),
-          componentId: 'token_group_sidebar_toggle',
-          action: () => this.$groupSidebarOpen(!this.groupSidebarOpen)
-        },
         title: this.currentHomeTabIndex === 0 ? undefined : { mainTitle: $r('app.string.tab_me') },
         bottomBuilder: this.currentHomeTabIndex === 0 ? {
           builder: (): void => this.TokenTitleBuilder(),
@@ -455,7 +444,53 @@ export struct AppShell {
     })
   }
 
-  build() {
+  /** 与侧边栏同级，仅用原生标题栏承载固定开关，保留 HDS 光感材质。 */
+  @LocalBuilder
+  SidebarTitleBarBuilder() {
+    HdsNavigation() {
+    }
+    .width(96)
+    .height('100%')
+    .hitTestBehavior(HitTestMode.Transparent)
+    .mode(NavigationMode.Stack)
+    .titleMode(HdsNavigationTitleMode.MINI)
+    .hideBackButton(false)
+    .hideToolBar(true)
+    .backgroundColor(Color.Transparent)
+    .titleBar({
+      avoidLayoutSafeArea: true,
+      enableComponentSafeArea: true,
+      style: {
+        originalStyle: {
+          contentStyle: {
+            backIconStyle: {
+              iconColor: $r('sys.color.icon_primary'),
+              backgroundColor: MaterialTheme.hdsMaterialType() === hdsMaterial.MaterialType.NONE ?
+                $r('sys.color.comp_background_gray') : undefined
+            }
+          }
+        },
+        scrollEffectOpts: { enableScrollEffect: false },
+        systemMaterialEffect: {
+          materialType: MaterialTheme.hdsMaterialType(),
+          materialLevel: MaterialTheme.hdsMaterialLevel()
+        }
+      },
+      content: {
+        backIcon: {
+          icon: this.groupSidebarOpen ? $r('sys.symbol.open_sidebar') : $r('sys.symbol.close_sidebar'),
+          label: this.groupSidebarOpen ? $r('app.string.token_group_close_sidebar') :
+            $r('app.string.token_group_open_sidebar'),
+          componentId: 'token_group_sidebar_toggle',
+          action: () => this.$groupSidebarOpen(!this.groupSidebarOpen)
+        }
+      }
+    })
+    .zIndex(1)
+  }
+
+  @LocalBuilder
+  SidebarBuilder() {
     HdsSideBar({
       sideBarPanelBuilder: (): void => this.GroupSidePanelBuilder(),
       contentPanelBuilder: (): void => this.NavigationBuilder(),
@@ -480,6 +515,17 @@ export struct AppShell {
       sideBarColor: $r('app.color.window_background'),
       contentColor: $r('app.color.window_background')
     })
+    .width('100%')
+    .height('100%')
+  }
+
+  build() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      this.SidebarBuilder()
+      if (this.canShowGroupSidebar) {
+        this.SidebarTitleBarBuilder()
+      }
+    }
     .width('100%')
     .height('100%')
     .foregroundBlurStyle((this.blurFlag || this.applockVisible) ? BlurStyle.Thin : BlurStyle.NONE, {

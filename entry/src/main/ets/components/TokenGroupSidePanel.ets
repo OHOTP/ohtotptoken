@@ -1,4 +1,4 @@
-import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial } from '@kit.UIDesignKit';
+import { HdsNavigation, HdsNavigationTitleMode } from '@kit.UIDesignKit';
 import { MaterialTheme } from './MaterialTheme';
 import { ALL_TOKEN_GROUPS, FAVORITE_TOKEN_GROUP, TokenConfig, otpType, TokenGroup, TokenGroupState,
   TokenGroupStore, TokenStore, dialogSystemMaterial, showSnackBar, SnackBarNotifyType } from 'common';
@@ -13,7 +13,6 @@ export struct TokenGroupSidePanel {
   @Local busy: boolean = false;
   @Event onSelect: (id: string) => void = () => {};
   @Event onAdd: () => void = () => {};
-  @Event onClose: () => void = () => {};
   private scroller: Scroller = new Scroller();
 
   private count(id: string): number {
@@ -233,33 +232,16 @@ export struct TokenGroupSidePanel {
     .height('100%')
     .mode(NavigationMode.Stack)
     .titleMode(HdsNavigationTitleMode.MINI)
-    .hideBackButton(false)
+    .hideBackButton(true)
     .backgroundColor(Color.Transparent)
     .titleBar({
-      avoidLayoutSafeArea: false,
+      avoidLayoutSafeArea: true,
       enableComponentSafeArea: true,
       style: {
-        originalStyle: {
-          contentStyle: {
-            backIconStyle: {
-              iconColor: $r('sys.color.icon_primary'),
-              backgroundColor: MaterialTheme.hdsMaterialType() === hdsMaterial.MaterialType.NONE ?
-                $r('sys.color.comp_background_gray') : undefined
-            }
-          }
-        },
         scrollEffectOpts: { enableScrollEffect: false },
         systemMaterialEffect: {
           materialType: MaterialTheme.hdsMaterialType(),
           materialLevel: MaterialTheme.hdsMaterialLevel()
-        }
-      },
-      content: {
-        backIcon: {
-          icon: $r('sys.symbol.open_sidebar'),
-          label: $r('app.string.token_group_close_sidebar'),
-          componentId: 'token_group_sidebar_close',
-          action: () => this.onClose()
         }
       }
     })
