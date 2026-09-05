@@ -205,6 +205,7 @@ export struct AppShell {
     Column() {
       TokenGroupSidePanel({
         tokens: this.tokens,
+        scrollEffectType: this.scrollEffectType,
         onAdd: () => this.openNewGroupDialog(),
         onSelect: (id: string) => {
           this.onSelectGroup(id);

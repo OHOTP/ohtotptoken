@@ -1,7 +1,7 @@
-import { HdsNavigation, HdsNavigationTitleMode } from '@kit.UIDesignKit';
+import { HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import { MaterialTheme } from './MaterialTheme';
 import { ALL_TOKEN_GROUPS, FAVORITE_TOKEN_GROUP, TokenConfig, otpType, TokenGroup, TokenGroupState,
-  TokenGroupStore, TokenStore, dialogSystemMaterial, showSnackBar, SnackBarNotifyType } from 'common';
+  TokenGroupStore, TokenStore, GenericDataSource, dialogSystemMaterial, showSnackBar, SnackBarNotifyType } from 'common';
 import { TokenGroupNameDialog } from '../dialogs/TokenGroupNameDialog';
 
 /** 分类和分组共用一个滚动区；新建入口始终可达。 */
@@ -9,11 +9,22 @@ import { TokenGroupNameDialog } from '../dialogs/TokenGroupNameDialog';
 export struct TokenGroupSidePanel {
   @Local state: TokenGroupState = TokenGroupStore.getInstance().state;
   @Param tokens: TokenConfig[] = [];
+  @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Local editing: boolean = false;
   @Local busy: boolean = false;
   @Event onSelect: (id: string) => void = () => {};
   @Event onAdd: () => void = () => {};
   private scroller: Scroller = new Scroller();
+  private groupDataSource: GenericDataSource<TokenGroup> = new GenericDataSource<TokenGroup>([]);
+
+  aboutToAppear(): void {
+    this.syncGroupDataSource();
+  }
+
+  @Monitor('state.groups')
+  syncGroupDataSource(): void {
+    this.groupDataSource.updateData(this.state.groups);
+  }
 
   private count(id: string): number {
     if (id === ALL_TOKEN_GROUPS) {
@@ -163,7 +174,7 @@ export struct TokenGroupSidePanel {
           .padding({ left: 12, right: 12, top: 16 })
         }
         // 分组保存时替换对象；名称变化后需重建行，避免复用旧名称和菜单回调。
-        ForEach(this.state.groups, (group: TokenGroup) => {
+        LazyForEach(this.groupDataSource, (group: TokenGroup) => {
           ListItem() {
             Row() {
               Button({ type: ButtonType.Normal }) {
@@ -216,6 +227,8 @@ export struct TokenGroupSidePanel {
       .width('100%')
       .layoutWeight(1)
       .scrollBar(BarState.Auto)
+      .clip(false)
+      .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       .contentEndOffset(8)
       Button({ type: ButtonType.Normal }) {
         Text($r('app.string.token_group_new'))
@@ -242,6 +255,7 @@ export struct TokenGroupSidePanel {
     .width('100%')
     .height('100%')
     .mode(NavigationMode.Stack)
+    .bindToScrollable([this.scroller])
     .titleMode(HdsNavigationTitleMode.MINI)
     .hideBackButton(true)
     .backgroundColor(Color.Transparent)
@@ -249,7 +263,10 @@ export struct TokenGroupSidePanel {
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: true,
       style: {
-        scrollEffectOpts: { enableScrollEffect: false },
+        scrollEffectOpts: {
+          enableScrollEffect: true,
+          scrollEffectType: this.scrollEffectType
+        },
         systemMaterialEffect: {
           materialType: MaterialTheme.hdsMaterialType(),
           materialLevel: MaterialTheme.hdsMaterialLevel()
