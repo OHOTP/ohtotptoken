@@ -264,8 +264,18 @@ export struct AppShell {
               mainTitleColor: $r('sys.color.font_primary'),
             },
             menuStyle: {
-              iconColor: $r('sys.color.icon_primary')
+              iconColor: $r('sys.color.icon_primary'),
+              backgroundColor: MaterialTheme.hdsMaterialType() === hdsMaterial.MaterialType.NONE ?
+                $r('sys.color.comp_background_gray') : undefined
             },
+          }
+        },
+        scrollEffectStyle: {
+          contentStyle: {
+            menuStyle: {
+              backgroundColor: MaterialTheme.hdsMaterialType() === hdsMaterial.MaterialType.NONE ?
+                $r('sys.color.comp_background_gray') : undefined
+            }
           }
         },
         scrollEffectOpts: {
