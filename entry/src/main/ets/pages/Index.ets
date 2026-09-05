@@ -176,6 +176,16 @@ function TokenSortMenuBuilder(host: Index) {
 struct Index {
   @Local CurrentTokens: TokenConfig[] = [];
   @Local groupState: TokenGroupState = TokenGroupStore.getInstance().state;
+  @Local groupSidebarOpen: boolean = false;
+  @Local tokenTitleCollapse: number = 0;
+
+  onBackPress(): boolean {
+    if (this.groupSidebarOpen && !this.isAppLockOverlayVisible) {
+      this.groupSidebarOpen = false;
+      return true;
+    }
+    return false;
+  }
 
   @Computed
   get displayTokens(): TokenConfig[] {
@@ -198,6 +208,7 @@ struct Index {
       return;
     }
     this.groupState.selectedId = id;
+    this.tokenTitleCollapse = 0;
     this.tokenListScroller.scrollTo({ xOffset: 0, yOffset: 0 });
     if (this.selectedTokenUUID !== '' &&
       !this.displayTokens.some(token => token.TokenUUID === this.selectedTokenUUID)) {
@@ -785,6 +796,7 @@ struct Index {
   }
 
   private openFullScreenRoute(name: ROUTE_NAMES, param: Object | null): void {
+    this.groupSidebarOpen = false;
     this.pageInfos.pushPathByName(name, param);
     this.businessSplitEnabled = false;
   }
@@ -1097,6 +1109,7 @@ struct Index {
   @Builder
   HomeContentBuilder() {
     HomeTabs({
+      onTokenListScroll: (offset: number) => { this.tokenTitleCollapse = Math.min(1, Math.max(0, offset / 56)); },
       tokens: this.displayTokens,
       groupFiltered: this.groupState.selectedId !== ALL_TOKEN_GROUPS && this.groupState.groups.length > 0,
       window: this.window,
@@ -1133,6 +1146,9 @@ struct Index {
         scrollEffectType: this.currentScrollEffectType,
         currentHomeTabIndex: this.currentHomeTabIndex,
         onSelectGroup: (id: string) => this.selectGroup(id),
+        groupSidebarOpen: this.groupSidebarOpen,
+        tokenTitleCollapse: this.tokenTitleCollapse,
+        $groupSidebarOpen: (open: boolean) => { this.groupSidebarOpen = open; },
         window: this.window,
         businessSplitEnabled: this.businessSplitEnabled,
         tokenListScroller: this.tokenListScroller,

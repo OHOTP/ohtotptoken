@@ -1,5 +1,7 @@
 {
   "string": [
+    { "name": "token_group_open_sidebar", "value": "Open groups sidebar" },
+    { "name": "token_group_close_sidebar", "value": "Close groups sidebar" },
     { "name": "token_group_all", "value": "All" },
     { "name": "token_group_ungrouped", "value": "Ungrouped" },
     { "name": "token_group_manage", "value": "Manage groups" },

@@ -37,6 +37,7 @@ export struct HomeTabs {
   @Param selectedTokenUUID: string = '';
   @Event onSelectToken: (conf: TokenConfig) => void = () => {};
   @Event onTabChange: (index: number) => void = () => {};
+  @Event onTokenListScroll: (offset: number) => void = () => {};
 
   // [冷启动优化] Setting Tab 懒加载标志,仅在用户首次切换到"我的"Tab 时构建组件树
   @Local settingTabInitialized: boolean = false;
@@ -67,6 +68,7 @@ export struct HomeTabs {
           updateTokenConfig: this.updateTokenConfig,
           updateTokenConfigs: this.updateTokenConfigs,
           listScroller: this.tokenListScroller,
+          onListScroll: (offset: number) => this.onTokenListScroll(offset),
           splitSelectionMode: false,
           selectedTokenUUID: this.selectedTokenUUID,
           onSelectToken: (conf: TokenConfig) => this.onSelectToken(conf)
@@ -87,6 +89,7 @@ export struct HomeTabs {
               updateTokenConfig: this.updateTokenConfig,
               updateTokenConfigs: this.updateTokenConfigs,
               listScroller: this.tokenListScroller,
+              onListScroll: (offset: number) => this.onTokenListScroll(offset),
               splitSelectionMode: this.window.AllowSplit,
               selectedTokenUUID: this.selectedTokenUUID,
               onSelectToken: (conf: TokenConfig) => this.onSelectToken(conf)
@@ -140,6 +143,7 @@ export struct HomeTabs {
         .clip(false)
         .backgroundColor($r('app.color.window_background'))
         .layoutWeight(1)
+        .width('100%')
         .barOverlap(!this.window.UseSideNavigation)
         .barBackgroundColor(Color.Transparent)
         .barBackgroundBlurStyle(this.window.UseSideNavigation ? BlurStyle.NONE : BlurStyle.Regular)
@@ -173,6 +177,8 @@ export struct HomeTabs {
           }
         })
       }
+      .width('100%')
+      .height('100%')
     }
   }
 }

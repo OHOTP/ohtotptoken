@@ -49,6 +49,7 @@ export struct TokenListPage {
   @Param splitSelectionMode: boolean = false;
   @Param selectedTokenUUID: string = '';
   @Event onSelectToken: (conf: TokenConfig) => void = () => {};
+  @Event onListScroll: (offset: number) => void = () => {};
   @Event updateTokenConfig: (conf: TokenConfig, toast: boolean) => Promise<boolean> = async () => false;
   @Event updateTokenConfigs: (tokens: Array<TokenConfig>) => void = () => {};
 
@@ -150,6 +151,7 @@ export struct TokenListPage {
             })
           }, (vm: TokenConfigVM) => vm.objid) // keyGenerator: objid 变化 = 组件重建
         }
+        .onDidScroll(() => this.onListScroll(this.listScroller.currentOffset().yOffset))
         .contentEndOffset(this.TabBarVisible ? (80 + this.appBottomAvoidHeight) : (20 + this.appBottomAvoidHeight))
         .alignListItem(ListItemAlign.Center)
         // ArkUI 链式动效要求显式单列且不能使用自动 lanes；仅 PC 保持自适应多列。

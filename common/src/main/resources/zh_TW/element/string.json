@@ -1,5 +1,7 @@
 {
   "string": [
+    { "name": "token_group_open_sidebar", "value": "展開分組側欄" },
+    { "name": "token_group_close_sidebar", "value": "收起分組側欄" },
     { "name": "token_group_all", "value": "全部" },
     { "name": "token_group_ungrouped", "value": "未分組" },
     { "name": "token_group_manage", "value": "管理分組" },

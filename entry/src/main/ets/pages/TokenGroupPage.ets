@@ -2,17 +2,14 @@ import { TokenGroup, TokenGroupState, TokenGroupStore, TokenStore, dialogSystemM
   showSnackBar, SnackBarNotifyType } from 'common';
 import { HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType, hdsMaterial } from '@kit.UIDesignKit';
 import { MaterialTheme } from '../components/MaterialTheme';
-import { AddTokenTextField, AddTokenActionButton } from '../components/AddTokenForm';
+import { TokenGroupNameDialog } from '../dialogs/TokenGroupNameDialog';
 
 @ComponentV2
 export struct TokenGroupPage {
   @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Event onExitFullScreen: () => void = () => {};
   @Local state: TokenGroupState = TokenGroupStore.getInstance().state;
-  @Local name: string = '';
-  @Local editingId: string = '';
   @Local busy: boolean = false;
-  @Local invalid: boolean = false;
   private scroller: Scroller = new Scroller();
 
   private async run(action: () => Promise<void>): Promise<void> {
@@ -29,23 +26,20 @@ export struct TokenGroupPage {
     }
   }
 
-  private save(): void {
-    this.invalid = !TokenGroupStore.getInstance().isValidName(this.name, this.editingId);
-    if (this.invalid) {
-      return;
-    }
-    this.run(async () => {
-      await TokenGroupStore.getInstance().renameOrCreate(this.name, this.editingId);
-      this.editingId = '';
-      this.name = '';
-    });
+  @LocalBuilder
+  NameDialogBuilder(groupId: string, name: string) {
+    TokenGroupNameDialog({ groupId: groupId, initialName: name })
   }
 
-  private rename(group: TokenGroup): void {
-    this.editingId = group.id;
-    this.name = group.name;
-    this.invalid = false;
-    this.scroller.scrollTo({ xOffset: 0, yOffset: 0 });
+  private openNameDialog(groupId: string = '', name: string = ''): void {
+    this.getUIContext().getPromptAction().openCustomDialog({
+      systemMaterial: dialogSystemMaterial(),
+      builder: () => this.NameDialogBuilder(groupId, name),
+      autoCancel: false,
+      alignment: DialogAlignment.Center
+    }).catch(() => {
+      showSnackBar($r('app.string.token_group_error'), SnackBarNotifyType.ERROR);
+    });
   }
 
   private deleteGroup(group: TokenGroup): void {
@@ -64,10 +58,6 @@ export struct TokenGroupPage {
         action: () => {
           this.run(async () => {
             await TokenStore.getInstance().deleteGroup(group.id);
-            if (this.editingId === group.id) {
-              this.editingId = '';
-              this.name = '';
-            }
           });
         }
       }
@@ -78,7 +68,7 @@ export struct TokenGroupPage {
   GroupMenu(group: TokenGroup, index: number) {
     Menu() {
       MenuItem({ content: $r('app.string.token_group_rename') })
-        .onClick(() => this.rename(group))
+        .onClick(() => this.openNameDialog(group.id, group.name))
       MenuItem({ content: $r('app.string.token_group_up') })
         .enabled(index > 0)
         .onClick(() => this.run(() => TokenGroupStore.getInstance().move(group.id, -1)))
@@ -97,30 +87,11 @@ export struct TokenGroupPage {
       List({ space: 16, scroller: this.scroller }) {
         ListItem() {
           Column({ space: 12 }) {
-            Text(this.editingId === '' ? $r('app.string.token_group_new') : $r('app.string.token_group_rename'))
-              .fontSize(20).fontWeight(FontWeight.Medium).width('100%')
-            AddTokenTextField({
-              label: $r('app.string.token_group_name'),
-              value: this.name,
-              maxLength: 24,
-              fieldEnabled: !this.busy,
-              onChange: (value: string) => { this.name = value; this.invalid = false; }
-            })
-            if (this.invalid) {
-              Text($r('app.string.token_group_invalid'))
-                .fontColor($r('sys.color.font_primary')).fontSize(14).width('100%')
-            }
-            AddTokenActionButton({
-              text: this.editingId === '' ? $r('app.string.token_group_new') : $r('app.string.token_group_save'),
-              buttonEnabled: !this.busy && this.name.trim().length > 0,
-              loading: this.busy,
-              action: () => this.save()
-            })
-            if (this.editingId !== '') {
-              Button($r('app.string.dialog_btn_cancel'))
-                .enabled(!this.busy)
-                .onClick(() => { this.editingId = ''; this.name = ''; this.invalid = false; })
-            }
+            Button($r('app.string.token_group_new'))
+              .constraintSize({ minHeight: 48 })
+              .width('100%')
+              .enabled(!this.busy)
+              .onClick(() => this.openNameDialog())
             Text($r('app.string.token_group_hint'))
               .fontSize(14).fontColor($r('sys.color.font_secondary')).width('100%')
           }

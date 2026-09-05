@@ -1,9 +1,11 @@
 import { MaterialTheme } from '../components/MaterialTheme';
-import { TokenGroupBar } from '../components/TokenGroupBar';
-import { TokenGroupState, TokenGroupStore } from 'common';
+import { TokenGroupSidePanel } from '../components/TokenGroupSidePanel';
+import { ALL_TOKEN_GROUPS, TokenGroupState, TokenGroupStore, dialogSystemMaterial,
+  showSnackBar, SnackBarNotifyType } from 'common';
+import { TokenGroupNameDialog } from '../dialogs/TokenGroupNameDialog';
 import lazy { TokenGroupPage } from '../pages/TokenGroupPage';
 import { uniformTypeDescriptor } from '@kit.ArkData';
-import { HdsNavDestination, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType, hdsMaterial, BottomBuilderShowType, HideMode } from '@kit.UIDesignKit';
+import { HdsNavDestination, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType, hdsMaterial, HdsSideBar, BottomBuilderShowType } from '@kit.UIDesignKit';
 import { AppWindowInfo, ROUTE_NAMES } from 'common';
 // [冷启动优化] 以下 NavDestination 页面仅在用户导航时触发评估
 import lazy { TokenCardConfigPage } from '../pages/TokenCardConfigPage'
@@ -82,6 +84,9 @@ export struct AppShell {
   @Require @Param currentHomeTabIndex: number = 0;
   @Local groupState: TokenGroupState = TokenGroupStore.getInstance().state;
   @Event onSelectGroup: (id: string) => void = () => {};
+  @Param groupSidebarOpen: boolean = false;
+  @Param tokenTitleCollapse: number = 0;
+  @Event $groupSidebarOpen: (open: boolean) => void = () => {};
   @Require @Param window: AppWindowInfo = new AppWindowInfo();
   @Require @Param businessSplitEnabled: boolean = true;
   @Require @Param tokenListScroller: Scroller = new Scroller();
@@ -112,9 +117,108 @@ export struct AppShell {
   private splitPlaceholder: ComponentContent<Object> =
     new ComponentContent(this.getUIContext(), wrapBuilder(TokenSplitPlaceholder));
 
-  @Builder
-  GroupBottomBuilder() {
-    TokenGroupBar({ onSelect: (id: string) => this.onSelectGroup(id) })
+  @Computed
+  get canShowGroupSidebar(): boolean {
+    return this.currentHomeTabIndex === 0 && this.businessSplitEnabled && !this.isLoading && !this.applockVisible;
+  }
+
+  @Computed
+  get embedGroupSidebar(): boolean {
+    // 为纵向页签、令牌列表及详情区保留空间，不在已有分栏中强塞侧栏。
+    return this.window.WidthVp >= (this.window.AllowSplit ? 1440 : 840);
+  }
+
+  @Computed
+  get tokenGroupTitle(): ResourceStr {
+    if (this.groupState.selectedId === ALL_TOKEN_GROUPS) {
+      return $r('app.string.tab_token');
+    }
+    return this.groupState.groups.find(group => group.id === this.groupState.selectedId)?.name ??
+      $r('app.string.token_group_ungrouped');
+  }
+
+  @Monitor('canShowGroupSidebar', 'embedGroupSidebar')
+  onSidebarLayoutChange(): void {
+    this.$groupSidebarOpen(this.canShowGroupSidebar && this.embedGroupSidebar);
+  }
+
+  aboutToAppear(): void {
+    this.$groupSidebarOpen(this.canShowGroupSidebar && this.embedGroupSidebar);
+  }
+
+  @LocalBuilder
+  TokenTitleBuilder() {
+    Text(this.tokenGroupTitle)
+      .id('token_group_title')
+      .fontSize(35 - 5 * this.tokenTitleCollapse)
+      .fontWeight(FontWeight.Bold)
+      .fontColor($r('sys.color.font_primary'))
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
+      .width('100%')
+      .height(56 - 8 * this.tokenTitleCollapse)
+      .padding({ left: this.window.WidthVp < 600 ? 16 : this.window.WidthVp < 840 ? 24 : 32,
+        right: this.window.WidthVp < 600 ? 16 : this.window.WidthVp < 840 ? 24 : 32 })
+  }
+
+  @LocalBuilder
+  SidebarToggleBuilder() {
+    Button({ type: ButtonType.Circle }) {
+      SymbolGlyph(this.groupSidebarOpen ? $r('sys.symbol.open_sidebar') : $r('sys.symbol.close_sidebar'))
+        .fontSize(24)
+        .fontColor([$r('sys.color.icon_primary')])
+    }
+    .id('token_group_sidebar_toggle')
+    .width(40)
+    .height(40)
+    .backgroundColor(MaterialTheme.surfaceBackground($r('sys.color.comp_background_gray')))
+    .systemMaterial(MaterialTheme.systemMaterial(true))
+    .accessibilityText(this.groupSidebarOpen ? $r('app.string.token_group_close_sidebar') :
+      $r('app.string.token_group_open_sidebar'))
+    .onClick(() => this.$groupSidebarOpen(!this.groupSidebarOpen))
+    .margin({
+      left: this.window.WidthVp < 600 ? 16 : this.window.WidthVp < 840 ? 24 : 32,
+      top: this.window.AvoidTopHeight + 6
+    })
+    .zIndex(1)
+  }
+
+  @LocalBuilder
+  NewGroupDialogBuilder() {
+    TokenGroupNameDialog()
+  }
+
+  private openNewGroupDialog(): void {
+    this.getUIContext().getPromptAction().openCustomDialog({
+      systemMaterial: dialogSystemMaterial(),
+      builder: () => this.NewGroupDialogBuilder(),
+      autoCancel: false,
+      alignment: DialogAlignment.Center
+    }).catch(() => {
+      showSnackBar($r('app.string.token_group_error'), SnackBarNotifyType.ERROR);
+    });
+  }
+
+  @LocalBuilder
+  GroupSidePanelBuilder() {
+    Column() {
+      TokenGroupSidePanel({
+        onAdd: () => this.openNewGroupDialog(),
+        onSelect: (id: string) => {
+          this.onSelectGroup(id);
+          if (!this.embedGroupSidebar) {
+            this.$groupSidebarOpen(false);
+          }
+        },
+        onManage: () => {
+          this.$groupSidebarOpen(false);
+          this.onOpenFullScreenRoute(ROUTE_NAMES.TokenGroupPage, null);
+        }
+      })
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ top: this.window.AvoidTopHeight, bottom: this.window.AvoidBottomHeight })
   }
 
   @LocalBuilder
@@ -198,7 +302,8 @@ export struct AppShell {
     }
   }
 
-  build() {
+  @LocalBuilder
+  NavigationBuilder() {
     HdsNavigation(this.pageInfos) {
       Stack() {
         if (this.isLoading) {
@@ -235,10 +340,11 @@ export struct AppShell {
       })
     }
     .backgroundColor($r('app.color.window_background'))
-    .foregroundBlurStyle((this.blurFlag || this.applockVisible) ? BlurStyle.Thin : BlurStyle.NONE, {
-      colorMode: ThemeColorMode.SYSTEM,
-      adaptiveColor: AdaptiveColor.DEFAULT
-    })
+    .width('100%')
+    .height('100%')
+    .translate({ x: !this.embedGroupSidebar && this.canShowGroupSidebar && this.groupSidebarOpen ?
+      Math.min(304, this.window.WidthVp - 56) : 0 })
+    .animation({ duration: 250, curve: Curve.EaseInOut })
     .hideTitleBar(this.isLoading)
     .mode(this.window.AllowSplit && (this.currentHomeTabIndex === 1 || this.businessSplitEnabled) ?
       NavigationMode.Split : NavigationMode.Stack)
@@ -265,12 +371,6 @@ export struct AppShell {
     .bindToScrollable([
       this.currentHomeTabIndex === 0 ? this.tokenListScroller : this.settingEntryScroller
     ])
-    .dynamicHideTitleBar({
-      hideTitleArea: false,
-      hideBottomBuilder: this.currentHomeTabIndex === 0 && this.groupState.groups.length > 0,
-      hideStatusBar: false,
-      mode: HideMode.SCROLL_UP
-    })
     .titleMode(HdsNavigationTitleMode.MINI)
     .hideBackButton(true)
     .titleBar({
@@ -307,15 +407,12 @@ export struct AppShell {
         }
       },
       content: {
-        bottomBuilder: this.currentHomeTabIndex === 0 && this.groupState.groups.length > 0 ? {
-          builder: (): void => this.GroupBottomBuilder(),
-          height: 56,
+        title: this.currentHomeTabIndex === 0 ? undefined : { mainTitle: $r('app.string.tab_me') },
+        bottomBuilder: this.currentHomeTabIndex === 0 ? {
+          builder: (): void => this.TokenTitleBuilder(),
+          height: 56 - 8 * this.tokenTitleCollapse,
           showType: BottomBuilderShowType.DIRECTLY_SHOW
         } : undefined,
-        title: {
-          mainTitle: this.currentHomeTabIndex === 0 ?
-            $r('app.string.tab_token') : $r('app.string.tab_me'),
-        },
         menu: {
           value: this.currentHomeTabIndex === 0 ? [
             {
@@ -353,6 +450,46 @@ export struct AppShell {
           ] : []
         }
       }
+    })
+  }
+
+  build() {
+    // 与备忘录一致：开关位于侧栏/导航之外，不参与标题收拢和内容平移。
+    Stack({ alignContent: Alignment.TopStart }) {
+    HdsSideBar({
+      sideBarPanelBuilder: (): void => this.GroupSidePanelBuilder(),
+      contentPanelBuilder: (): void => this.NavigationBuilder(),
+      isShowSideBar: this.canShowGroupSidebar && this.groupSidebarOpen,
+      $isShowSideBar: (open: boolean) => this.$groupSidebarOpen(open),
+      onChange: (open: boolean) => {
+        if (open !== this.groupSidebarOpen) {
+          this.$groupSidebarOpen(open);
+        }
+      },
+      sideBarContainerType: this.embedGroupSidebar ? SideBarContainerType.Embed : SideBarContainerType.Overlay,
+      sideBarWidth: this.embedGroupSidebar ? 240 : Math.min(304, this.window.WidthVp - 56),
+      minSideBarWidth: Math.min(200, Math.max(0, this.window.WidthVp - 56)),
+      maxSideBarWidth: 320,
+      minContentWidth: this.embedGroupSidebar ?
+        HOME_SIDE_TAB_WIDTH + TOKEN_LIST_MIN_CONTENT_WIDTH + 300 : Math.min(360, this.window.WidthVp),
+      contentAreaMask: true,
+      scaleContentEnabled: false,
+      swipeEnabled: this.canShowGroupSidebar && !this.embedGroupSidebar,
+      isSideBarBlur: MaterialTheme.hdsMaterialType() !== hdsMaterial.MaterialType.NONE,
+      sideBarColor: $r('app.color.window_background'),
+      contentColor: $r('app.color.window_background')
+    })
+    .width('100%')
+    .height('100%')
+    if (this.canShowGroupSidebar) {
+      this.SidebarToggleBuilder()
+    }
+    }
+    .width('100%')
+    .height('100%')
+    .foregroundBlurStyle((this.blurFlag || this.applockVisible) ? BlurStyle.Thin : BlurStyle.NONE, {
+      colorMode: ThemeColorMode.SYSTEM,
+      adaptiveColor: AdaptiveColor.DEFAULT
     })
     .bindContentCover(this.applockVisible, this.appLockContent ? this.appLockContent() : null, {
       modalTransition: ModalTransition.NONE,
