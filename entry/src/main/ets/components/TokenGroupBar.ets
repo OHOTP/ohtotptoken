@@ -1,4 +1,4 @@
-import { AppStorageV2, CapsuleSegmentButtonV2, ColorMetrics, LengthMetrics,
+import { AppStorageV2, TabSegmentButtonV2,
   SegmentButtonV2ItemOptions, SegmentButtonV2Items, uiMaterial } from '@kit.ArkUI';
 import { ALL_TOKEN_GROUPS, MaterialPreference, TokenGroupState, TokenGroupStore } from 'common';
 import { MaterialTheme } from './MaterialTheme';
@@ -8,7 +8,6 @@ import { MaterialTheme } from './MaterialTheme';
 export struct TokenGroupBar {
   @Local state: TokenGroupState = TokenGroupStore.getInstance().state;
   @Local material: MaterialPreference = AppStorageV2.connect(MaterialPreference, () => new MaterialPreference())!;
-  @Local availableWidth: number = 0;
   @Event onSelect: (id: string) => void = () => {};
 
   @Computed
@@ -53,37 +52,17 @@ export struct TokenGroupBar {
   }
 
   build() {
-    Scroll() {
-      if (MaterialTheme.supportsNativeMaterial()) {
-        CapsuleSegmentButtonV2({
-          items: this.items,
-          selectedIndex: this.selectedIndex,
-          $selectedIndex: (index: number) => this.select(index),
-          itemMinHeight: LengthMetrics.vp(44),
-          itemMaxFontScale: 1.3,
-          itemFontColor: ColorMetrics.resourceColor($r('sys.color.font_primary')),
-          backgroundSystemMaterial: this.backgroundMaterial
-        })
-        .width(Math.max(this.availableWidth, this.items.length * 112))
-      } else {
-        CapsuleSegmentButtonV2({
-          items: this.items,
-          selectedIndex: this.selectedIndex,
-          $selectedIndex: (index: number) => this.select(index),
-          itemMinHeight: LengthMetrics.vp(44),
-          itemMaxFontScale: 1.3
-        })
-        .width(Math.max(this.availableWidth, this.items.length * 112))
-      }
+    Column() {
+      TabSegmentButtonV2({
+        items: this.items,
+        selectedIndex: this.selectedIndex,
+        backgroundSystemMaterial: this.backgroundMaterial,
+        $selectedIndex: (index: number) => this.select(index)
+      })
     }
-    .scrollable(ScrollDirection.Horizontal)
-    .scrollBar(BarState.Off)
-    .edgeEffect(EdgeEffect.None)
     .width('100%')
     .height(56)
-    .padding({ left: 16, right: 16, top: 4, bottom: 8 })
-    .onAreaChange((_oldArea: Area, area: Area) => {
-      this.availableWidth = Math.max(0, Number(area.width) - 32);
-    })
+    .justifyContent(FlexAlign.Center)
+    .padding({ left: 16, right: 16 })
   }
 }
