@@ -5,6 +5,7 @@ import { TokenGroupStore } from 'common';
 export struct TokenGroupNameDialog {
   @Param groupId: string = '';
   @Param initialName: string = '';
+  @Event onClose: () => void = () => {};
   @Local name: string = '';
   @Local busy: boolean = false;
   @Local error: ResourceStr | undefined = undefined;
@@ -25,7 +26,7 @@ export struct TokenGroupNameDialog {
     this.busy = true;
     try {
       await store.renameOrCreate(this.name, this.groupId);
-      this.getDialogController()?.close();
+      this.onClose();
     } catch (_) {
       this.error = $r('app.string.token_group_error');
     } finally {
@@ -60,7 +61,7 @@ export struct TokenGroupNameDialog {
           .fontSize($r('sys.float.ohos_id_text_size_body1'))
           .fontWeight(FontWeight.Medium)
           .enabled(!this.busy)
-          .onClick(() => this.getDialogController()?.close())
+          .onClick(() => this.onClose())
         Divider()
           .vertical(true)
           .height(24)

@@ -30,16 +30,26 @@ export struct TokenGroupSidePanel {
   }
 
   @LocalBuilder
-  NameDialogBuilder(group: TokenGroup) {
-    TokenGroupNameDialog({ groupId: group.id, initialName: group.name })
+  NameDialogBuilder(group: TokenGroup, onClose: () => void) {
+    TokenGroupNameDialog({ groupId: group.id, initialName: group.name, onClose: onClose })
   }
 
   private rename(group: TokenGroup): void {
-    this.getUIContext().getPromptAction().openCustomDialog({
+    const promptAction = this.getUIContext().getPromptAction();
+    let dialogId: number | undefined = undefined;
+    const onClose = (): void => {
+      if (dialogId !== undefined) {
+        promptAction.closeCustomDialog(dialogId);
+        dialogId = undefined;
+      }
+    };
+    promptAction.openCustomDialog({
       systemMaterial: dialogSystemMaterial(),
-      builder: () => this.NameDialogBuilder(group),
+      builder: () => this.NameDialogBuilder(group, onClose),
       autoCancel: false,
       alignment: DialogAlignment.Center
+    }).then((id: number) => {
+      dialogId = id;
     }).catch(() => showSnackBar($r('app.string.token_group_error'), SnackBarNotifyType.ERROR));
   }
 
@@ -152,6 +162,7 @@ export struct TokenGroupSidePanel {
           .height(64)
           .padding({ left: 12, right: 12, top: 16 })
         }
+        // 分组保存时替换对象；名称变化后需重建行，避免复用旧名称和菜单回调。
         ForEach(this.state.groups, (group: TokenGroup) => {
           ListItem() {
             Row() {
@@ -199,7 +210,7 @@ export struct TokenGroupSidePanel {
             .backgroundColor(this.state.selectedId === group.id ?
               $r('sys.color.comp_emphasize_secondary') : Color.Transparent)
           }
-        }, (group: TokenGroup) => group.id)
+        }, (group: TokenGroup) => JSON.stringify([group.id, group.name]))
       }
       .id('token_group_sidebar_list')
       .width('100%')

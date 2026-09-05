@@ -175,16 +175,26 @@ export struct AppShell {
   }
 
   @LocalBuilder
-  NewGroupDialogBuilder() {
-    TokenGroupNameDialog()
+  NewGroupDialogBuilder(onClose: () => void) {
+    TokenGroupNameDialog({ onClose: onClose })
   }
 
   private openNewGroupDialog(): void {
-    this.getUIContext().getPromptAction().openCustomDialog({
+    const promptAction = this.getUIContext().getPromptAction();
+    let dialogId: number | undefined = undefined;
+    const onClose = (): void => {
+      if (dialogId !== undefined) {
+        promptAction.closeCustomDialog(dialogId);
+        dialogId = undefined;
+      }
+    };
+    promptAction.openCustomDialog({
       systemMaterial: dialogSystemMaterial(),
-      builder: () => this.NewGroupDialogBuilder(),
+      builder: () => this.NewGroupDialogBuilder(onClose),
       autoCancel: false,
       alignment: DialogAlignment.Center
+    }).then((id: number) => {
+      dialogId = id;
     }).catch(() => {
       showSnackBar($r('app.string.token_group_error'), SnackBarNotifyType.ERROR);
     });
