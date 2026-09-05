@@ -1,4 +1,5 @@
-import { HdsSideMenu, HdsSideMenuMainItem } from '@kit.UIDesignKit';
+import { HdsNavigation, HdsNavigationTitleMode, HdsSideMenu, HdsSideMenuMainItem, hdsMaterial } from '@kit.UIDesignKit';
+import { MaterialTheme } from './MaterialTheme';
 import { ALL_TOKEN_GROUPS, TokenGroup, TokenGroupState, TokenGroupStore } from 'common';
 
 /** 固定入口使用原生菜单；动态分组使用 List，避免 HdsSideMenu 的五项限制。 */
@@ -8,15 +9,15 @@ export struct TokenGroupSidePanel {
   @Event onSelect: (id: string) => void = () => {};
   @Event onManage: () => void = () => {};
   @Event onAdd: () => void = () => {};
+  @Event onClose: () => void = () => {};
   private fixedItems: HdsSideMenuMainItem[] = [
     new HdsSideMenuMainItem({ label: $r('app.string.token_group_all') }),
     new HdsSideMenuMainItem({ label: $r('app.string.token_group_ungrouped') })
   ];
 
-  build() {
+  @LocalBuilder
+  GroupListBuilder() {
     Column({ space: 8 }) {
-      // 为外层固定的开关按钮留出顶部区域；抽屉内不重复创建关闭按钮。
-      Row().height(56).width('100%')
       HdsSideMenu({
         items: this.fixedItems,
         selectedIndex: this.state.selectedId === ALL_TOKEN_GROUPS ? 0 : this.state.selectedId === '' ? 1 : -1,
@@ -54,23 +55,76 @@ export struct TokenGroupSidePanel {
       .width('100%')
       .layoutWeight(1)
       .scrollBar(BarState.Auto)
-      Button($r('app.string.token_group_new'), { type: ButtonType.Normal })
-        .width('100%')
-        .constraintSize({ minHeight: 48 })
-        .borderRadius(16)
-        .fontColor($r('sys.color.font_emphasize'))
-        .backgroundColor(Color.Transparent)
-        .onClick(() => this.onAdd())
-      Button($r('app.string.token_group_manage'), { type: ButtonType.Normal })
-        .width('100%')
-        .constraintSize({ minHeight: 48 })
-        .borderRadius(16)
-        .fontColor($r('sys.color.font_emphasize'))
-        .backgroundColor(Color.Transparent)
-        .onClick(() => this.onManage())
     }
     .width('100%')
     .height('100%')
     .padding({ left: 12, right: 12, bottom: 8 })
+  }
+
+  build() {
+    // 使用真实标题栏承载操作，避免在普通侧栏内容区设置不生效的 systemMaterial。
+    HdsNavigation() {
+      this.GroupListBuilder()
+    }
+    .width('100%')
+    .height('100%')
+    .mode(NavigationMode.Stack)
+    .titleMode(HdsNavigationTitleMode.MINI)
+    .hideBackButton(false)
+    .backgroundColor(Color.Transparent)
+    .titleBar({
+      // 系统安全区由 AppShell 处理；组件级安全区仍需开启，让列表避开标题栏。
+      avoidLayoutSafeArea: false,
+      enableComponentSafeArea: true,
+      style: {
+        originalStyle: {
+          contentStyle: {
+            backIconStyle: {
+              iconColor: $r('sys.color.icon_primary'),
+              backgroundColor: MaterialTheme.hdsMaterialType() === hdsMaterial.MaterialType.NONE ?
+                $r('sys.color.comp_background_gray') : undefined
+            },
+            menuStyle: {
+              iconColor: $r('sys.color.icon_primary'),
+              backgroundColor: MaterialTheme.hdsMaterialType() === hdsMaterial.MaterialType.NONE ?
+                $r('sys.color.comp_background_gray') : undefined
+            }
+          }
+        },
+        scrollEffectOpts: { enableScrollEffect: false },
+        systemMaterialEffect: {
+          materialType: MaterialTheme.hdsMaterialType(),
+          materialLevel: MaterialTheme.hdsMaterialLevel()
+        }
+      },
+      content: {
+        backIcon: {
+          icon: $r('sys.symbol.open_sidebar'),
+          label: $r('app.string.token_group_close_sidebar'),
+          componentId: 'token_group_sidebar_close',
+          action: () => this.onClose()
+        },
+        menu: {
+          value: [
+            {
+              content: {
+                icon: $r('sys.symbol.plus'),
+                label: $r('app.string.token_group_new'),
+                componentId: 'token_group_new',
+                action: () => this.onAdd()
+              }
+            },
+            {
+              content: {
+                icon: $r('sys.symbol.folder'),
+                label: $r('app.string.token_group_manage'),
+                componentId: 'token_group_manage',
+                action: () => this.onManage()
+              }
+            }
+          ]
+        }
+      }
+    })
   }
 }

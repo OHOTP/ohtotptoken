@@ -162,28 +162,6 @@ export struct AppShell {
   }
 
   @LocalBuilder
-  SidebarToggleBuilder() {
-    Button({ type: ButtonType.Circle }) {
-      SymbolGlyph(this.groupSidebarOpen ? $r('sys.symbol.open_sidebar') : $r('sys.symbol.close_sidebar'))
-        .fontSize(24)
-        .fontColor([$r('sys.color.icon_primary')])
-    }
-    .id('token_group_sidebar_toggle')
-    .width(40)
-    .height(40)
-    .backgroundColor(MaterialTheme.surfaceBackground($r('sys.color.comp_background_gray')))
-    .systemMaterial(MaterialTheme.systemMaterial(true))
-    .accessibilityText(this.groupSidebarOpen ? $r('app.string.token_group_close_sidebar') :
-      $r('app.string.token_group_open_sidebar'))
-    .onClick(() => this.$groupSidebarOpen(!this.groupSidebarOpen))
-    .margin({
-      left: this.window.WidthVp < 600 ? 16 : this.window.WidthVp < 840 ? 24 : 32,
-      top: this.window.AvoidTopHeight + 6
-    })
-    .zIndex(1)
-  }
-
-  @LocalBuilder
   NewGroupDialogBuilder() {
     TokenGroupNameDialog()
   }
@@ -203,6 +181,7 @@ export struct AppShell {
   GroupSidePanelBuilder() {
     Column() {
       TokenGroupSidePanel({
+        onClose: () => this.$groupSidebarOpen(false),
         onAdd: () => this.openNewGroupDialog(),
         onSelect: (id: string) => {
           this.onSelectGroup(id);
@@ -372,7 +351,7 @@ export struct AppShell {
       this.currentHomeTabIndex === 0 ? this.tokenListScroller : this.settingEntryScroller
     ])
     .titleMode(HdsNavigationTitleMode.MINI)
-    .hideBackButton(true)
+    .hideBackButton(!this.canShowGroupSidebar)
     .titleBar({
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: true,
@@ -381,6 +360,11 @@ export struct AppShell {
           contentStyle: {
             titleStyle: {
               mainTitleColor: $r('sys.color.font_primary'),
+            },
+            backIconStyle: {
+              iconColor: $r('sys.color.icon_primary'),
+              backgroundColor: MaterialTheme.hdsMaterialType() === hdsMaterial.MaterialType.NONE ?
+                $r('sys.color.comp_background_gray') : undefined
             },
             menuStyle: {
               iconColor: $r('sys.color.icon_primary'),
@@ -391,6 +375,10 @@ export struct AppShell {
         },
         scrollEffectStyle: {
           contentStyle: {
+            backIconStyle: {
+              backgroundColor: MaterialTheme.hdsMaterialType() === hdsMaterial.MaterialType.NONE ?
+                $r('sys.color.comp_background_gray') : undefined
+            },
             menuStyle: {
               backgroundColor: MaterialTheme.hdsMaterialType() === hdsMaterial.MaterialType.NONE ?
                 $r('sys.color.comp_background_gray') : undefined
@@ -407,6 +395,13 @@ export struct AppShell {
         }
       },
       content: {
+        backIcon: {
+          icon: this.groupSidebarOpen ? $r('sys.symbol.open_sidebar') : $r('sys.symbol.close_sidebar'),
+          label: this.groupSidebarOpen ? $r('app.string.token_group_close_sidebar') :
+            $r('app.string.token_group_open_sidebar'),
+          componentId: 'token_group_sidebar_toggle',
+          action: () => this.$groupSidebarOpen(!this.groupSidebarOpen)
+        },
         title: this.currentHomeTabIndex === 0 ? undefined : { mainTitle: $r('app.string.tab_me') },
         bottomBuilder: this.currentHomeTabIndex === 0 ? {
           builder: (): void => this.TokenTitleBuilder(),
@@ -454,8 +449,6 @@ export struct AppShell {
   }
 
   build() {
-    // 与备忘录一致：开关位于侧栏/导航之外，不参与标题收拢和内容平移。
-    Stack({ alignContent: Alignment.TopStart }) {
     HdsSideBar({
       sideBarPanelBuilder: (): void => this.GroupSidePanelBuilder(),
       contentPanelBuilder: (): void => this.NavigationBuilder(),
@@ -479,12 +472,6 @@ export struct AppShell {
       sideBarColor: $r('app.color.window_background'),
       contentColor: $r('app.color.window_background')
     })
-    .width('100%')
-    .height('100%')
-    if (this.canShowGroupSidebar) {
-      this.SidebarToggleBuilder()
-    }
-    }
     .width('100%')
     .height('100%')
     .foregroundBlurStyle((this.blurFlag || this.applockVisible) ? BlurStyle.Thin : BlurStyle.NONE, {
