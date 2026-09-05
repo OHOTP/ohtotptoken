@@ -59,7 +59,6 @@ export struct SubItemToggle {
             this.onChange(isOn);
           })
           .enabled(!this.disable)
-          .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.95 })
           .systemMaterial(MaterialTheme.systemMaterial(true))
       }
       .width('100%')

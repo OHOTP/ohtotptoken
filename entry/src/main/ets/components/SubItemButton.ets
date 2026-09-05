@@ -77,8 +77,7 @@ export struct SubItemButton {
       .justifyContent(FlexAlign.Start)
     }
     // 业务选中态使用低强调背板和前景强调色，避免与键盘焦点蓝色闭合框混淆。
-    // 触屏按下立即提供轻量回弹，鼠标场景继续使用系统悬浮高亮。
-    .clickEffect({ level: ClickEffectLevel.MIDDLE, scale: 0.98 })
+    // 按压仅提供背景高亮，鼠标场景继续使用系统悬浮高亮。
     .hoverEffect(HoverEffect.Highlight)
     .selected(this.selected)
     .stateStyles({
