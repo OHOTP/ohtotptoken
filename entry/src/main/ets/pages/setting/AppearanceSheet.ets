@@ -16,7 +16,7 @@ import { AppWindowInfo } from 'common';
 import { common, ConfigurationConstant } from '@kit.AbilityKit';
 import { throttle } from 'common';
 import { AppearancePage } from '../AppearancePage';
-import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
+import { HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import { SETTING_PAGE_INSET } from '../../components/SettingStyle';
 import { MaterialTheme } from '../../components/MaterialTheme';
 
@@ -321,7 +321,7 @@ export struct AppearanceSheet {
           },
           systemMaterialEffect: {
             materialType: MaterialTheme.hdsMaterialType(),
-            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+            materialLevel: MaterialTheme.hdsMaterialLevel()
           }
         },
         content: {

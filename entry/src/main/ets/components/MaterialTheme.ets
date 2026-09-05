@@ -69,6 +69,11 @@ export class MaterialTheme {
       hdsMaterial.MaterialType.IMMERSIVE : hdsMaterial.MaterialType.NONE;
   }
 
+  /** 统一 HDS 性能等级，保留不支持沉浸材质设备的 SMOOTH 回退。 */
+  static hdsMaterialLevel(): hdsMaterial.MaterialLevel {
+    return MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel();
+  }
+
   static dialogSystemMaterial(): SystemUiMaterial | undefined {
     return MaterialTheme.systemMaterial();
   }

@@ -284,7 +284,7 @@ export struct AppShell {
         },
         systemMaterialEffect: {
           materialType: MaterialTheme.hdsMaterialType(),
-          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+          materialLevel: MaterialTheme.hdsMaterialLevel()
         }
       },
       content: {

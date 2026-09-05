@@ -1,5 +1,4 @@
 import { TokenConfig, SettingBottomTabsType } from 'common';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 import { MaterialTheme } from '../components/MaterialTheme';
 
 import { TokenListPage } from '../pages/TokenListPage';
@@ -153,7 +152,7 @@ export struct HomeTabs {
             barBottomMargin: 28,
             systemMaterialEffect: {
               materialType: MaterialTheme.hdsMaterialType(),
-              materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+              materialLevel: MaterialTheme.hdsMaterialLevel()
             }
           } : undefined)
         .vertical(this.window.UseSideNavigation)

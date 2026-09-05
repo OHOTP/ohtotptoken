@@ -11,8 +11,17 @@ const source = readFileSync(new URL('../entry/src/main/ets/components/MaterialTh
 const code = stripTypeScriptTypes(source) + '\nMaterialTheme;';
 const styles = { ULTRA_THIN: 0, THIN: 1, REGULAR: 2, THICK: 3, ULTRA_THICK: 4 };
 
-function fixture(api = 26) {
-  const preference = { app_appearance_immersive_enable: true, app_appearance_immersive_style: 2 };
+function fixture(api = 26, hdsLevel = 'ADAPTIVE') {
+  // Keep aligned with MaterialPreference defaults in common/utils/AppPreference.ets.
+  const preference = {
+    app_appearance_immersive_enable: true,
+    app_appearance_immersive_style: styles.REGULAR,
+    app_appearance_immersive_interactive: true,
+    app_appearance_immersive_light_effect: true,
+    app_appearance_material_shadow: true,
+    app_appearance_material_color: 0x00000000,
+    app_appearance_light_color: 0xFFFFFFFF
+  };
   const empty = {};
   const sdk = {
     Material: { empty },
@@ -25,7 +34,11 @@ function fixture(api = 26) {
     AppStorageV2: { connect: () => preference },
     deviceInfo: { sdkApiVersion: api },
     // Regression: a startup HDS fallback must not veto API 26 native material.
-    MaterialPolicy: { getInstance: () => ({ getTier: () => 'hds', isImmersive: () => false }) },
+    MaterialPolicy: { getInstance: () => ({
+      getTier: () => 'hds',
+      isImmersive: () => false,
+      getHdsAdaptiveMaterialLevel: () => hdsLevel
+    }) },
     hdsMaterial: { MaterialType: { IMMERSIVE: 2, NONE: 0 } },
     Color: { Transparent: 'transparent', White: 'white' },
     get uiMaterial() {
@@ -77,6 +90,22 @@ test('API 23–25 returns undefined without touching native material symbols', (
 test('interactive search material retains light feedback', () => {
   const { theme } = fixture();
   assert.equal(theme.systemMaterial(true).options.interactive, true);
-  assert.equal(theme.systemMaterial(true).options.lightEffect.color, 'white');
+  assert.equal(theme.systemMaterial(true).options.lightEffect.color, 0xFFFFFFFF);
   assert.equal(theme.systemMaterial().options.lightEffect, undefined);
+});
+
+test('interactive and light feedback respect disabled preferences', () => {
+  const { theme, preference } = fixture();
+  preference.app_appearance_immersive_interactive = false;
+  assert.equal(theme.systemMaterial(true).options.interactive, false);
+  preference.app_appearance_immersive_light_effect = false;
+  assert.equal(theme.systemMaterial(true).options.lightEffect, null);
+  assert.equal(theme.systemMaterial().options.lightEffect, null);
+});
+
+test('HDS material level delegates adaptive and low-end fallback to policy', () => {
+  for (const level of ['ADAPTIVE', 'SMOOTH']) {
+    const { theme } = fixture(23, level);
+    assert.equal(theme.hdsMaterialLevel(), level);
+  }
 });
