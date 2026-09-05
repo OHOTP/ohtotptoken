@@ -1,4 +1,5 @@
 import { SETTING_ROW_MIN_HEIGHT, SETTING_ROW_PADDING } from './SettingStyle';
+import { MaterialTheme } from './MaterialTheme';
 
 @Preview
 @ComponentV2
@@ -58,7 +59,7 @@ export struct SubItemToggle {
             this.onChange(isOn);
           })
           .enabled(!this.disable)
-          .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.95 })
+          .systemMaterial(MaterialTheme.systemMaterial(true))
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)

@@ -1,9 +1,10 @@
+import { dialogSystemMaterial } from 'common';
 import { CropModel, CropView } from './ImageCropView';
 import { getImageDimensions, savePixelMapToFile, copyFileToDir } from 'common';
 import { showSelectFilePicker } from 'common';
 import { AegisIconPack, TokenIconPacks } from 'common';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { LengthMetrics, uiMaterial } from '@kit.ArkUI';
+import { LengthMetrics } from '@kit.ArkUI';
 import { showSnackBar, SnackBarNotifyType } from 'common';
 
 const MAX_ICON_SIZE = 256;
@@ -90,12 +91,6 @@ export struct IconPicker {
   @Param showSearch: boolean = true;
   @Param showPackTabs: boolean = true;
   @Param currentPackIndex: number = 0;
-  /**
-   * 确认按钮是否启用沉浸光感材质（跟随设置里的材质模式选项）。
-   * uikit 无法依赖 entry 侧 MaterialTheme，由调用方（entry 页面）求值后传入；
-   * 默认 false 保持实体蓝底（未传入场景行为不变）。
-   */
-  @Param immersiveMaterialEnabled: boolean = false;
   @Param iconScrollers: Scroller[] = [];
   @Param searchText: string = '';
   @Param viewState: IconPickerViewState = new IconPickerViewState();
@@ -209,6 +204,7 @@ export struct IconPicker {
         .align(Alignment.BottomStart)
         .onClick(() => {
           this.getUIContext().showAlertDialog({
+            systemMaterial: dialogSystemMaterial(),
             message: $r('app.string.icon_alert_remove_confirm_msg'),
             autoCancel: true,
             alignment: DialogAlignment.Center,
@@ -510,31 +506,13 @@ export struct IconPicker {
             .onClick(() => this.cancel())
             .layoutWeight(1)
         }
-        if (this.immersiveMaterialEnabled) {
-          // 沉浸档：材质参数与 AddTokenActionButton 对齐（THIN/蓝色赋色/光感/形变），
-          // 背景透明透出材质层；uiMaterial 符号仅在本分支求值，低 API 设备不触达。
-          Button($r('app.string.dialog_btn_confirm'))
-            .fontColor(Color.White)
-            .backgroundColor(Color.Transparent)
-            .height(48)
-            .borderRadius(24)
-            .systemMaterial(new uiMaterial.ImmersiveMaterial({
-              style: uiMaterial.ImmersiveStyle.THIN,
-              materialColor: $r('app.color.button_blue'),
-              interactive: true,
-              lightEffect: { color: Color.White }
-            }))
-            .onClick(() => this.confirm(this.selectedIconPath))
-            .layoutWeight(1)
-        } else {
-          Button($r('app.string.dialog_btn_confirm'))
-            .fontColor(Color.White)
-            .backgroundColor($r('app.color.button_blue'))
-            .height(48)
-            .borderRadius(24)
-            .onClick(() => this.confirm(this.selectedIconPath))
-            .layoutWeight(1)
-        }
+        Button($r('app.string.dialog_btn_confirm'))
+          .fontColor(Color.White)
+          .backgroundColor($r('app.color.button_blue'))
+          .height(48)
+          .borderRadius(24)
+          .onClick(() => this.confirm(this.selectedIconPath))
+          .layoutWeight(1)
       }
       .width('100%')
       .padding({ top: LengthMetrics.vp(8).value })

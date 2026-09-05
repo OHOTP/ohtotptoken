@@ -1,3 +1,5 @@
+import { dialogSystemMaterial } from 'common';
+import { MaterialTheme } from '../components/MaterialTheme';
 import { TokenConfig } from 'common';
 import { TokenStore } from 'common';
 import { GenericDataSource } from 'common';
@@ -14,7 +16,6 @@ import {
   HdsNavDestinationTitleMode,
   ScrollEffectType
 } from '@kit.UIDesignKit';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 import { TokenIcon } from 'uikit';
 
 @Entry
@@ -146,8 +147,9 @@ export struct TokenCardConfigPage {
           scrollEffectType: this.scrollEffectType
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+          // 带 bottomBuilder 的标题栏直接启用光感，等级由系统自适应，不走应用能力降档。
+          materialType: MaterialTheme.hdsMaterialType(),
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },
       content: {
@@ -246,7 +248,8 @@ export struct TokenCardConfigPage {
 
     if (!this.formId) {
       hilog.error(0, 'TokenCardConfig', 'formId is empty, cannot update card');
-      this.getUIContext().getPromptAction().showToast({ message: 'formId为空，无法更新卡片' });
+      this.getUIContext().getPromptAction().showToast({
+        systemMaterial: dialogSystemMaterial(), message: 'formId为空，无法更新卡片' });
       this.pathStack.pop();
       return;
     }
@@ -257,11 +260,13 @@ export struct TokenCardConfigPage {
       const formBindingDataObj = formBindingData.createFormBindingData(formData);
       await formProvider.updateForm(this.formId, formBindingDataObj);
       hilog.info(0, 'TokenCardConfig', `updateForm success, formId: ${this.formId}`);
-      this.getUIContext().getPromptAction().showToast({ message: '卡片更新成功' });
+      this.getUIContext().getPromptAction().showToast({
+        systemMaterial: dialogSystemMaterial(), message: '卡片更新成功' });
     } catch (err) {
       const errMsg = (err as BusinessError).message;
       hilog.error(0, 'TokenCardConfig', `updateForm error: ${errMsg}`);
-      this.getUIContext().getPromptAction().showToast({ message: `卡片更新失败: ${errMsg}` });
+      this.getUIContext().getPromptAction().showToast({
+        systemMaterial: dialogSystemMaterial(), message: `卡片更新失败: ${errMsg}` });
     }
 
     this.pathStack.pop();

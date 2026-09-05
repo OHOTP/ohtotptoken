@@ -181,14 +181,16 @@ export enum PREF_KEYS {
   ASSET_MIGRATION_DONE = 'app_asset_migration_done',
   /** 图标包云备份最后同步时间 */
   ICON_PACK_CLOUD_SYNC_TIME = 'app_icon_pack_cloud_sync_time',
-  /** 材质模式（自动/沉浸光感/实体背景） */
-  APPEARANCE_MATERIAL_MODE = 'app_appearance_material_mode',
+  /** 组件级沉浸光感开关 */
+  APPEARANCE_IMMERSIVE_ENABLE = 'app_appearance_immersive_enable',
   /** 沉浸材质厚度偏好 */
   APPEARANCE_IMMERSIVE_STYLE = 'app_appearance_immersive_style',
-  /** 令牌列表项材质（实体/光感） */
-  APPEARANCE_TOKEN_ITEM_MATERIAL = 'app_appearance_token_item_material',
-  /** 光源反馈模式（跟随组件/全部开启） */
-  APPEARANCE_LIGHT_EFFECT_MODE = 'app_appearance_light_effect_mode',
+  APPEARANCE_IMMERSIVE_INTERACTIVE = 'app_appearance_immersive_interactive',
+  APPEARANCE_IMMERSIVE_LIGHT_EFFECT = 'app_appearance_immersive_light_effect',
+  APPEARANCE_MATERIAL_SHADOW = 'app_appearance_material_shadow',
+  APPEARANCE_MATERIAL_COLOR = 'app_appearance_material_color',
+  APPEARANCE_LIGHT_COLOR = 'app_appearance_light_color',
+
 }
 
 /** 主密码旧偏好键名（已废弃，仅用于兼容性检测与清理） */
@@ -310,30 +312,6 @@ export const AVAILABLE_BOTTOM_TABS_TYPES: EnumSelectOption[] = [
 ];
 
 /**
- * 材质模式枚举（Phase 4.1）
- * AUTO：跟随设备能力（MaterialPolicy 三级回退判定）
- * IMMERSIVE：尽量使用沉浸光感材质（设备不支持时按能力回退，与 AUTO 等价）
- * SOLID：强制实体背景，关闭材质
- */
-export enum SettingMaterialMode {
-  /** 自动（跟随设备能力） */
-  AUTO,
-  /** 沉浸光感（尽量使用材质） */
-  IMMERSIVE,
-  /** 实体背景（关闭材质） */
-  SOLID,
-}
-
-/**
- * 当前支持的材质模式选项数组
- */
-export const AVAILABLE_MATERIAL_MODES: EnumSelectOption[] = [
-  { label: $r('app.string.setting_material_mode_auto'), value: SettingMaterialMode.AUTO },
-  { label: $r('app.string.setting_material_mode_immersive'), value: SettingMaterialMode.IMMERSIVE },
-  { label: $r('app.string.setting_material_mode_solid'), value: SettingMaterialMode.SOLID },
-];
-
-/**
  * 沉浸材质厚度偏好枚举（Phase 4.1）
  * 与 uiMaterial.ImmersiveStyle 五档一一对应；common HAR 不能引用
  * uiMaterial（entry 侧 API 26 符号），故用独立枚举承载偏好值
@@ -355,47 +333,6 @@ export const AVAILABLE_IMMERSIVE_STYLES: EnumSelectOption[] = [
   { label: $r('app.string.setting_immersive_style_regular'), value: SettingImmersiveStyle.REGULAR },
   { label: $r('app.string.setting_immersive_style_thick'), value: SettingImmersiveStyle.THICK },
   { label: $r('app.string.setting_immersive_style_ultra_thick'), value: SettingImmersiveStyle.ULTRA_THICK },
-];
-
-/**
- * 令牌列表项材质枚举
- * SOLID：实体背景（默认，官方推荐的列表项实现）
- * IMMERSIVE：逐项沉浸光感材质（滚动时逐项重采样背景，有性能开销，
- * 选择时须经 Dialog 二次确认告知影响）
- */
-export enum SettingTokenItemMaterial {
-  /** 实体背景（默认） */
-  SOLID,
-  /** 沉浸光感材质 */
-  IMMERSIVE,
-}
-
-/**
- * 当前支持的令牌列表项材质选项数组
- */
-export const AVAILABLE_TOKEN_ITEM_MATERIALS: EnumSelectOption[] = [
-  { label: $r('app.string.setting_token_item_material_solid'), value: SettingTokenItemMaterial.SOLID },
-  { label: $r('app.string.setting_token_item_material_immersive'), value: SettingTokenItemMaterial.IMMERSIVE },
-];
-
-/**
- * 光源反馈模式枚举
- * DEFAULT：跟随组件（各沉浸材质表面按自身 lightEffect 设置决定是否启用，默认）
- * ALL：全部开启（所有沉浸材质表面启用触摸光感反馈）
- */
-export enum SettingLightEffectMode {
-  /** 跟随组件（默认） */
-  DEFAULT,
-  /** 全部开启 */
-  ALL,
-}
-
-/**
- * 当前支持的光源反馈模式选项数组
- */
-export const AVAILABLE_LIGHT_EFFECT_MODES: EnumSelectOption[] = [
-  { label: $r('app.string.setting_light_effect_mode_default'), value: SettingLightEffectMode.DEFAULT },
-  { label: $r('app.string.setting_light_effect_mode_all'), value: SettingLightEffectMode.ALL },
 ];
 
 
@@ -451,21 +388,21 @@ export class TokenPreference {
 
 /**
  * 材质偏好配置类
- * 存储材质模式与沉浸材质厚度偏好，@Trace 字段供 UI 建立依赖：
- * MaterialTheme 静态方法在组件 build 中读取本类字段时，依赖被收集，
- * 偏好变更后所有材质消费组件（MaterialSurface/MaterialSheetStyle 等）自动重建。
+ * 存储沉浸光感开关与厚度，@Trace 字段使支持材质的组件随设置更新。
  * 写入遵循项目既有双写模式：先 AppPreference.setPreference 持久化，再赋值 @Trace 字段。
  */
 @ObservedV2
 export class MaterialPreference {
-  /** 材质模式（SettingMaterialMode：AUTO/IMMERSIVE/SOLID，默认自动） */
-  @Trace app_appearance_material_mode: number = SettingMaterialMode.AUTO;
+  /** 默认开启，仅在系统支持的区域应用 */
+  @Trace app_appearance_immersive_enable: boolean = true;
   /** 沉浸材质厚度偏好（SettingImmersiveStyle 五档） */
   @Trace app_appearance_immersive_style: number = SettingImmersiveStyle.REGULAR;
-  /** 令牌列表项材质（SettingTokenItemMaterial：SOLID/IMMERSIVE，默认 SOLID） */
-  @Trace app_appearance_token_item_material: number = SettingTokenItemMaterial.SOLID;
-  /** 光源反馈模式（SettingLightEffectMode：DEFAULT/ALL，默认 DEFAULT） */
-  @Trace app_appearance_light_effect_mode: number = SettingLightEffectMode.DEFAULT;
+  @Trace app_appearance_immersive_interactive: boolean = true;
+  @Trace app_appearance_immersive_light_effect: boolean = true;
+  @Trace app_appearance_material_shadow: boolean = true;
+  @Trace app_appearance_material_color: number = 0x00000000;
+  @Trace app_appearance_light_color: number = 0xFFFFFFFF;
+
 }
 
 /**
@@ -594,14 +531,16 @@ export class AppPreference {
     [PREF_KEYS.DEBUG_MODE_ON, false],
     // 快速扫描URI
     [PREF_KEYS.WANT_URI, ''],
-    // 材质模式（默认自动，跟随设备能力）
-    [PREF_KEYS.APPEARANCE_MATERIAL_MODE, SettingMaterialMode.AUTO],
+    // 沉浸光感开关（默认开启）
+    [PREF_KEYS.APPEARANCE_IMMERSIVE_ENABLE, true],
     // 沉浸材质厚度偏好（默认常规）
     [PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE, SettingImmersiveStyle.REGULAR],
-    // 令牌列表项材质（默认实体，光感需用户显式确认开启）
-    [PREF_KEYS.APPEARANCE_TOKEN_ITEM_MATERIAL, SettingTokenItemMaterial.SOLID],
-    // 光源反馈模式（默认跟随组件）
-    [PREF_KEYS.APPEARANCE_LIGHT_EFFECT_MODE, SettingLightEffectMode.DEFAULT],
+    [PREF_KEYS.APPEARANCE_IMMERSIVE_INTERACTIVE, true],
+    [PREF_KEYS.APPEARANCE_IMMERSIVE_LIGHT_EFFECT, true],
+    [PREF_KEYS.APPEARANCE_MATERIAL_SHADOW, true],
+    [PREF_KEYS.APPEARANCE_MATERIAL_COLOR, 0x00000000],
+    [PREF_KEYS.APPEARANCE_LIGHT_COLOR, 0xFFFFFFFF],
+
   ]);
   private static appearance_default: Map<string, SettingValue> = new Map<string, SettingValue>([
     // 外观-自定义
@@ -692,6 +631,11 @@ export class AppPreference {
    public static async loadSettings(): Promise<void> {
     await AppPreference.prefMgr.ensureInitialized();
     const allValues = AppPreference.prefMgr.getAllValues();
+    // 旧版“实体背景”迁移为关闭，避免升级后重新启用用户已关闭的效果。
+    if (allValues[PREF_KEYS.APPEARANCE_IMMERSIVE_ENABLE] === undefined &&
+      Number(allValues['app_appearance_material_mode']) === 2) {
+      AppPreference.setPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_ENABLE, false);
+    }
     for (const k of AppPreference.settings.keys()) {
       const raw = allValues[k];
       if (raw !== undefined && raw !== null && raw !== '') {
@@ -804,14 +748,21 @@ export class AppPreference {
   private static loadMaterialAppearance(): void {
     let material_preference: MaterialPreference =
       AppStorageV2.connect(MaterialPreference, () => new MaterialPreference())!;
-    material_preference.app_appearance_material_mode =
-      AppPreference.getPreference(PREF_KEYS.APPEARANCE_MATERIAL_MODE) as number;
+    material_preference.app_appearance_immersive_enable =
+      AppPreference.getPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_ENABLE) as boolean;
     material_preference.app_appearance_immersive_style =
       AppPreference.getPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE) as number;
-    material_preference.app_appearance_token_item_material =
-      AppPreference.getPreference(PREF_KEYS.APPEARANCE_TOKEN_ITEM_MATERIAL) as number;
-    material_preference.app_appearance_light_effect_mode =
-      AppPreference.getPreference(PREF_KEYS.APPEARANCE_LIGHT_EFFECT_MODE) as number;
+    material_preference.app_appearance_immersive_interactive =
+      AppPreference.getPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_INTERACTIVE) as boolean;
+    material_preference.app_appearance_immersive_light_effect =
+      AppPreference.getPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_LIGHT_EFFECT) as boolean;
+    material_preference.app_appearance_material_shadow =
+      AppPreference.getPreference(PREF_KEYS.APPEARANCE_MATERIAL_SHADOW) as boolean;
+    material_preference.app_appearance_material_color =
+      AppPreference.getPreference(PREF_KEYS.APPEARANCE_MATERIAL_COLOR) as number;
+    material_preference.app_appearance_light_color =
+      AppPreference.getPreference(PREF_KEYS.APPEARANCE_LIGHT_COLOR) as number;
+
   }
 
   /**

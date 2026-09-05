@@ -1,3 +1,4 @@
+import { MaterialTheme } from '../components/MaterialTheme';
 import { AppWindowInfo, EVENT_NAMES, HMACAlgorithm, otpType, ROUTE_NAMES, ScanBarCode, showSnackBar,
   SnackBarNotifyType, TokenConfig } from 'common';
 import { AppStorageV2 } from '@kit.ArkUI';
@@ -10,9 +11,7 @@ import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, HdsNavDestination, 
 import { AddTokenActionButton, AddTokenHeader, AddTokenPageParams, ADD_TOKEN_BOTTOM_ACTION_INSET, ADD_TOKEN_PAGE_INSET,
   ADD_TOKEN_SECTION_PADDING, ADD_TOKEN_SECTION_RADIUS,
   AddTokenSectionTitle, AddTokenTextField } from '../components/AddTokenForm';
-import { MaterialSurface } from '../components/MaterialSurface';
 import { PageScaffold } from '../components/PageScaffold';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 import { IconPickerPageParams } from './IconPickerPage';
 import { ResponsiveTokenEditStore, TokenSwitchPerf, TokenSwitchTrace } from '../utils/TokenSwitchPerf';
 
@@ -209,30 +208,30 @@ export struct AddTotpTokenPage {
             .padding({ left: ADD_TOKEN_PAGE_INSET, right: ADD_TOKEN_PAGE_INSET, top: 8 })
 
             ListItem() {
-              MaterialSurface({ radius: ADD_TOKEN_SECTION_RADIUS, applyShadow: true }) {
-                Column({ space: 14 }) {
-                  AddTokenTextField({
-                    label: $r('app.string.dialog_cfg_tk_secret'),
-                    value: this.secret,
-                    inputType: InputType.Password,
-                    onChange: (value: string) => this.secret = value
-                  })
-                  Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
-                  AddTokenTextField({
-                    label: $r('app.string.dialog_cfg_tk_issuer'),
-                    value: this.issuer,
-                    onChange: (value: string) => this.issuer = value
-                  })
-                  Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
-                  AddTokenTextField({
-                    label: $r('app.string.dialog_cfg_tk_name'),
-                    value: this.accountName,
-                    onChange: (value: string) => this.accountName = value
-                  })
-                }
-                .padding(ADD_TOKEN_SECTION_PADDING)
-                .width('100%')
+              Column({ space: 14 }) {
+                AddTokenTextField({
+                  label: $r('app.string.dialog_cfg_tk_secret'),
+                  value: this.secret,
+                  inputType: InputType.Password,
+                  onChange: (value: string) => this.secret = value
+                })
+                Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
+                AddTokenTextField({
+                  label: $r('app.string.dialog_cfg_tk_issuer'),
+                  value: this.issuer,
+                  onChange: (value: string) => this.issuer = value
+                })
+                Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
+                AddTokenTextField({
+                  label: $r('app.string.dialog_cfg_tk_name'),
+                  value: this.accountName,
+                  onChange: (value: string) => this.accountName = value
+                })
               }
+              .padding(ADD_TOKEN_SECTION_PADDING)
+              .width('100%')
+              .borderRadius(ADD_TOKEN_SECTION_RADIUS)
+              .backgroundColor($r('app.color.item_bg'))
             }
             .padding({ left: ADD_TOKEN_PAGE_INSET, right: ADD_TOKEN_PAGE_INSET })
 
@@ -242,83 +241,90 @@ export struct AddTotpTokenPage {
             .padding({ left: ADD_TOKEN_PAGE_INSET, right: ADD_TOKEN_PAGE_INSET, top: 8 })
 
             ListItem() {
-              MaterialSurface({ radius: ADD_TOKEN_SECTION_RADIUS, applyShadow: true }) {
-                Column({ space: 16 }) {
-                  Row({ space: 12 }) {
-                    Text($r('app.string.add_token_type'))
-                      .fontSize(13).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_secondary'))
-                      .layoutWeight(1)
-                    Select([
-                      { value: 'TOTP' },
-                      { value: 'HOTP' }
-                    ])
-                      .selected(this.tokenType === otpType.HOTP ? 1 : 0)
-                      .value(this.tokenType === otpType.HOTP ? 'HOTP' : 'TOTP')
-                      .onSelect((index: number) => this.tokenType = index === 1 ? otpType.HOTP : otpType.TOTP)
-                  }
-                  .width('100%')
-                  .alignItems(VerticalAlign.Center)
-                  Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
-                  Row({ space: 12 }) {
-                    Text($r('app.string.dialog_cfg_tk_alg'))
-                      .fontSize(13).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_secondary'))
-                      .layoutWeight(1)
-                    Select([
-                      { value: 'SHA1' },
-                      { value: 'SHA224' },
-                      { value: 'SHA256' },
-                      { value: 'SHA384' },
-                      { value: 'SHA512' },
-                      { value: 'SM3' },
-                      { value: 'MD5' }
-                    ])
-                      .selected(this.algorithms.indexOf(this.algorithm))
-                      .value(this.algorithm)
-                      .onSelect((_: number, value: string) => this.algorithm = value as HMACAlgorithm)
-                  }
-                  .width('100%')
-                  .alignItems(VerticalAlign.Center)
-                  Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
-                  Row({ space: 12 }) {
-                    Text($r('app.string.dialog_cfg_tk_digits'))
-                      .fontSize(13).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_secondary'))
-                      .layoutWeight(1)
-                    Select([
-                      { value: '4' },
-                      { value: '6' },
-                      { value: '8' }
-                    ])
-                      .selected(this.digits === 4 ? 0 : this.digits === 8 ? 2 : 1)
-                      .value(this.digits.toString())
-                      .onSelect((_: number, value: string) => this.digits = Number.parseInt(value))
-                  }
-                  .width('100%')
-                  .alignItems(VerticalAlign.Center)
-                  Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
-                  if (this.tokenType === otpType.TOTP) {
-                    Column({ space: 8 }) {
-                      Row() {
-                        Text($r('app.string.dialog_cfg_tk_timeout'))
-                          .fontSize(13).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_secondary'))
-                        Text(`${this.period}s`).fontSize(13).fontColor($r('sys.color.font_secondary'))
-                      }
-                      .width('100%').justifyContent(FlexAlign.SpaceBetween)
-                      Slider({ min: 1, max: 60, value: this.period, step: 1, style: SliderStyle.InSet })
-                        .width('100%')
-                        .onChange((value: number) => this.period = Math.round(value))
-                    }
-                  } else {
-                    AddTokenTextField({
-                      label: $r('app.string.dialog_cfg_tk_counter'),
-                      value: this.counter.toString(),
-                      maxLength: 16,
-                      onChange: (value: string) => this.counter = this.parseNonNegativeInt(value, 0)
-                    })
-                  }
+              Column({ space: 16 }) {
+                Row({ space: 12 }) {
+                  Text($r('app.string.add_token_type'))
+                    .fontSize(13).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_secondary'))
+                    .layoutWeight(1)
+                  Select([
+                    { value: 'TOTP' },
+                    { value: 'HOTP' }
+                  ])
+                    .selected(this.tokenType === otpType.HOTP ? 1 : 0)
+                    .value(this.tokenType === otpType.HOTP ? 'HOTP' : 'TOTP')
+                    .systemMaterial(MaterialTheme.systemMaterial(true))
+                    .menuSystemMaterial(MaterialTheme.systemMaterial())
+                    .onSelect((index: number) => this.tokenType = index === 1 ? otpType.HOTP : otpType.TOTP)
                 }
-                .padding(ADD_TOKEN_SECTION_PADDING)
                 .width('100%')
+                .alignItems(VerticalAlign.Center)
+                Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
+                Row({ space: 12 }) {
+                  Text($r('app.string.dialog_cfg_tk_alg'))
+                    .fontSize(13).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_secondary'))
+                    .layoutWeight(1)
+                  Select([
+                    { value: 'SHA1' },
+                    { value: 'SHA224' },
+                    { value: 'SHA256' },
+                    { value: 'SHA384' },
+                    { value: 'SHA512' },
+                    { value: 'SM3' },
+                    { value: 'MD5' }
+                  ])
+                    .selected(this.algorithms.indexOf(this.algorithm))
+                    .value(this.algorithm)
+                    .systemMaterial(MaterialTheme.systemMaterial(true))
+                    .menuSystemMaterial(MaterialTheme.systemMaterial())
+                    .onSelect((_: number, value: string) => this.algorithm = value as HMACAlgorithm)
+                }
+                .width('100%')
+                .alignItems(VerticalAlign.Center)
+                Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
+                Row({ space: 12 }) {
+                  Text($r('app.string.dialog_cfg_tk_digits'))
+                    .fontSize(13).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_secondary'))
+                    .layoutWeight(1)
+                  Select([
+                    { value: '4' },
+                    { value: '6' },
+                    { value: '8' }
+                  ])
+                    .selected(this.digits === 4 ? 0 : this.digits === 8 ? 2 : 1)
+                    .value(this.digits.toString())
+                    .systemMaterial(MaterialTheme.systemMaterial(true))
+                    .menuSystemMaterial(MaterialTheme.systemMaterial())
+                    .onSelect((_: number, value: string) => this.digits = Number.parseInt(value))
+                }
+                .width('100%')
+                .alignItems(VerticalAlign.Center)
+                Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
+                if (this.tokenType === otpType.TOTP) {
+                  Column({ space: 8 }) {
+                    Row() {
+                      Text($r('app.string.dialog_cfg_tk_timeout'))
+                        .fontSize(13).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_secondary'))
+                      Text(`${this.period}s`).fontSize(13).fontColor($r('sys.color.font_secondary'))
+                    }
+                    .width('100%').justifyContent(FlexAlign.SpaceBetween)
+                    Slider({ min: 1, max: 60, value: this.period, step: 1, style: SliderStyle.InSet })
+                      .width('100%')
+                      .systemMaterial(MaterialTheme.systemMaterial(true))
+                      .onChange((value: number) => this.period = Math.round(value))
+                  }
+                } else {
+                  AddTokenTextField({
+                    label: $r('app.string.dialog_cfg_tk_counter'),
+                    value: this.counter.toString(),
+                    maxLength: 16,
+                    onChange: (value: string) => this.counter = this.parseNonNegativeInt(value, 0)
+                  })
+                }
               }
+              .padding(ADD_TOKEN_SECTION_PADDING)
+              .width('100%')
+              .borderRadius(ADD_TOKEN_SECTION_RADIUS)
+              .backgroundColor($r('app.color.item_bg'))
             }
             .padding({ left: ADD_TOKEN_PAGE_INSET, right: ADD_TOKEN_PAGE_INSET })
 
@@ -365,8 +371,8 @@ export struct AddTotpTokenPage {
         },
         scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: this.scrollEffectType },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+          materialType: MaterialTheme.hdsMaterialType(),
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },
       content: {

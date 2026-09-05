@@ -1,7 +1,7 @@
+import { MaterialTheme } from '../components/MaterialTheme';
 import { uniformTypeDescriptor } from '@kit.ArkData';
 import { HdsNavDestination, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType, hdsMaterial } from '@kit.UIDesignKit';
 import { AppWindowInfo, ROUTE_NAMES } from 'common';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 // [冷启动优化] 以下 NavDestination 页面仅在用户导航时触发评估
 import lazy { TokenCardConfigPage } from '../pages/TokenCardConfigPage'
 import lazy { WatchSyncPage } from '../pages/WatchSyncPage'
@@ -264,8 +264,18 @@ export struct AppShell {
               mainTitleColor: $r('sys.color.font_primary'),
             },
             menuStyle: {
-              iconColor: $r('sys.color.icon_primary')
+              iconColor: $r('sys.color.icon_primary'),
+              backgroundColor: MaterialTheme.hdsMaterialType() === hdsMaterial.MaterialType.NONE ?
+                $r('sys.color.comp_background_gray') : undefined
             },
+          }
+        },
+        scrollEffectStyle: {
+          contentStyle: {
+            menuStyle: {
+              backgroundColor: MaterialTheme.hdsMaterialType() === hdsMaterial.MaterialType.NONE ?
+                $r('sys.color.comp_background_gray') : undefined
+            }
           }
         },
         scrollEffectOpts: {
@@ -273,8 +283,8 @@ export struct AppShell {
           scrollEffectType: this.scrollEffectType
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+          materialType: MaterialTheme.hdsMaterialType(),
+          materialLevel: MaterialTheme.hdsMaterialLevel()
         }
       },
       content: {
@@ -296,23 +306,23 @@ export struct AppShell {
             },
             {
               content: {
-                label: $r('app.string.token_right_menu_sort'),
-                icon: $r('sys.symbol.list_bullet'),
-                isEnabled: true,
-                componentId: this.sortTokenMenuTargetId,
-                action: () => {
-                  this.openTokenSortMenu();
-                }
-              }
-            },
-            {
-              content: {
                 label: $r('app.string.app_ua_add_token'),
                 icon: $r('sys.symbol.plus'),
                 isEnabled: true,
                 componentId: this.addTokenMenuTargetId,
                 action: () => {
                   this.openAddTokenMenu();
+                }
+              }
+            },
+            {
+              content: {
+                label: $r('app.string.menu_token_actions'),
+                icon: $r('sys.symbol.dot_grid_2x2'),
+                isEnabled: true,
+                componentId: this.sortTokenMenuTargetId,
+                action: () => {
+                  this.openTokenSortMenu();
                 }
               }
             }

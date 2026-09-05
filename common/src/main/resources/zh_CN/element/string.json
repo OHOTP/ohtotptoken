@@ -553,6 +553,18 @@
       "value": "添加密钥"
     },
     {
+      "name": "menu_token_actions",
+      "value": "更多选项"
+    },
+    {
+      "name": "menu_token_sort_method",
+      "value": "排序方式"
+    },
+    {
+      "name": "menu_token_multi_select",
+      "value": "多选"
+    },
+    {
       "name": "menu_token_sort_default",
       "value": "默认"
     },
@@ -1253,24 +1265,56 @@
       "value": "沉浸式渐变模糊"
     },
     {
-      "name": "setting_material_mode",
-      "value": "材质模式"
+      "name": "setting_immersive_interactive",
+      "value": "按压形变"
     },
     {
-      "name": "setting_material_mode_desc",
-      "value": "为卡片与表面启用沉浸光感材质，需要设备支持。"
+      "name": "setting_immersive_interactive_desc",
+      "value": "按压支持的原生材质控件时产生弹性形变，不影响 HDS 标题栏。"
     },
     {
-      "name": "setting_material_mode_auto",
-      "value": "自动"
+      "name": "setting_immersive_light_effect",
+      "value": "触摸光效"
     },
     {
-      "name": "setting_material_mode_immersive",
-      "value": "沉浸光感"
+      "name": "setting_immersive_light_effect_desc",
+      "value": "为支持的原生材质控件显示触摸光感反馈，与形变独立，不影响 HDS 标题栏。"
     },
     {
-      "name": "setting_material_mode_solid",
-      "value": "实体背景"
+      "name": "setting_material_reset_colors",
+      "value": "还原默认颜色"
+    },
+    {
+      "name": "setting_material_shadow",
+      "value": "材质阴影"
+    },
+    {
+      "name": "setting_material_shadow_desc",
+      "value": "控制原生材质自带阴影，不影响组件单独设置的阴影或 HDS 标题栏。"
+    },
+    {
+      "name": "setting_material_color",
+      "value": "材质色调"
+    },
+    {
+      "name": "setting_material_color_desc",
+      "value": "透明色恢复默认；建议半透明色，不透明色会遮住光感。仅对 API 26+ 原生材质生效。"
+    },
+    {
+      "name": "setting_light_color",
+      "value": "光效颜色"
+    },
+    {
+      "name": "setting_light_color_desc",
+      "value": "默认白色，开启触摸光效后生效。需 API 26+ 支持光效的设备，不影响 HDS 标题栏。"
+    },
+    {
+      "name": "setting_immersive_enable",
+      "value": "启用沉浸光感"
+    },
+    {
+      "name": "setting_immersive_enable_desc",
+      "value": "用于受支持的标题栏、底部页签、弹窗及控件，不作用于内容卡片。"
     },
     {
       "name": "setting_immersive_style",
@@ -1278,7 +1322,7 @@
     },
     {
       "name": "setting_immersive_style_desc",
-      "value": "沉浸材质的厚度档位。"
+      "value": "调节通透程度，不影响 HDS 导航与页签。"
     },
     {
       "name": "setting_immersive_style_ultra_thin",
@@ -1323,46 +1367,6 @@
     {
       "name": "setting_group_support_about",
       "value": "支持与关于"
-    },
-    {
-      "name": "setting_token_item_material",
-      "value": "列表项材质"
-    },
-    {
-      "name": "setting_token_item_material_desc",
-      "value": "为令牌列表项逐项启用光感材质。"
-    },
-    {
-      "name": "setting_light_effect_mode",
-      "value": "光源反馈"
-    },
-    {
-      "name": "setting_light_effect_mode_desc",
-      "value": "触摸时在材质表面显示光斑反馈。"
-    },
-    {
-      "name": "setting_light_effect_mode_default",
-      "value": "跟随组件"
-    },
-    {
-      "name": "setting_light_effect_mode_all",
-      "value": "全部开启"
-    },
-    {
-      "name": "setting_token_item_material_solid",
-      "value": "实体"
-    },
-    {
-      "name": "setting_token_item_material_immersive",
-      "value": "光感"
-    },
-    {
-      "name": "token_item_material_confirm_title",
-      "value": "启用列表项光感材质？"
-    },
-    {
-      "name": "token_item_material_confirm_msg",
-      "value": "为每个令牌列表项单独启用光感材质后，列表滚动时需要逐项实时重采样背景，会增加性能与功耗开销，令牌较多或设备性能较低时可能出现滚动卡顿。\n\n光感效果仅在设备支持沉浸材质且材质模式未设为「实体背景」时生效。确定要启用吗？"
     },
     {
       "name": "setting_bottom_tabs_type",

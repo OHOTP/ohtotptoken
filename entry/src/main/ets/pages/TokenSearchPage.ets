@@ -1,15 +1,14 @@
+import { dialogSystemMaterial } from 'common';
 import { TokenItem } from "../components/TokenItem";
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 
 import { PageScaffold } from "../components/PageScaffold";
-import { MaterialSurface } from "../components/MaterialSurface";
-import { MaterialTheme, MaterialThickness } from "../components/MaterialTheme";
+import { MaterialTheme } from "../components/MaterialTheme";
 import { QRCodeDialog } from 'uikit';
 import { AppPreference, TokenPreference, EVENT_NAMES, PREF_KEYS, ROUTE_NAMES } from 'common';
 import { otpType, TokenConfig, TokenConfigVM } from 'common';
 import { TokenStore } from 'common';
 import { convertToken2URI } from 'common';
-import { AppStorageV2, uiMaterial } from "@kit.ArkUI";
+import { AppStorageV2 } from "@kit.ArkUI";
 import { AppWindowInfo } from 'common';
 import { GenericDataSource } from 'common';
 import { showSnackBar, SnackBarNotifyType } from 'common';
@@ -114,45 +113,23 @@ export struct TokenSearchPage {
   @Builder
   SearchBottomBuilder() {
     Column() {
-      if (MaterialTheme.isImmersiveEffective()) {
-        // 材质直接挂到 Search，避免 MaterialSurface 的根节点被 bottomBuilder
-        // 拉伸到 56vp；Search 本身不设高度，保持系统默认尺寸。
-        Search({
-          placeholder: $r('app.string.token_search_placeholder'),
-          value: this.tokenSearchText
+      // 标题栏内直接设置 Search 材质，保持系统默认尺寸。
+      Search({
+        placeholder: $r('app.string.token_search_placeholder'),
+        value: this.tokenSearchText
+      })
+        .width('100%')
+        .defaultFocus(true)
+        .backgroundColor(MaterialTheme.surfaceBackground($r('sys.color.comp_background_tertiary')))
+        .systemMaterial(MaterialTheme.systemMaterial(true))
+        .onChange((value: string) => {
+          this.tokenSearchText = value;
+          this.filterCurrentTokens(value);
         })
-          .width('100%')
-          .defaultFocus(true)
-          .backgroundColor(Color.Transparent)
-          .systemMaterial(new uiMaterial.ImmersiveMaterial({
-            style: uiMaterial.ImmersiveStyle.THIN,
-            lightEffect: { color: Color.White }
-          }))
-          .onChange((value: string) => {
-            this.tokenSearchText = value;
-            this.filterCurrentTokens(value);
-          })
-          .onSubmit((value: string) => {
-            this.tokenSearchText = value;
-            this.filterCurrentTokens(value);
-          })
-      } else {
-        // hds/solid 档：保持现有系统默认样式，不套材质表面
-        Search({
-          placeholder: $r('app.string.token_search_placeholder'),
-          value: this.tokenSearchText
+        .onSubmit((value: string) => {
+          this.tokenSearchText = value;
+          this.filterCurrentTokens(value);
         })
-          .width('100%')
-          .defaultFocus(true)
-          .onChange((value: string) => {
-            this.tokenSearchText = value;
-            this.filterCurrentTokens(value);
-          })
-          .onSubmit((value: string) => {
-            this.tokenSearchText = value;
-            this.filterCurrentTokens(value);
-          })
-      }
     }
     .width('100%')
     .padding({ left: 16, right: 16 })
@@ -225,8 +202,9 @@ export struct TokenSearchPage {
           scrollEffectType: this.scrollEffectType,
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+          // HDS 标题栏跟随开关，性能等级由系统自适应。
+          materialType: MaterialTheme.hdsMaterialType(),
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },
       content: {
@@ -255,6 +233,7 @@ export struct TokenSearchPage {
 
   showQRCodeDialog(conf: TokenConfig): void {
     this.getUIContext().getPromptAction().openCustomDialog({
+      systemMaterial: dialogSystemMaterial(),
       builder: () => {
         this.QRCodeDialogBuilder(conf);
       }
@@ -289,6 +268,7 @@ export struct TokenSearchPage {
       }
     })
       .bindPopup(this.token_copy_guide_popup && vm.config.TokenUUID === this.dataSource.getData(0)?.config.TokenUUID, {
+        systemMaterial: dialogSystemMaterial(),
         placement: Placement.Left,
         message: this.getUIContext().getHostContext()?.resourceManager
           .getStringSync($r('app.string.token_copy_guide_popup').id),
@@ -313,99 +293,69 @@ export struct TokenSearchPage {
   @Builder
   TokenItemSwipeEnd(vm: TokenConfigVM) {
     Row({ space: 10 }) {
-      // 侧滑操作按钮(Phase 5.7): MaterialSurface 承载语义色材质 + 光感反馈
-      // + 按压形变; 按钮背景按档位映射(沉浸档透明透出材质, 其余档语义色)
-      MaterialSurface({
-        thickness: MaterialThickness.THIN,
-        lightEffect: true,
-        interactive: true,
-        materialColor: Color.Orange,
-        radius: '50%',
-        solidColor: Color.Transparent,
-        fillWidth: false
-      }) {
-        Button({ type: ButtonType.Circle }) {
-          Text() {
-            SymbolSpan($r('sys.symbol.qrcode'))
-              .fontSize(30)
-              .fontWeight(FontWeight.Medium)
-              .fontColor([Color.White])
-          }
+      // 内容区侧滑按钮不在材质生效范围，保留语义色背景。
+      Button({ type: ButtonType.Circle }) {
+        Text() {
+          SymbolSpan($r('sys.symbol.qrcode'))
+            .fontSize(30)
+            .fontWeight(FontWeight.Medium)
+            .fontColor([Color.White])
         }
-        .backgroundColor(MaterialTheme.surfaceBackground(Color.Orange))
-        .padding(10)
-        .onClick(() => {
-          this.showQRCodeDialog(vm.config);
-        })
       }
+      .backgroundColor(Color.Orange)
+      .padding(10)
+      .onClick(() => {
+        this.showQRCodeDialog(vm.config);
+      })
 
-      MaterialSurface({
-        thickness: MaterialThickness.THIN,
-        lightEffect: true,
-        interactive: true,
-        materialColor: Color.Gray,
-        radius: '50%',
-        solidColor: Color.Transparent,
-        fillWidth: false
-      }) {
-        Button({ type: ButtonType.Circle }) {
-          Text() {
-            SymbolSpan($r('sys.symbol.square_and_pencil_fill'))
-              .fontSize(30)
-              .fontWeight(FontWeight.Medium)
-              .fontColor([Color.White])
-          }
+      Button({ type: ButtonType.Circle }) {
+        Text() {
+          SymbolSpan($r('sys.symbol.square_and_pencil_fill'))
+            .fontSize(30)
+            .fontWeight(FontWeight.Medium)
+            .fontColor([Color.White])
         }
-        .backgroundColor(MaterialTheme.surfaceBackground(Color.Gray))
-        .padding(10)
-        .onClick(() => {
-          this.openEditPage(vm.config);
-        })
       }
+      .backgroundColor(Color.Gray)
+      .padding(10)
+      .onClick(() => {
+        this.openEditPage(vm.config);
+      })
 
-      MaterialSurface({
-        thickness: MaterialThickness.THIN,
-        lightEffect: true,
-        interactive: true,
-        materialColor: Color.Red,
-        radius: '50%',
-        solidColor: Color.Transparent,
-        fillWidth: false
-      }) {
-        Button({ type: ButtonType.Circle }) {
-          Text() {
-            SymbolSpan($r('sys.symbol.trash_fill'))
-              .fontSize(30)
-              .fontWeight(FontWeight.Medium)
-              .fontColor([Color.White])
-          }
+      Button({ type: ButtonType.Circle }) {
+        Text() {
+          SymbolSpan($r('sys.symbol.trash_fill'))
+            .fontSize(30)
+            .fontWeight(FontWeight.Medium)
+            .fontColor([Color.White])
         }
-        .backgroundColor(MaterialTheme.surfaceBackground(Color.Red))
-        .padding(10)
-        .onClick(async () => {
-          AlertDialog.show({
-            title: $r('app.string.alert_remove_title', vm.config.TokenIssuer),
-            subtitle: vm.config.TokenName,
-            message: $r('app.string.alert_remove_confirm_msg'),
-            autoCancel: true,
-            alignment: DialogAlignment.Center,
-            primaryButton: {
-              defaultFocus: false,
-              value: $r('app.string.dialog_btn_cancel'),
-              action: () => {
-                return;
-              }
-            },
-            secondaryButton: {
-              value: $r('app.string.dialog_btn_delete'),
-              fontColor: Color.Red,
-              action: async () => {
-                tkStore.deleteToken(vm.config.TokenUUID);
-              }
+      }
+      .backgroundColor(Color.Red)
+      .padding(10)
+      .onClick(async () => {
+        AlertDialog.show({
+          systemMaterial: dialogSystemMaterial(),
+          title: $r('app.string.alert_remove_title', vm.config.TokenIssuer),
+          subtitle: vm.config.TokenName,
+          message: $r('app.string.alert_remove_confirm_msg'),
+          autoCancel: true,
+          alignment: DialogAlignment.Center,
+          primaryButton: {
+            defaultFocus: false,
+            value: $r('app.string.dialog_btn_cancel'),
+            action: () => {
+              return;
             }
-          })
+          },
+          secondaryButton: {
+            value: $r('app.string.dialog_btn_delete'),
+            fontColor: Color.Red,
+            action: async () => {
+              tkStore.deleteToken(vm.config.TokenUUID);
+            }
+          }
         })
-      }
+      })
     }
     .margin({ left: 10, right: this.token_preference.app_appearance_token_list_item_suffix_padding })
   }

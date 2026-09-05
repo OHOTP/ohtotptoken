@@ -1,11 +1,11 @@
 import { TokenConfig, SettingBottomTabsType } from 'common';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
+import { MaterialTheme } from '../components/MaterialTheme';
 
 import { TokenListPage } from '../pages/TokenListPage';
 import { AppWindowInfo } from 'common';
 import { PageScaffold } from '../components/PageScaffold';
 import { SymbolGlyphModifier } from '@kit.ArkUI';
-import { HdsTabs, hdsMaterial } from '@kit.UIDesignKit';
+import { HdsTabs } from '@kit.UIDesignKit';
 
 @Builder
 function EmptyBuilder() {
@@ -151,8 +151,8 @@ export struct HomeTabs {
           {
             barBottomMargin: 28,
             systemMaterialEffect: {
-              materialType: hdsMaterial.MaterialType.ADAPTIVE,
-              materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+              materialType: MaterialTheme.hdsMaterialType(),
+              materialLevel: MaterialTheme.hdsMaterialLevel()
             }
           } : undefined)
         .vertical(this.window.UseSideNavigation)

@@ -1,3 +1,4 @@
+import { MaterialTheme } from './MaterialTheme';
 import { SETTING_ROW_MIN_HEIGHT, SETTING_ROW_PADDING } from './SettingStyle';
 
 /**
@@ -78,6 +79,8 @@ export struct SubItemSelect {
           .enabled(!this.disable)
           .value(this.values[this.selected])
           .selected(this.selected)
+          .systemMaterial(MaterialTheme.systemMaterial(true))
+          .menuSystemMaterial(MaterialTheme.systemMaterial())
           .onSelect((index) => {
             this.onChange(index);
           })

@@ -1,5 +1,5 @@
+import { MaterialTheme } from '../components/MaterialTheme';
 import { AppStorageV2 } from '@kit.ArkUI';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 
 import { SettingItem } from '../components/SettingItem';
 import { SubItemDivider } from '../components/SubItemDivider';
@@ -614,8 +614,8 @@ export struct AppearancePage {
           scrollEffectType: this.scrollEffectType
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+          materialType: MaterialTheme.hdsMaterialType(),
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },
       content: {

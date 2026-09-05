@@ -1,6 +1,5 @@
 import { TokenItem } from "../components/TokenItem";
 import { MaterialTheme } from '../components/MaterialTheme';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 
 import { AppPreference, TokenPreference, EVENT_NAMES } from 'common';
 import { TokenConfig } from 'common';
@@ -93,7 +92,7 @@ export struct TokenSortPage {
                 this.token_preference.app_appearance_token_list_item_prefix_padding,
                 this.token_preference.app_appearance_token_list_item_suffix_padding,
                 this.token_preference.app_appearance_item_radius,
-                MaterialTheme.isTokenItemMaterialEffective() ? Color.Transparent : $r('app.color.item_bg'))
+                $r('app.color.item_bg'))
             })
           }, (item: TokenConfig) => {
             return item.TokenUUID
@@ -135,8 +134,8 @@ export struct TokenSortPage {
           scrollEffectType: this.scrollEffectType,
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+          materialType: MaterialTheme.hdsMaterialType(),
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },
       content: {

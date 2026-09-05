@@ -1,5 +1,4 @@
 import { SubItemButton } from '../../components/SubItemButton';
-import { MaterialPolicy } from '../../utils/MaterialPolicy';
 
 import { SettingItem } from '../../components/SettingItem';
 import { SubItemDivider } from '../../components/SubItemDivider';
@@ -106,8 +105,8 @@ export struct AgreementSheet {
             scrollEffectType: this.scrollEffectType
           },
           systemMaterialEffect: {
-            materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+            materialType: MaterialTheme.hdsMaterialType(),
+            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
           }
         },
         content: {

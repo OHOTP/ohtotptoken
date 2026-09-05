@@ -1,8 +1,8 @@
+import { dialogSystemMaterial } from 'common';
 import { AppStorageV2 } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hdsMaterial, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import { AppPreference, AppWindowInfo, PREF_KEYS, showSnackBar, SnackBarNotifyType } from 'common';
-import { MaterialPolicy } from '../../utils/MaterialPolicy';
 import { MaterialTheme } from '../../components/MaterialTheme';
 import { SettingItem } from '../../components/SettingItem';
 import { SubItemButton } from '../../components/SubItemButton';
@@ -23,6 +23,7 @@ export struct DeveloperOptionsSheet {
 
   private showAddTestTokensConfirmDialog(): void {
     this.getUIContext().showAlertDialog({
+      systemMaterial: dialogSystemMaterial(),
       title: $r('app.string.developer_add_test_tokens_confirm_title'),
       message: $r('app.string.developer_add_test_tokens_confirm_message'),
       autoCancel: true,
@@ -49,6 +50,7 @@ export struct DeveloperOptionsSheet {
 
   private showRemoveTestTokensConfirmDialog(): void {
     this.getUIContext().showAlertDialog({
+      systemMaterial: dialogSystemMaterial(),
       title: $r('app.string.developer_remove_test_tokens_confirm_title'),
       message: $r('app.string.developer_remove_test_tokens_confirm_message'),
       autoCancel: true,
@@ -154,8 +156,8 @@ export struct DeveloperOptionsSheet {
             scrollEffectType: this.scrollEffectType
           },
           systemMaterialEffect: {
-            materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+            materialType: MaterialTheme.hdsMaterialType(),
+            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
           }
         },
         content: {

@@ -1,5 +1,6 @@
+import { dialogSystemMaterial } from 'common';
+import { MaterialTheme } from '../components/MaterialTheme';
 import { common, Want } from '@kit.AbilityKit';
-import { MaterialPolicy } from '../utils/MaterialPolicy';
 
 import { AppStorageV2, promptAction, LengthMetrics } from '@kit.ArkUI';
 import { SettingItem } from '../components/SettingItem';
@@ -488,8 +489,8 @@ export struct ShowCloudSyncDetailsPage {
           scrollEffectType: this.scrollEffectType
         },
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: MaterialPolicy.getInstance().getHdsAdaptiveMaterialLevel()
+          materialType: MaterialTheme.hdsMaterialType(),
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         }
       },
       content: {
@@ -619,6 +620,7 @@ export struct ShowCloudSyncDetailsPage {
     }
     try {
       this.getUIContext().getPromptAction().showActionMenu({
+        systemMaterial: dialogSystemMaterial(),
         title: $r('app.string.cloud_sync_clear_storage_confirm'),
         buttons: [
           {
@@ -660,6 +662,7 @@ export struct ShowCloudSyncDetailsPage {
         ? $r('app.string.cloud_sync_clear_device_name_confirm_msg')
         : $r('app.string.cloud_sync_clear_device_confirm_msg');
     this.getUIContext().showAlertDialog({
+      systemMaterial: dialogSystemMaterial(),
       title: $r('app.string.cloud_sync_clear_storage_confirm'),
       message: msg,
       autoCancel: true,
