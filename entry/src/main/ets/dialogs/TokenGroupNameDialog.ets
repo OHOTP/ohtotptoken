@@ -1,17 +1,24 @@
 import { CustomContentDialogV2 } from '@kit.ArkUI';
 import { TokenGroupStore } from 'common';
+import { SubItemColor } from '../components/SubItemColor';
 
 @ComponentV2
 export struct TokenGroupNameDialog {
   @Param groupId: string = '';
   @Param initialName: string = '';
+  @Param initialColor: number | undefined = undefined;
   @Event onClose: () => void = () => {};
   @Local name: string = '';
+  @Local color: number = 0;
+  @Local colorChanged: boolean = false;
   @Local busy: boolean = false;
   @Local error: ResourceStr | undefined = undefined;
 
   aboutToAppear(): void {
     this.name = this.initialName;
+    this.color = this.initialColor ??
+      this.getUIContext().getHostContext()!.resourceManager.getColorSync($r('sys.color.icon_emphasize').id);
+    this.colorChanged = false;
   }
 
   private async save(): Promise<void> {
@@ -25,7 +32,8 @@ export struct TokenGroupNameDialog {
     }
     this.busy = true;
     try {
-      await store.renameOrCreate(this.name, this.groupId);
+      await store.renameOrCreate(this.name, this.groupId,
+        this.groupId === '' || this.colorChanged ? this.color : this.initialColor);
       this.onClose();
     } catch (_) {
       this.error = $r('app.string.token_group_error');
@@ -37,6 +45,18 @@ export struct TokenGroupNameDialog {
   @Builder
   ContentBuilder() {
     Column() {
+      SubItemColor({
+        title: $r('app.string.custom_color'),
+        colors: [{ name: $r('app.string.custom_color'), color: this.color }],
+        disable: this.busy,
+        rowPadding: { left: 0, right: 0, top: 14, bottom: 14 },
+        onChange: (_index: number, color: number) => {
+          this.color = color;
+          this.colorChanged = true;
+        }
+      })
+        .id('token_group_color_picker')
+        .margin({ bottom: 8 })
       TextInput({ text: this.name, placeholder: $r('app.string.token_group_name') })
         .id('token_group_name_input')
         .height(40)

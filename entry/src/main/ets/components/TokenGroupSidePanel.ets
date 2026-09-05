@@ -42,7 +42,7 @@ export struct TokenGroupSidePanel {
 
   @LocalBuilder
   NameDialogBuilder(group: TokenGroup, onClose: () => void) {
-    TokenGroupNameDialog({ groupId: group.id, initialName: group.name, onClose: onClose })
+    TokenGroupNameDialog({ groupId: group.id, initialName: group.name, initialColor: group.color, onClose: onClose })
   }
 
   private rename(group: TokenGroup): void {
@@ -104,11 +104,12 @@ export struct TokenGroupSidePanel {
   }
 
   @LocalBuilder
-  ItemContent(id: string, label: ResourceStr, icon: Resource, isGroup: boolean) {
+  ItemContent(id: string, label: ResourceStr, icon: Resource, isGroup: boolean,
+    color: ResourceColor = $r('sys.color.icon_emphasize')) {
     Row({ space: 16 }) {
       SymbolGlyph(icon)
         .fontSize(24)
-        .fontColor([isGroup ? $r('sys.color.icon_emphasize') : $r('sys.color.icon_secondary')])
+        .fontColor([isGroup ? color : $r('sys.color.icon_secondary')])
       Text(label)
         .fontSize(18)
         .fontColor($r('sys.color.font_primary'))
@@ -173,12 +174,13 @@ export struct TokenGroupSidePanel {
           .height(64)
           .padding({ left: 12, right: 12, top: 16 })
         }
-        // 分组保存时替换对象；名称变化后需重建行，避免复用旧名称和菜单回调。
+        // 分组保存时替换对象；名称或颜色变化后重建行，避免复用旧显示和菜单回调。
         LazyForEach(this.groupDataSource, (group: TokenGroup) => {
           ListItem() {
             Row() {
               Button({ type: ButtonType.Normal }) {
-                this.ItemContent(group.id, group.name, $r('sys.symbol.folder'), true)
+                this.ItemContent(group.id, group.name, $r('sys.symbol.folder'), true,
+                  group.color ?? $r('sys.color.icon_emphasize'))
               }
               .layoutWeight(1)
               .backgroundColor(Color.Transparent)
@@ -221,7 +223,7 @@ export struct TokenGroupSidePanel {
             .backgroundColor(this.state.selectedId === group.id ?
               $r('sys.color.comp_emphasize_secondary') : Color.Transparent)
           }
-        }, (group: TokenGroup) => JSON.stringify([group.id, group.name]))
+        }, (group: TokenGroup) => JSON.stringify([group.id, group.name, group.color]))
       }
       .id('token_group_sidebar_list')
       .width('100%')

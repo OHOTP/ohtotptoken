@@ -8,9 +8,13 @@ export const FAVORITE_TOKEN_GROUP: string = '__favorites__';
 export class TokenGroup {
   id: string = '';
   name: string = '';
-  constructor(id: string, name: string) {
+  color?: number;
+  constructor(id: string, name: string, color?: number) {
     this.id = id;
     this.name = name;
+    // 旧目录无颜色时继续使用系统强调色；忽略备份中的非法颜色。
+    this.color = typeof color === 'number' && Number.isInteger(color) && color >= 0 && color <= 0xFFFFFFFF ?
+      color : undefined;
   }
 }
 
@@ -31,7 +35,8 @@ export class TokenGroupStore {
   }
 
   async load(): Promise<void> {
-    this.state.groups = await KvManager.getInstance().getValue<TokenGroup[]>(this.key) ?? [];
+    const groups = await KvManager.getInstance().getValue<TokenGroup[]>(this.key) ?? [];
+    this.state.groups = groups.map(group => new TokenGroup(group.id, group.name, group.color));
     this.reconcileSelection();
   }
 
@@ -55,13 +60,14 @@ export class TokenGroupStore {
       !this.state.groups.some(group => group.id !== exceptId && group.name.toLowerCase() === trimmed.toLowerCase());
   }
 
-  async renameOrCreate(name: string, id: string = ''): Promise<void> {
+  async renameOrCreate(name: string, id: string = '', color?: number): Promise<void> {
     if (!this.isValidName(name, id)) {
       throw new Error('Invalid group name');
     }
-    const groups = this.state.groups.map(group => new TokenGroup(group.id, group.id === id ? name.trim() : group.name));
+    const groups = this.state.groups.map(group => new TokenGroup(group.id,
+      group.id === id ? name.trim() : group.name, group.id === id ? (color ?? group.color) : group.color));
     if (id === '') {
-      groups.push(new TokenGroup(util.generateRandomUUID(), name.trim()));
+      groups.push(new TokenGroup(util.generateRandomUUID(), name.trim(), color));
     }
     await this.save(groups);
   }
@@ -93,7 +99,7 @@ export class TokenGroupStore {
       if (typeof group.id === 'string' && group.id !== '' && group.id !== ALL_TOKEN_GROUPS && group.id !== FAVORITE_TOKEN_GROUP &&
         typeof group.name === 'string' && group.name.trim().length > 0 &&
         !merged.some(existing => existing.id === group.id)) {
-        merged.push(new TokenGroup(group.id, group.name.trim().slice(0, 24)));
+        merged.push(new TokenGroup(group.id, group.name.trim().slice(0, 24), group.color));
       }
     }
     await this.save(merged);
