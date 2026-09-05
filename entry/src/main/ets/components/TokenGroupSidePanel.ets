@@ -4,7 +4,7 @@ import { ALL_TOKEN_GROUPS, FAVORITE_TOKEN_GROUP, TokenConfig, otpType, TokenGrou
   TokenGroupStore, TokenStore, GenericDataSource, dialogSystemMaterial, showSnackBar, SnackBarNotifyType } from 'common';
 import { TokenGroupNameDialog } from '../dialogs/TokenGroupNameDialog';
 
-/** 分类和分组共用一个滚动区；新建入口始终可达。 */
+/** 分类和分组共用一个滚动区；分组标题行提供新建和编辑入口。 */
 @ComponentV2
 export struct TokenGroupSidePanel {
   @Local state: TokenGroupState = TokenGroupStore.getInstance().state;
@@ -161,13 +161,28 @@ export struct TokenGroupSidePanel {
               .fontSize(16)
               .fontColor($r('sys.color.font_secondary'))
               .layoutWeight(1)
+            Button({ type: ButtonType.Circle }) {
+              SymbolGlyph($r('sys.symbol.plus'))
+                .fontSize(20)
+                .fontColor([$r('sys.color.font_emphasize')])
+            }
+            .id('token_group_new')
+            .width(48)
+            .height(48)
+            .padding(0)
+            .backgroundColor(Color.Transparent)
+            .accessibilityText($r('app.string.token_group_new'))
+            .enabled(!this.busy)
+            .onClick(() => this.onAdd())
             Button(this.editing ? $r('app.string.token_group_done') : $r('app.string.token_group_edit'))
               .id('token_group_edit')
               .fontSize(16)
               .fontColor($r('sys.color.font_emphasize'))
               .backgroundColor(Color.Transparent)
               .constraintSize({ minWidth: 48, minHeight: 48 })
-              .padding({ left: 8, right: 0 })
+              .padding({ left: 8, right: 8 })
+              // 抵消按钮内边距，让文字右缘对齐计数，同时保持高亮与文字居中。
+              .margin({ right: -8 })
               .enabled(this.state.groups.length > 0 && !this.busy)
               .onClick(() => this.editing = !this.editing)
           }
@@ -232,18 +247,6 @@ export struct TokenGroupSidePanel {
       .clip(false)
       .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       .contentEndOffset(8)
-      Button({ type: ButtonType.Normal }) {
-        Text($r('app.string.token_group_new'))
-          .fontSize(18)
-          .fontColor($r('sys.color.font_emphasize'))
-          .width('100%')
-      }
-      .id('token_group_new')
-      .width('100%')
-      .constraintSize({ minHeight: 52 })
-      .padding(12)
-      .backgroundColor(Color.Transparent)
-      .onClick(() => this.onAdd())
     }
     .width('100%')
     .height('100%')
