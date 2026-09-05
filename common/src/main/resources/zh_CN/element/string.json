@@ -1,5 +1,22 @@
 {
   "string": [
+    { "name": "token_group_all", "value": "全部" },
+    { "name": "token_group_ungrouped", "value": "未分组" },
+    { "name": "token_group_manage", "value": "管理分组" },
+    { "name": "token_group_new", "value": "新建分组" },
+    { "name": "token_group_name", "value": "分组名称" },
+    { "name": "token_group_label", "value": "分组" },
+    { "name": "token_group_move", "value": "移动到分组" },
+    { "name": "token_group_rename", "value": "重命名" },
+    { "name": "token_group_delete", "value": "删除分组" },
+    { "name": "token_group_delete_message", "value": "组内令牌将移至“未分组”，不会删除任何令牌。" },
+    { "name": "token_group_up", "value": "上移" },
+    { "name": "token_group_down", "value": "下移" },
+    { "name": "token_group_save", "value": "保存" },
+    { "name": "token_group_invalid", "value": "请输入 1–24 个字符，且不与其他分组重名。" },
+    { "name": "token_group_error", "value": "分组保存失败，请重试。" },
+    { "name": "token_group_empty", "value": "此分组暂无令牌" },
+    { "name": "token_group_hint", "value": "新建分组整理令牌，长按令牌可将其移动到分组。" },
     {
       "name": "module_desc",
       "value": "一次性密码令牌管理软件"

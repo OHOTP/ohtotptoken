@@ -29,6 +29,7 @@ export * from './src/main/ets/utils/SyncTimeHelper';
 export * from './src/main/ets/utils/TokenBackup';
 export * from './src/main/ets/utils/TokenCardStore';
 export * from './src/main/ets/utils/TokenConfig';
+export * from './src/main/ets/utils/TokenGroupStore';
 export * from './src/main/ets/utils/TokenStore';
 export * from './src/main/ets/utils/TokenUtils';
 export * from './src/main/ets/utils/UiUtils';

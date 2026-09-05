@@ -1,4 +1,5 @@
 import { MaterialTheme } from '../components/MaterialTheme';
+import { TokenGroupSelect } from '../components/TokenGroupSelect';
 import { AppWindowInfo, base32Decode, base32Encode, EVENT_NAMES, otpType, ROUTE_NAMES, ScanBarCode, showSnackBar,
   SnackBarNotifyType, stringToIntArray, TokenConfig } from 'common';
 import { common } from '@kit.AbilityKit';
@@ -45,6 +46,7 @@ export struct AddFortiTokenPage {
   @Local secret: string = '';
   @Local accountName: string = '';
   @Local iconPath: string = '';
+  @Local groupId: string = '';
   @Local isRequesting: boolean = false;
   @Local isSaving: boolean = false;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
@@ -64,6 +66,7 @@ export struct AddFortiTokenPage {
     this.secret = editConfig.TokenSecret;
     this.accountName = editConfig.TokenName;
     this.iconPath = editConfig.TokenIconPath ?? '';
+    this.groupId = editConfig.TokenGroupId ?? '';
   }
 
   aboutToAppear(): void {
@@ -219,6 +222,7 @@ export struct AddFortiTokenPage {
     conf.FortiToken = this.activationCode.trim();
     conf.FortiDevID = this.deviceId.trim();
     conf.TokenIconPath = this.iconPath;
+    conf.TokenGroupId = this.groupId;
     const ok = await this.saveToken(conf);
     this.isSaving = false;
     if (ok && !(this.window.AllowSplit && this.pageParams.editConfig !== undefined)) {
@@ -240,6 +244,9 @@ export struct AddFortiTokenPage {
         PageScaffold() {
         Column() {
           List({ space: 12, scroller: this.scroller }) {
+            ListItem() {
+              TokenGroupSelect({ groupId: this.groupId, onChange: (id: string) => this.groupId = id })
+            }
             ListItem() {
               AddTokenHeader({
                 issuer: 'Forti',

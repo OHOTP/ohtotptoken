@@ -22,6 +22,7 @@ function EmptyBuilder() {
 @ComponentV2
 export struct HomeTabs {
   @Require @Param tokens: TokenConfig[] = [];
+  @Param groupFiltered: boolean = false;
   @Require @Param window: AppWindowInfo = new AppWindowInfo();
   /** 底部页签类型（悬浮/平铺），由 Index 监听 BOTTOM_TABS_TYPE_CHANGED 事件驱动更新 */
   @Require @Param bottomTabsType: SettingBottomTabsType = SettingBottomTabsType.SUSPENSION;
@@ -57,6 +58,7 @@ export struct HomeTabs {
       PageScaffold() {
         TokenListPage({
           Tokens: this.tokens,
+          groupFiltered: this.groupFiltered,
           TabBarVisible: false,
           appBottomAvoidHeight: this.window.AvoidBottomHeight,
           appTopAvoidHeight: this.window.AvoidTopHeight,
@@ -76,6 +78,7 @@ export struct HomeTabs {
           TabContent() {
             TokenListPage({
               Tokens: this.tokens,
+              groupFiltered: this.groupFiltered,
               TabBarVisible: !this.window.UseSideNavigation,
               appBottomAvoidHeight: this.window.AvoidBottomHeight,
               appTopAvoidHeight: this.window.AvoidTopHeight,

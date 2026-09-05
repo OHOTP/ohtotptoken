@@ -1,5 +1,22 @@
 {
   "string": [
+    { "name": "token_group_all", "value": "All" },
+    { "name": "token_group_ungrouped", "value": "Ungrouped" },
+    { "name": "token_group_manage", "value": "Manage groups" },
+    { "name": "token_group_new", "value": "New group" },
+    { "name": "token_group_name", "value": "Group name" },
+    { "name": "token_group_label", "value": "Group" },
+    { "name": "token_group_move", "value": "Move to group" },
+    { "name": "token_group_rename", "value": "Rename" },
+    { "name": "token_group_delete", "value": "Delete group" },
+    { "name": "token_group_delete_message", "value": "Tokens in this group will become ungrouped. No tokens will be deleted." },
+    { "name": "token_group_up", "value": "Move up" },
+    { "name": "token_group_down", "value": "Move down" },
+    { "name": "token_group_save", "value": "Save" },
+    { "name": "token_group_invalid", "value": "Use a unique group name of 1–24 characters." },
+    { "name": "token_group_error", "value": "Could not save groups. Please try again." },
+    { "name": "token_group_empty", "value": "No tokens in this group" },
+    { "name": "token_group_hint", "value": "Create groups to organize your tokens. Long-press a token to move it to a group." },
     {
       "name": "module_desc",
       "value": "Time-based One-Time Password Token"

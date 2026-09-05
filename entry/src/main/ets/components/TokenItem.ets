@@ -1,4 +1,4 @@
-import { dialogSystemMaterial } from 'common';
+import { dialogSystemMaterial, TokenGroup, TokenGroupStore, showSnackBar, SnackBarNotifyType } from 'common';
 import { BusinessError, systemDateTime } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { otpType, TokenConfig } from 'common';
@@ -728,10 +728,34 @@ export struct TokenItem {
   }
 
   @Builder
+  GroupMoveMenu() {
+    Menu() {
+      MenuItem({ content: $r('app.string.token_group_ungrouped') })
+        .selected(!this.Config.TokenGroupId)
+        .onClick(() => this.requestGroupMove(''))
+      ForEach(TokenGroupStore.getInstance().state.groups, (group: TokenGroup) => {
+        MenuItem({ content: group.name })
+          .selected(this.Config.TokenGroupId === group.id)
+          .onClick(() => this.requestGroupMove(group.id))
+      }, (group: TokenGroup) => group.id)
+    }
+    .systemMaterial(dialogSystemMaterial())
+  }
+
+  private requestGroupMove(id: string): void {
+    this.requestContextMenuAction(() => {
+      tkStore.moveTokenToGroup(this.Config.TokenUUID, id).catch(() => {
+        showSnackBar($r('app.string.token_group_error'), SnackBarNotifyType.ERROR);
+      });
+    });
+  }
+
+  @Builder
   TokenRightCtxMenu(_responseType: ResponseType) {
     Menu() {
       // NFC 外部令牌为会话级、不持久化，排序（RankScore 持久化）对其无意义，故不提供排序入口
       if (this.Config.TokenType !== otpType.NFC_external) {
+        MenuItem({ content: $r('app.string.token_group_move'), builder: () => this.GroupMoveMenu() })
         MenuItem({ symbolStartIcon: this.menu_icon_sort, content: $r('app.string.token_right_menu_sort') })
           .onClick(() => {
             this.requestContextMenuAction(() => {

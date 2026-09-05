@@ -1,0 +1,99 @@
+import { AppStorageV2 } from '@kit.ArkUI';
+import { util } from '@kit.ArkTS';
+import { KvManager } from './KvManager';
+
+export const ALL_TOKEN_GROUPS: string = '__all__';
+
+export class TokenGroup {
+  id: string = '';
+  name: string = '';
+  constructor(id: string, name: string) {
+    this.id = id;
+    this.name = name;
+  }
+}
+
+@ObservedV2
+export class TokenGroupState {
+  @Trace groups: TokenGroup[] = [];
+  @Trace selectedId: string = ALL_TOKEN_GROUPS;
+}
+
+/** 分组目录与令牌一起存入加密 KV；数组顺序就是显示顺序。 */
+export class TokenGroupStore {
+  private static instance: TokenGroupStore = new TokenGroupStore();
+  private readonly key: string = '_token_groups_v1';
+  readonly state: TokenGroupState = AppStorageV2.connect(TokenGroupState, () => new TokenGroupState())!;
+
+  static getInstance(): TokenGroupStore {
+    return TokenGroupStore.instance;
+  }
+
+  async load(): Promise<void> {
+    this.state.groups = await KvManager.getInstance().getValue<TokenGroup[]>(this.key) ?? [];
+    this.reconcileSelection();
+  }
+
+  private reconcileSelection(): void {
+    if (this.state.selectedId !== ALL_TOKEN_GROUPS && this.state.selectedId !== '' &&
+      !this.state.groups.some(group => group.id === this.state.selectedId)) {
+      this.state.selectedId = ALL_TOKEN_GROUPS;
+    }
+  }
+
+  private async save(groups: TokenGroup[]): Promise<void> {
+    await KvManager.getInstance().setValue(this.key, groups);
+    this.state.groups = groups;
+    this.reconcileSelection();
+  }
+
+  isValidName(name: string, exceptId: string = ''): boolean {
+    const trimmed = name.trim();
+    return trimmed.length > 0 && trimmed.length <= 24 &&
+      !this.state.groups.some(group => group.id !== exceptId && group.name.toLowerCase() === trimmed.toLowerCase());
+  }
+
+  async renameOrCreate(name: string, id: string = ''): Promise<void> {
+    if (!this.isValidName(name, id)) {
+      throw new Error('Invalid group name');
+    }
+    const groups = this.state.groups.map(group => new TokenGroup(group.id, group.id === id ? name.trim() : group.name));
+    if (id === '') {
+      groups.push(new TokenGroup(util.generateRandomUUID(), name.trim()));
+    }
+    await this.save(groups);
+  }
+
+  async remove(id: string): Promise<void> {
+    await this.save(this.state.groups.filter(group => group.id !== id));
+  }
+
+  async move(id: string, direction: number): Promise<void> {
+    const groups = [...this.state.groups];
+    const from = groups.findIndex(group => group.id === id);
+    const to = from + direction;
+    if (from < 0 || to < 0 || to >= groups.length) {
+      return;
+    }
+    const group = groups[from];
+    groups.splice(from, 1);
+    groups.splice(to, 0, group);
+    await this.save(groups);
+  }
+
+  /** 恢复采用 ID 合并，不覆盖本地目录或更改现有令牌归属。旧备份不含目录。 */
+  async merge(groups: TokenGroup[] | undefined): Promise<void> {
+    if (!Array.isArray(groups) || groups.length === 0) {
+      return;
+    }
+    const merged = [...this.state.groups];
+    for (const group of groups) {
+      if (typeof group.id === 'string' && group.id !== '' && group.id !== ALL_TOKEN_GROUPS &&
+        typeof group.name === 'string' && group.name.trim().length > 0 &&
+        !merged.some(existing => existing.id === group.id)) {
+        merged.push(new TokenGroup(group.id, group.name.trim().slice(0, 24)));
+      }
+    }
+    await this.save(merged);
+  }
+}

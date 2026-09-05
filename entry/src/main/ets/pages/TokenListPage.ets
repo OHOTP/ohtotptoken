@@ -39,6 +39,7 @@ class TokenListItemModifier extends ListItemModifier {
 @ComponentV2
 export struct TokenListPage {
   @Require @Param Tokens: TokenConfig[] = [];
+  @Param groupFiltered: boolean = false;
   @Require @Param appBottomAvoidHeight: number = 0;
   @Require @Param appTopAvoidHeight: number = 0;
   @Require @Param appWindowSize: window.Size = { width: 0, height: 0 };
@@ -116,7 +117,7 @@ export struct TokenListPage {
     Stack({ alignContent: Alignment.Bottom }) {
       if (this.Tokens.length === 0) {
         Row() {
-          Text($r('app.string.app_guide_msg'))
+          Text(this.groupFiltered ? $r('app.string.token_group_empty') : $r('app.string.app_guide_msg'))
             .textAlign(TextAlign.Center)
             .fontSize(20)
             .width('100%')

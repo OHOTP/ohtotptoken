@@ -1,5 +1,22 @@
 {
   "string": [
+    { "name": "token_group_all", "value": "全部" },
+    { "name": "token_group_ungrouped", "value": "未分組" },
+    { "name": "token_group_manage", "value": "管理分組" },
+    { "name": "token_group_new", "value": "新增分組" },
+    { "name": "token_group_name", "value": "分組名稱" },
+    { "name": "token_group_label", "value": "分組" },
+    { "name": "token_group_move", "value": "移動到分組" },
+    { "name": "token_group_rename", "value": "重新命名" },
+    { "name": "token_group_delete", "value": "刪除分組" },
+    { "name": "token_group_delete_message", "value": "組內權杖將移至「未分組」，不會刪除任何權杖。" },
+    { "name": "token_group_up", "value": "上移" },
+    { "name": "token_group_down", "value": "下移" },
+    { "name": "token_group_save", "value": "儲存" },
+    { "name": "token_group_invalid", "value": "請輸入 1–24 個字元，且不與其他分組同名。" },
+    { "name": "token_group_error", "value": "分組儲存失敗，請重試。" },
+    { "name": "token_group_empty", "value": "此分組尚無權杖" },
+    { "name": "token_group_hint", "value": "新增分組整理權杖，長按權杖可將其移動到分組。" },
     {
       "name": "module_desc",
       "value": "一次性密碼令牌管理軟體"

@@ -10,7 +10,7 @@ import { AppPreference, SettingTopEffectType, SettingBottomTabsType, EVENT_NAMES
 import lazy { privacyManager } from '@kit.StoreKit';
 import { hilog, hiTraceMeter } from '@kit.PerformanceAnalysisKit';
 import CommonEventManager from '@ohos.commonEventManager';
-import { TokenStore } from 'common';
+import { TokenStore, TokenGroupState, TokenGroupStore, ALL_TOKEN_GROUPS } from 'common';
 // [冷启动优化] 权限检查仅在 deferredInit 中使用
 import lazy { PermissionManager } from 'common';
 // [冷启动优化] 拖拽弹框仅在 onDragEnter 时触发
@@ -117,6 +117,8 @@ function TokenActionsMenuBuilder(host: Index) {
       builder: TokenSortMenuBuilder.bind(host, host)
     })
       .accessibilityText($r('app.string.menu_token_sort_method'))
+    MenuItem({ content: $r('app.string.token_group_manage') })
+      .onClick(() => host.openGroupManager())
     MenuItem({ content: $r('app.string.menu_token_multi_select') })
       .enabled(false)
       .accessibilityText($r('app.string.menu_token_multi_select'))
@@ -173,6 +175,36 @@ function TokenSortMenuBuilder(host: Index) {
 @ComponentV2
 struct Index {
   @Local CurrentTokens: TokenConfig[] = [];
+  @Local groupState: TokenGroupState = TokenGroupStore.getInstance().state;
+
+  @Computed
+  get displayTokens(): TokenConfig[] {
+    if (this.groupState.selectedId === ALL_TOKEN_GROUPS || this.groupState.groups.length === 0) {
+      return this.CurrentTokens;
+    }
+    return this.CurrentTokens.filter(token => {
+      const id = token.TokenType === otpType.NFC_external ? '' : (token.TokenGroupId ?? '');
+      const knownId = this.groupState.groups.some(group => group.id === id) ? id : '';
+      return knownId === this.groupState.selectedId;
+    });
+  }
+
+  openGroupManager(): void {
+    this.openFullScreenRoute(ROUTE_NAMES.TokenGroupPage, null);
+  }
+
+  private selectGroup(id: string): void {
+    if (id === this.groupState.selectedId) {
+      return;
+    }
+    this.groupState.selectedId = id;
+    this.tokenListScroller.scrollTo({ xOffset: 0, yOffset: 0 });
+    if (this.selectedTokenUUID !== '' &&
+      !this.displayTokens.some(token => token.TokenUUID === this.selectedTokenUUID)) {
+      this.selectedTokenUUID = '';
+      this.pageInfos.clear();
+    }
+  }
   @Local tokenSortMode: TokenListSortMode = TokenListSortMode.DEFAULT;
   @Local token_loading: Boolean = true;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
@@ -1065,7 +1097,8 @@ struct Index {
   @Builder
   HomeContentBuilder() {
     HomeTabs({
-      tokens: this.CurrentTokens,
+      tokens: this.displayTokens,
+      groupFiltered: this.groupState.selectedId !== ALL_TOKEN_GROUPS && this.groupState.groups.length > 0,
       window: this.window,
       bottomTabsType: this.currentBottomTabsType,
       currentTabIndex: this.currentHomeTabIndex,
@@ -1099,6 +1132,7 @@ struct Index {
         applockVisible: this.isAppLockOverlayVisible,
         scrollEffectType: this.currentScrollEffectType,
         currentHomeTabIndex: this.currentHomeTabIndex,
+        onSelectGroup: (id: string) => this.selectGroup(id),
         window: this.window,
         businessSplitEnabled: this.businessSplitEnabled,
         tokenListScroller: this.tokenListScroller,

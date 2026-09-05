@@ -1,4 +1,5 @@
 import { MaterialTheme } from '../components/MaterialTheme';
+import { TokenGroupSelect } from '../components/TokenGroupSelect';
 import { AppWindowInfo, EVENT_NAMES, HMACAlgorithm, otpType, ROUTE_NAMES, ScanBarCode, showSnackBar,
   SnackBarNotifyType, TokenConfig } from 'common';
 import { AppStorageV2 } from '@kit.ArkUI';
@@ -34,6 +35,7 @@ export struct AddTotpTokenPage {
   @Local period: number = 30;
   @Local counter: number = 0;
   @Local iconPath: string = '';
+  @Local groupId: string = '';
   @Local isSaving: boolean = false;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
 
@@ -56,6 +58,7 @@ export struct AddTotpTokenPage {
     this.period = editConfig.TokenPeriod;
     this.counter = editConfig.TokenCounter;
     this.iconPath = editConfig.TokenIconPath ?? '';
+    this.groupId = editConfig.TokenGroupId ?? '';
   }
 
   aboutToAppear(): void {
@@ -171,6 +174,7 @@ export struct AddTotpTokenPage {
       conf.TokenUUID = this.activeEditConfig.TokenUUID;
     }
     conf.TokenIconPath = this.iconPath;
+    conf.TokenGroupId = this.groupId;
     const ok = await this.saveToken(conf);
     this.isSaving = false;
     if (ok && !(this.window.AllowSplit && this.pageParams.editConfig !== undefined)) {
@@ -192,6 +196,9 @@ export struct AddTotpTokenPage {
         PageScaffold() {
         Column() {
           List({ space: 12, scroller: this.scroller }) {
+            ListItem() {
+              TokenGroupSelect({ groupId: this.groupId, onChange: (id: string) => this.groupId = id })
+            }
             ListItem() {
               AddTokenHeader({
                 issuer: this.issuer,

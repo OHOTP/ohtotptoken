@@ -1,4 +1,5 @@
 import { MaterialTheme } from '../components/MaterialTheme';
+import { TokenGroupSelect } from '../components/TokenGroupSelect';
 import { AppWindowInfo, EVENT_NAMES, maFile, otpType, readFileContent, ROUTE_NAMES, ScanBarCode,
   showSelectFilePicker, showSnackBar, SnackBarNotifyType, TokenConfig } from 'common';
 import { AppStorageV2 } from '@kit.ArkUI';
@@ -29,6 +30,7 @@ export struct AddSteamTokenPage {
   @Local issuer: string = 'Steam';
   @Local accountName: string = '';
   @Local iconPath: string = '';
+  @Local groupId: string = '';
   @Local isSaving: boolean = false;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
 
@@ -46,6 +48,7 @@ export struct AddSteamTokenPage {
     this.issuer = editConfig.TokenIssuer;
     this.accountName = editConfig.TokenName;
     this.iconPath = editConfig.TokenIconPath ?? '';
+    this.groupId = editConfig.TokenGroupId ?? '';
     this.steamMaFile = editConfig.SteamMaFile;
   }
 
@@ -141,6 +144,7 @@ export struct AddSteamTokenPage {
       conf.TokenUUID = this.activeEditConfig.TokenUUID;
     }
     conf.TokenIconPath = this.iconPath;
+    conf.TokenGroupId = this.groupId;
     conf.SteamMaFile = this.steamMaFile;
     const ok = await this.saveToken(conf);
     this.isSaving = false;
@@ -163,6 +167,9 @@ export struct AddSteamTokenPage {
         PageScaffold() {
         Column() {
           List({ space: 12, scroller: this.scroller }) {
+            ListItem() {
+              TokenGroupSelect({ groupId: this.groupId, onChange: (id: string) => this.groupId = id })
+            }
             ListItem() {
               AddTokenHeader({
                 issuer: this.issuer,

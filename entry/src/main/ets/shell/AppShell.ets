@@ -1,6 +1,9 @@
 import { MaterialTheme } from '../components/MaterialTheme';
+import { TokenGroupBar } from '../components/TokenGroupBar';
+import { TokenGroupState, TokenGroupStore } from 'common';
+import lazy { TokenGroupPage } from '../pages/TokenGroupPage';
 import { uniformTypeDescriptor } from '@kit.ArkData';
-import { HdsNavDestination, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType, hdsMaterial } from '@kit.UIDesignKit';
+import { HdsNavDestination, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType, hdsMaterial, BottomBuilderShowType, HideMode } from '@kit.UIDesignKit';
 import { AppWindowInfo, ROUTE_NAMES } from 'common';
 // [冷启动优化] 以下 NavDestination 页面仅在用户导航时触发评估
 import lazy { TokenCardConfigPage } from '../pages/TokenCardConfigPage'
@@ -77,6 +80,8 @@ export struct AppShell {
   /** 顶部滚动效果类型(传递给各 NavDestination 页面并配置主页标题栏) */
   @Require @Param scrollEffectType: ScrollEffectType = ScrollEffectType.IMMERSIVE_GRADIENT_BLUR;
   @Require @Param currentHomeTabIndex: number = 0;
+  @Local groupState: TokenGroupState = TokenGroupStore.getInstance().state;
+  @Event onSelectGroup: (id: string) => void = () => {};
   @Require @Param window: AppWindowInfo = new AppWindowInfo();
   @Require @Param businessSplitEnabled: boolean = true;
   @Require @Param tokenListScroller: Scroller = new Scroller();
@@ -107,6 +112,11 @@ export struct AppShell {
   private splitPlaceholder: ComponentContent<Object> =
     new ComponentContent(this.getUIContext(), wrapBuilder(TokenSplitPlaceholder));
 
+  @Builder
+  GroupBottomBuilder() {
+    TokenGroupBar({ onSelect: (id: string) => this.onSelectGroup(id) })
+  }
+
   @LocalBuilder
   navDestinationBuilder(name: string, param: Object) {
     if (name === ROUTE_NAMES.ShowDataSyncDetailsPage) {
@@ -121,6 +131,9 @@ export struct AppShell {
       WebPage({ scrollEffectType: this.scrollEffectType, pageParams: param as WebPageParams })
     } else if (name === ROUTE_NAMES.TokenCardConfigPage) {
       TokenCardConfigPage({ scrollEffectType: this.scrollEffectType })
+    } else if (name === ROUTE_NAMES.TokenGroupPage) {
+      TokenGroupPage({ scrollEffectType: this.scrollEffectType,
+        onExitFullScreen: () => this.onExitFullScreenRoute() })
     } else if (name === ROUTE_NAMES.TokenSortPage) {
       TokenSortPage({
         scrollEffectType: this.scrollEffectType,
@@ -252,6 +265,12 @@ export struct AppShell {
     .bindToScrollable([
       this.currentHomeTabIndex === 0 ? this.tokenListScroller : this.settingEntryScroller
     ])
+    .dynamicHideTitleBar({
+      hideTitleArea: false,
+      hideBottomBuilder: this.currentHomeTabIndex === 0 && this.groupState.groups.length > 0,
+      hideStatusBar: false,
+      mode: HideMode.SCROLL_UP
+    })
     .titleMode(HdsNavigationTitleMode.MINI)
     .hideBackButton(true)
     .titleBar({
@@ -288,6 +307,11 @@ export struct AppShell {
         }
       },
       content: {
+        bottomBuilder: this.currentHomeTabIndex === 0 && this.groupState.groups.length > 0 ? {
+          builder: (): void => this.GroupBottomBuilder(),
+          height: 56,
+          showType: BottomBuilderShowType.DIRECTLY_SHOW
+        } : undefined,
         title: {
           mainTitle: this.currentHomeTabIndex === 0 ?
             $r('app.string.tab_token') : $r('app.string.tab_me'),
