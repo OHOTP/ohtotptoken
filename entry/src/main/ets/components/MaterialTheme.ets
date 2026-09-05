@@ -37,8 +37,6 @@ export class MaterialTheme {
     }
     return new uiMaterial.ImmersiveMaterial({
       style: MaterialTheme.preferredStyle(),
-      interactive: interactive,
-      lightEffect: interactive ? { color: Color.White } : undefined,
       colorInvert: true
     });
   }
