@@ -12,9 +12,10 @@ export class TokenGroup {
   constructor(id: string, name: string, color?: number) {
     this.id = id;
     this.name = name;
+    // 兼容颜色工具返回的有符号 ARGB，统一以无符号 32 位值保存。
     // 旧目录无颜色时继续使用系统强调色；忽略备份中的非法颜色。
-    this.color = typeof color === 'number' && Number.isInteger(color) && color >= 0 && color <= 0xFFFFFFFF ?
-      color : undefined;
+    this.color = typeof color === 'number' && Number.isInteger(color) &&
+      color >= -0x80000000 && color <= 0xFFFFFFFF ? color >>> 0 : undefined;
   }
 }
 

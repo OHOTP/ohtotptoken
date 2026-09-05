@@ -11,6 +11,9 @@ const source = readFileSync(new URL('../common/src/main/ets/utils/TokenGroupStor
   .replace(/@Trace /g, '')
   .replace(/export /g, '');
 const code = stripTypeScriptTypes(source) + '\n({ TokenGroup, TokenGroupStore });';
+const colorSource = readFileSync(new URL('../common/src/main/ets/utils/ColorUtils.ets', import.meta.url), 'utf8')
+  .replace(/export /g, '');
+const { hexColor, setRgba } = runInNewContext(stripTypeScriptTypes(colorSource) + '\n({ hexColor, setRgba });');
 
 function fixture(initial = []) {
   let saved = structuredClone(initial);
@@ -82,10 +85,33 @@ test('backup merge preserves colors and does not overwrite local groups', async 
 
 test('invalid colors fall back while transparent ARGB remains valid', async () => {
   const { TokenGroup } = fixture();
-  for (const color of [-1, 0x100000000, NaN, Infinity, 1.5, 'red', null]) {
+  for (const color of [-0x80000001, 0x100000000, NaN, Infinity, 1.5, 'red', null]) {
     assert.equal(new TokenGroup('a', 'A', color).color, undefined);
   }
   assert.equal(new TokenGroup('a', 'A', 0).color, 0);
+});
+
+test('picker conversion saves signed ARGB and survives editing and reload', async () => {
+  const { store, persisted } = fixture();
+  const picked = hexColor('#FFFF0000');
+  assert.ok(picked < 0, 'production converter returns signed ARGB');
+  await store.renameOrCreate('Red', '', picked);
+  assert.equal(persisted()[0].color, 0xFFFF0000);
+  await store.load();
+  assert.equal(store.state.groups[0].color, 0xFFFF0000);
+  await store.renameOrCreate('Red', store.state.groups[0].id, setRgba(0, 255, 0, 255));
+  assert.equal(persisted()[0].color, 0xFF00FF00);
+  await store.load();
+  assert.equal(store.state.groups[0].color, 0xFF00FF00);
+});
+
+test('signed colors from local storage and backups are normalized', async () => {
+  const { store, TokenGroup } = fixture([{ id: 'a', name: 'Red', color: hexColor('#FFFF0000') }]);
+  await store.load();
+  assert.equal(store.state.groups[0].color, 0xFFFF0000);
+  await store.merge([{ id: 'b', name: 'White', color: hexColor('#FFFFFFFF') }]);
+  assert.equal(store.state.groups[1].color, 0xFFFFFFFF);
+  assert.equal(new TokenGroup('c', 'Black', -0x80000000).color, 0x80000000);
 });
 
 test('reordering and removing other groups preserve color', async () => {
