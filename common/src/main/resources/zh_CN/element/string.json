@@ -2,7 +2,12 @@
   "string": [
     { "name": "token_group_open_sidebar", "value": "展开分组侧栏" },
     { "name": "token_group_close_sidebar", "value": "收起分组侧栏" },
-    { "name": "token_group_all", "value": "全部" },
+    { "name": "token_group_all", "value": "全部令牌" },
+    { "name": "token_group_favorites", "value": "收藏" },
+    { "name": "token_favorite_add", "value": "收藏" },
+    { "name": "token_favorite_remove", "value": "取消收藏" },
+    { "name": "token_group_edit", "value": "编辑" },
+    { "name": "token_group_done", "value": "完成" },
     { "name": "token_group_ungrouped", "value": "未分组" },
     { "name": "token_group_manage", "value": "管理分组" },
     { "name": "token_group_new", "value": "新建分组" },

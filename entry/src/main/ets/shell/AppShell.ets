@@ -1,6 +1,6 @@
 import { MaterialTheme } from '../components/MaterialTheme';
 import { TokenGroupSidePanel } from '../components/TokenGroupSidePanel';
-import { ALL_TOKEN_GROUPS, TokenGroupState, TokenGroupStore, dialogSystemMaterial,
+import { ALL_TOKEN_GROUPS, FAVORITE_TOKEN_GROUP, TokenGroupState, TokenGroupStore, dialogSystemMaterial,
   showSnackBar, SnackBarNotifyType } from 'common';
 import { TokenGroupNameDialog } from '../dialogs/TokenGroupNameDialog';
 import lazy { TokenGroupPage } from '../pages/TokenGroupPage';
@@ -133,6 +133,9 @@ export struct AppShell {
     if (this.groupState.selectedId === ALL_TOKEN_GROUPS) {
       return $r('app.string.tab_token');
     }
+    if (this.groupState.selectedId === FAVORITE_TOKEN_GROUP) {
+      return $r('app.string.token_group_favorites');
+    }
     return this.groupState.groups.find(group => group.id === this.groupState.selectedId)?.name ??
       $r('app.string.token_group_ungrouped');
   }
@@ -181,6 +184,7 @@ export struct AppShell {
   GroupSidePanelBuilder() {
     Column() {
       TokenGroupSidePanel({
+        tokens: this.tokens,
         onClose: () => this.$groupSidebarOpen(false),
         onAdd: () => this.openNewGroupDialog(),
         onSelect: (id: string) => {
@@ -188,10 +192,6 @@ export struct AppShell {
           if (!this.embedGroupSidebar) {
             this.$groupSidebarOpen(false);
           }
-        },
-        onManage: () => {
-          this.$groupSidebarOpen(false);
-          this.onOpenFullScreenRoute(ROUTE_NAMES.TokenGroupPage, null);
         }
       })
     }
@@ -460,9 +460,9 @@ export struct AppShell {
         }
       },
       sideBarContainerType: this.embedGroupSidebar ? SideBarContainerType.Embed : SideBarContainerType.Overlay,
-      sideBarWidth: this.embedGroupSidebar ? 240 : Math.min(304, this.window.WidthVp - 56),
+      sideBarWidth: this.embedGroupSidebar ? 240 : Math.min(380, this.window.WidthVp * 0.78),
       minSideBarWidth: Math.min(200, Math.max(0, this.window.WidthVp - 56)),
-      maxSideBarWidth: 320,
+      maxSideBarWidth: 380,
       minContentWidth: this.embedGroupSidebar ?
         HOME_SIDE_TAB_WIDTH + TOKEN_LIST_MIN_CONTENT_WIDTH + 300 : Math.min(360, this.window.WidthVp),
       contentAreaMask: true,

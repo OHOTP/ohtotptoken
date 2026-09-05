@@ -2,7 +2,12 @@
   "string": [
     { "name": "token_group_open_sidebar", "value": "展開分組側欄" },
     { "name": "token_group_close_sidebar", "value": "收起分組側欄" },
-    { "name": "token_group_all", "value": "全部" },
+    { "name": "token_group_all", "value": "全部權杖" },
+    { "name": "token_group_favorites", "value": "收藏" },
+    { "name": "token_favorite_add", "value": "收藏" },
+    { "name": "token_favorite_remove", "value": "取消收藏" },
+    { "name": "token_group_edit", "value": "編輯" },
+    { "name": "token_group_done", "value": "完成" },
     { "name": "token_group_ungrouped", "value": "未分組" },
     { "name": "token_group_manage", "value": "管理分組" },
     { "name": "token_group_new", "value": "新增分組" },

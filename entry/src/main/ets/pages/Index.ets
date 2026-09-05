@@ -10,7 +10,7 @@ import { AppPreference, SettingTopEffectType, SettingBottomTabsType, EVENT_NAMES
 import lazy { privacyManager } from '@kit.StoreKit';
 import { hilog, hiTraceMeter } from '@kit.PerformanceAnalysisKit';
 import CommonEventManager from '@ohos.commonEventManager';
-import { TokenStore, TokenGroupState, TokenGroupStore, ALL_TOKEN_GROUPS } from 'common';
+import { TokenStore, TokenGroupState, TokenGroupStore, ALL_TOKEN_GROUPS, FAVORITE_TOKEN_GROUP } from 'common';
 // [冷启动优化] 权限检查仅在 deferredInit 中使用
 import lazy { PermissionManager } from 'common';
 // [冷启动优化] 拖拽弹框仅在 onDragEnter 时触发
@@ -189,8 +189,11 @@ struct Index {
 
   @Computed
   get displayTokens(): TokenConfig[] {
-    if (this.groupState.selectedId === ALL_TOKEN_GROUPS || this.groupState.groups.length === 0) {
+    if (this.groupState.selectedId === ALL_TOKEN_GROUPS) {
       return this.CurrentTokens;
+    }
+    if (this.groupState.selectedId === FAVORITE_TOKEN_GROUP) {
+      return this.CurrentTokens.filter(token => token.TokenType !== otpType.NFC_external && token.TokenFavorite === true);
     }
     return this.CurrentTokens.filter(token => {
       const id = token.TokenType === otpType.NFC_external ? '' : (token.TokenGroupId ?? '');
@@ -1111,7 +1114,7 @@ struct Index {
     HomeTabs({
       onTokenListScroll: (offset: number) => { this.tokenTitleCollapse = Math.min(1, Math.max(0, offset / 56)); },
       tokens: this.displayTokens,
-      groupFiltered: this.groupState.selectedId !== ALL_TOKEN_GROUPS && this.groupState.groups.length > 0,
+      groupFiltered: this.groupState.selectedId !== ALL_TOKEN_GROUPS,
       window: this.window,
       bottomTabsType: this.currentBottomTabsType,
       currentTabIndex: this.currentHomeTabIndex,

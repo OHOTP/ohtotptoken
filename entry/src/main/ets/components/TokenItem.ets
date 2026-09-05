@@ -755,6 +755,13 @@ export struct TokenItem {
     Menu() {
       // NFC 外部令牌为会话级、不持久化，排序（RankScore 持久化）对其无意义，故不提供排序入口
       if (this.Config.TokenType !== otpType.NFC_external) {
+        MenuItem({ content: this.Config.TokenFavorite ?
+          $r('app.string.token_favorite_remove') : $r('app.string.token_favorite_add') })
+          .onClick(() => this.requestContextMenuAction(() => {
+            tkStore.setTokenFavorite(this.Config.TokenUUID, !this.Config.TokenFavorite).catch(() => {
+              showSnackBar($r('app.string.token_group_error'), SnackBarNotifyType.ERROR);
+            });
+          }))
         MenuItem({ content: $r('app.string.token_group_move'), builder: () => this.GroupMoveMenu() })
         MenuItem({ symbolStartIcon: this.menu_icon_sort, content: $r('app.string.token_right_menu_sort') })
           .onClick(() => {

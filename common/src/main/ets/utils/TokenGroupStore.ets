@@ -3,6 +3,7 @@ import { util } from '@kit.ArkTS';
 import { KvManager } from './KvManager';
 
 export const ALL_TOKEN_GROUPS: string = '__all__';
+export const FAVORITE_TOKEN_GROUP: string = '__favorites__';
 
 export class TokenGroup {
   id: string = '';
@@ -35,7 +36,8 @@ export class TokenGroupStore {
   }
 
   private reconcileSelection(): void {
-    if (this.state.selectedId !== ALL_TOKEN_GROUPS && this.state.selectedId !== '' &&
+    if (this.state.selectedId !== ALL_TOKEN_GROUPS && this.state.selectedId !== FAVORITE_TOKEN_GROUP &&
+      this.state.selectedId !== '' &&
       !this.state.groups.some(group => group.id === this.state.selectedId)) {
       this.state.selectedId = ALL_TOKEN_GROUPS;
     }
@@ -88,7 +90,7 @@ export class TokenGroupStore {
     }
     const merged = [...this.state.groups];
     for (const group of groups) {
-      if (typeof group.id === 'string' && group.id !== '' && group.id !== ALL_TOKEN_GROUPS &&
+      if (typeof group.id === 'string' && group.id !== '' && group.id !== ALL_TOKEN_GROUPS && group.id !== FAVORITE_TOKEN_GROUP &&
         typeof group.name === 'string' && group.name.trim().length > 0 &&
         !merged.some(existing => existing.id === group.id)) {
         merged.push(new TokenGroup(group.id, group.name.trim().slice(0, 24)));
