@@ -35,8 +35,10 @@ export struct TokenGroupNameDialog {
 
   @Builder
   ContentBuilder() {
-    Column({ space: 16 }) {
+    Column() {
       TextInput({ text: this.name, placeholder: $r('app.string.token_group_name') })
+        .id('token_group_name_input')
+        .height(40)
         .maxLength(24)
         .enabled(!this.busy)
         .defaultFocus(true)
@@ -46,21 +48,40 @@ export struct TokenGroupNameDialog {
         .onChange((value: string) => { this.name = value; this.error = undefined; })
         .onSubmit(() => { this.save(); })
       // 使用内容区按钮：校验/保存失败时不能自动关闭 DialogV2。
-      Row({ space: 8 }) {
+      Row() {
         Button($r('app.string.dialog_btn_cancel'))
+          .id('token_group_name_cancel')
+          .type(ButtonType.ROUNDED_RECTANGLE)
+          .borderRadius($r('sys.float.ohos_id_corner_radius_button'))
+          .height($r('sys.float.ohos_id_button_height'))
           .layoutWeight(1)
-          .height(48)
           .backgroundColor(Color.Transparent)
           .fontColor($r('sys.color.font_emphasize'))
+          .fontSize($r('sys.float.ohos_id_text_size_body1'))
+          .fontWeight(FontWeight.Medium)
           .enabled(!this.busy)
           .onClick(() => this.getDialogController()?.close())
+        Divider()
+          .vertical(true)
+          .height(24)
+          .strokeWidth(2)
+          .color($r('sys.color.ohos_id_color_list_separator'))
+          .margin({ left: 3, right: 3 })
         Button(this.groupId === '' ? $r('app.string.token_group_new') : $r('app.string.token_group_save'))
+          .id('token_group_name_save')
+          .type(ButtonType.ROUNDED_RECTANGLE)
+          .borderRadius($r('sys.float.ohos_id_corner_radius_button'))
+          .height($r('sys.float.ohos_id_button_height'))
           .layoutWeight(1)
-          .height(48)
+          .backgroundColor(Color.Transparent)
+          .fontColor($r('sys.color.font_emphasize'))
+          .fontSize($r('sys.float.ohos_id_text_size_body1'))
+          .fontWeight(FontWeight.Medium)
           .enabled(!this.busy && this.name.trim().length > 0)
           .onClick(() => { this.save(); })
       }
       .width('100%')
+      .padding({ top: 8 })
     }
     .width('100%')
   }

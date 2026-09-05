@@ -3,7 +3,6 @@ import { TokenGroupSidePanel } from '../components/TokenGroupSidePanel';
 import { ALL_TOKEN_GROUPS, FAVORITE_TOKEN_GROUP, TokenGroupState, TokenGroupStore, dialogSystemMaterial,
   showSnackBar, SnackBarNotifyType } from 'common';
 import { TokenGroupNameDialog } from '../dialogs/TokenGroupNameDialog';
-import lazy { TokenGroupPage } from '../pages/TokenGroupPage';
 import { uniformTypeDescriptor } from '@kit.ArkData';
 import { HdsNavDestination, HdsNavigation, HdsNavigationTitleMode, ScrollEffectType, hdsMaterial, HdsSideBar, BottomBuilderShowType } from '@kit.UIDesignKit';
 import { AppWindowInfo, ROUTE_NAMES } from 'common';
@@ -214,9 +213,7 @@ export struct AppShell {
       WebPage({ scrollEffectType: this.scrollEffectType, pageParams: param as WebPageParams })
     } else if (name === ROUTE_NAMES.TokenCardConfigPage) {
       TokenCardConfigPage({ scrollEffectType: this.scrollEffectType })
-    } else if (name === ROUTE_NAMES.TokenGroupPage) {
-      TokenGroupPage({ scrollEffectType: this.scrollEffectType,
-        onExitFullScreen: () => this.onExitFullScreenRoute() })
+
     } else if (name === ROUTE_NAMES.TokenSortPage) {
       TokenSortPage({
         scrollEffectType: this.scrollEffectType,

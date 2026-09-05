@@ -426,7 +426,6 @@ export enum ROUTE_NAMES {
   TokenCardConfigPage = 'TokenCardConfigPage',
   /** Token排序页面 */
   TokenSortPage = 'TokenSortPage',
-  TokenGroupPage = 'TokenGroupPage',
   /** Token搜索页面 */
   TokenSearchPage = 'TokenSearchPage',
   /** 添加通用 TOTP/HOTP 令牌页面 */

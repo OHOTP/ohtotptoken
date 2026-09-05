@@ -117,8 +117,6 @@ function TokenActionsMenuBuilder(host: Index) {
       builder: TokenSortMenuBuilder.bind(host, host)
     })
       .accessibilityText($r('app.string.menu_token_sort_method'))
-    MenuItem({ content: $r('app.string.token_group_manage') })
-      .onClick(() => host.openGroupManager())
     MenuItem({ content: $r('app.string.menu_token_multi_select') })
       .enabled(false)
       .accessibilityText($r('app.string.menu_token_multi_select'))
@@ -200,10 +198,6 @@ struct Index {
       const knownId = this.groupState.groups.some(group => group.id === id) ? id : '';
       return knownId === this.groupState.selectedId;
     });
-  }
-
-  openGroupManager(): void {
-    this.openFullScreenRoute(ROUTE_NAMES.TokenGroupPage, null);
   }
 
   private selectGroup(id: string): void {

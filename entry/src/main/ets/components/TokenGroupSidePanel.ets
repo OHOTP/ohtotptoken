@@ -96,11 +96,13 @@ export struct TokenGroupSidePanel {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .layoutWeight(1)
-      Text(this.count(id).toString())
-        .fontSize(16)
-        .fontColor($r('sys.color.font_secondary'))
-        .maxLines(1)
-        .flexShrink(0)
+      if (!isGroup || !this.editing) {
+        Text(this.count(id).toString())
+          .fontSize(16)
+          .fontColor($r('sys.color.font_secondary'))
+          .maxLines(1)
+          .flexShrink(0)
+      }
     }
     .width('100%')
     .constraintSize({ minHeight: 60 })
@@ -161,19 +163,35 @@ export struct TokenGroupSidePanel {
               .backgroundColor(Color.Transparent)
               .enabled(!this.busy)
               .accessibilitySelected(this.state.selectedId === group.id)
-              .onClick(() => this.editing ? this.rename(group) : this.onSelect(group.id))
+              .onClick(() => {
+                if (!this.editing) {
+                  this.onSelect(group.id);
+                }
+              })
               .bindContextMenu(() => this.GroupMenu(group), ResponseType.LongPress)
               if (this.editing) {
                 Button({ type: ButtonType.Circle }) {
-                  SymbolGlyph($r('sys.symbol.dot_grid_2x2'))
+                  SymbolGlyph($r('sys.symbol.trash'))
                     .fontSize(22)
                     .fontColor([$r('sys.color.icon_secondary')])
                 }
-                .width(48).height(48)
+                .id('token_group_delete_' + group.id)
+                .width(44).height(48)
                 .backgroundColor(Color.Transparent)
-                .accessibilityText($r('app.string.token_group_manage'))
+                .accessibilityText($r('app.string.token_group_delete'))
                 .enabled(!this.busy)
-                .bindMenu((): void => this.GroupMenu(group))
+                .onClick(() => this.deleteGroup(group))
+                Button({ type: ButtonType.Circle }) {
+                  SymbolGlyph($r('sys.symbol.square_and_pencil'))
+                    .fontSize(22)
+                    .fontColor([$r('sys.color.icon_secondary')])
+                }
+                .id('token_group_rename_' + group.id)
+                .width(44).height(48)
+                .backgroundColor(Color.Transparent)
+                .accessibilityText($r('app.string.token_group_rename'))
+                .enabled(!this.busy)
+                .onClick(() => this.rename(group))
               }
             }
             .width('100%')
