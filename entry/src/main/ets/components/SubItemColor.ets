@@ -74,10 +74,11 @@ export struct SubItemColor {
       .alignItems(HorizontalAlign.Start)
 
       Column({ space: 8 }) {
-        ForEach(this.colors, (color: ColorItem, index: number) => {
+        // 索引键复用行时直接读取 @Param 数组，避免捕获已被替换的普通 ColorItem。
+        ForEach(this.colors, (_color: ColorItem, index: number) => {
           Row({ space: 8 }) {
             if (this.colors.length > 1) {
-              Text(color.name)
+              Text(this.colors[index].name)
                 .fontSize($r('sys.float.ohos_id_text_size_body2'))
                 .fontColor($r('sys.color.font_secondary'))
                 .maxLines(1)
@@ -86,7 +87,7 @@ export struct SubItemColor {
             if (this.isHdsColorPickerAvailable()) {
               Row() {
                 HdsColorPicker({
-                  initialColor: colorHex(color.color),
+                  initialColor: colorHex(this.colors[index].color),
                   options: { circleRadius: 16 },
                   onColorSelected: (selectedColor: string) => {
                     const normalizedColor = selectedColor.startsWith('#') ?
@@ -103,16 +104,16 @@ export struct SubItemColor {
                 Row()
                   .width(32)
                   .height(32)
-                  .backgroundColor(color.color)
+                  .backgroundColor(this.colors[index].color)
                   .borderRadius($r('sys.float.corner_radius_level2'))
                   .border({ width: 1, color: $r('sys.color.comp_divider') })
               }
               .width(48)
               .height(48)
               .backgroundColor(Color.Transparent)
-              .accessibilityText(typeof color.name === 'string' ? color.name :
-                this.getUIContext().getHostContext()!.resourceManager.getStringSync(color.name.id))
-              .onClick(() => this.openLegacyColorPicker(color.color, index))
+              .accessibilityText(typeof this.colors[index].name === 'string' ? this.colors[index].name as string :
+                this.getUIContext().getHostContext()!.resourceManager.getStringSync((this.colors[index].name as Resource).id))
+              .onClick(() => this.openLegacyColorPicker(this.colors[index].color, index))
             }
           }
           .alignItems(VerticalAlign.Center)
