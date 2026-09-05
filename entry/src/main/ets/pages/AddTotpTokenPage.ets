@@ -197,9 +197,6 @@ export struct AddTotpTokenPage {
         Column() {
           List({ space: 12, scroller: this.scroller }) {
             ListItem() {
-              TokenGroupSelect({ groupId: this.groupId, onChange: (id: string) => this.groupId = id })
-            }
-            ListItem() {
               AddTokenHeader({
                 issuer: this.issuer,
                 iconPath: this.iconPath,
@@ -234,6 +231,8 @@ export struct AddTotpTokenPage {
                   value: this.accountName,
                   onChange: (value: string) => this.accountName = value
                 })
+                Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
+                TokenGroupSelect({ groupId: this.groupId, onChange: (id: string) => this.groupId = id })
               }
               .padding(ADD_TOKEN_SECTION_PADDING)
               .width('100%')

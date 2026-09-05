@@ -31,6 +31,5 @@ export struct TokenGroupSelect {
         .menuSystemMaterial(MaterialTheme.systemMaterial())
     }
     .width('100%')
-    .padding(16)
   }
 }
