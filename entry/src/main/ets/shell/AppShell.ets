@@ -522,12 +522,19 @@ export struct AppShell {
       contentAreaMask: true,
       scaleContentEnabled: false,
       swipeEnabled: this.canShowGroupSidebar && !this.embedGroupSidebar,
-      isSideBarBlur: MaterialTheme.hdsMaterialType() !== hdsMaterial.MaterialType.NONE,
+      isSideBarBlur: true,
       sideBarColor: $r('app.color.window_background'),
       contentColor: $r('app.color.window_background')
     })
     .width('100%')
     .height('100%')
+    .onClick((event: ClickEvent) => {
+      // 仅关闭悬浮侧边栏，侧栏内点击和宽屏嵌入模式保持原行为。
+      if (this.canShowGroupSidebar && this.groupSidebarOpen && !this.embedGroupSidebar &&
+        event.x >= Math.min(380, this.window.WidthVp * 0.78)) {
+        this.$groupSidebarOpen(false);
+      }
+    })
   }
 
   build() {
