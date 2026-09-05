@@ -37,6 +37,12 @@ export class MaterialTheme {
     }
     return new uiMaterial.ImmersiveMaterial({
       style: MaterialTheme.preferredStyle(),
+      interactive: interactive && MaterialTheme.materialPref().app_appearance_immersive_interactive,
+      lightEffect: MaterialTheme.materialPref().app_appearance_immersive_light_effect ?
+        (interactive ? { color: MaterialTheme.materialPref().app_appearance_light_color } : undefined) : null,
+      applyShadow: MaterialTheme.materialPref().app_appearance_material_shadow,
+      materialColor: (MaterialTheme.materialPref().app_appearance_material_color >>> 24) === 0 ?
+        undefined : MaterialTheme.materialPref().app_appearance_material_color,
       colorInvert: true
     });
   }

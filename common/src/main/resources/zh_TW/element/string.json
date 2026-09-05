@@ -1265,6 +1265,50 @@
       "value": "沉浸式漸變模糊"
     },
     {
+      "name": "setting_immersive_interactive",
+      "value": "按壓形變"
+    },
+    {
+      "name": "setting_immersive_interactive_desc",
+      "value": "按壓支援的原生材質控制項時產生彈性形變，不影響 HDS 標題列。"
+    },
+    {
+      "name": "setting_immersive_light_effect",
+      "value": "觸控光效"
+    },
+    {
+      "name": "setting_immersive_light_effect_desc",
+      "value": "為支援的原生材質控制項顯示觸控光感回饋，與形變獨立，不影響 HDS 標題列。"
+    },
+    {
+      "name": "setting_material_reset_colors",
+      "value": "還原預設顏色"
+    },
+    {
+      "name": "setting_material_shadow",
+      "value": "材質陰影"
+    },
+    {
+      "name": "setting_material_shadow_desc",
+      "value": "控制原生材質自帶陰影，不影響控制項單獨設定的陰影或 HDS 標題列。"
+    },
+    {
+      "name": "setting_material_color",
+      "value": "材質色調"
+    },
+    {
+      "name": "setting_material_color_desc",
+      "value": "透明色恢復預設；建議半透明色，不透明色會遮住光感。僅對 API 26+ 原生材質生效。"
+    },
+    {
+      "name": "setting_light_color",
+      "value": "光效顏色"
+    },
+    {
+      "name": "setting_light_color_desc",
+      "value": "預設白色，開啟觸控光效後生效。需 API 26+ 支援光效的裝置，不影響 HDS 標題列。"
+    },
+    {
       "name": "setting_immersive_enable",
       "value": "啟用沉浸光感"
     },

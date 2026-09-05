@@ -1277,6 +1277,50 @@
       "value": "Immersive Gradient Blur"
     },
     {
+      "name": "setting_immersive_interactive",
+      "value": "Press deformation"
+    },
+    {
+      "name": "setting_immersive_interactive_desc",
+      "value": "Animate supported native material controls when pressed. Does not affect HDS title bars."
+    },
+    {
+      "name": "setting_immersive_light_effect",
+      "value": "Touch lighting"
+    },
+    {
+      "name": "setting_immersive_light_effect_desc",
+      "value": "Show touch lighting on supported native material controls, independently of deformation. Does not affect HDS title bars."
+    },
+    {
+      "name": "setting_material_reset_colors",
+      "value": "Restore default colors"
+    },
+    {
+      "name": "setting_material_shadow",
+      "value": "Material shadow"
+    },
+    {
+      "name": "setting_material_shadow_desc",
+      "value": "Control native material shadows, not separately configured shadows or HDS title bars."
+    },
+    {
+      "name": "setting_material_color",
+      "value": "Material tint"
+    },
+    {
+      "name": "setting_material_color_desc",
+      "value": "Transparent restores defaults. Use translucent colors; opaque colors hide the material. Requires API 26+ native material."
+    },
+    {
+      "name": "setting_light_color",
+      "value": "Light effect color"
+    },
+    {
+      "name": "setting_light_color_desc",
+      "value": "White by default. Requires touch lighting and a supported API 26+ device. Does not affect HDS title bars."
+    },
+    {
       "name": "setting_immersive_enable",
       "value": "Enable immersive material"
     },

@@ -10,6 +10,7 @@ import { SettingItem } from '../../components/SettingItem';
 import { SubItemDivider } from '../../components/SubItemDivider';
 import { SubItemSelect } from '../../components/SubItemSelect';
 import { SubItemEnumSelect } from '../../components/SubItemEnumSelect';
+import { SubItemColor } from '../../components/SubItemColor';
 import { SubItemIconManager } from '../../components/SubItemIconManager';
 import { AppWindowInfo } from 'common';
 import { common, ConfigurationConstant } from '@kit.AbilityKit';
@@ -168,6 +169,51 @@ export struct AppearanceSheet {
 
                 SubItemDivider()
 
+                SubItemToggle({
+                  icon: $r('sys.symbol.rectangle_stack'),
+                  title: $r('app.string.setting_immersive_interactive'),
+                  description: $r('app.string.setting_immersive_interactive_desc'),
+                  isOn: this.material_preference.app_appearance_immersive_interactive,
+                  disable: !this.material_preference.app_appearance_immersive_enable ||
+                    !MaterialTheme.supportsNativeMaterial(),
+                  onChange: (value: boolean) => {
+                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_INTERACTIVE, value);
+                    this.material_preference.app_appearance_immersive_interactive = value;
+                  }
+                })
+
+                SubItemDivider()
+
+                SubItemToggle({
+                  icon: $r('sys.symbol.rectangle_stack'),
+                  title: $r('app.string.setting_immersive_light_effect'),
+                  description: $r('app.string.setting_immersive_light_effect_desc'),
+                  isOn: this.material_preference.app_appearance_immersive_light_effect,
+                  disable: !this.material_preference.app_appearance_immersive_enable ||
+                    !MaterialTheme.supportsNativeMaterial(),
+                  onChange: (value: boolean) => {
+                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_LIGHT_EFFECT, value);
+                    this.material_preference.app_appearance_immersive_light_effect = value;
+                  }
+                })
+
+                SubItemDivider()
+
+                SubItemToggle({
+                  icon: $r('sys.symbol.rectangle_stack'),
+                  title: $r('app.string.setting_material_shadow'),
+                  description: $r('app.string.setting_material_shadow_desc'),
+                  isOn: this.material_preference.app_appearance_material_shadow,
+                  disable: !this.material_preference.app_appearance_immersive_enable ||
+                    !MaterialTheme.supportsNativeMaterial(),
+                  onChange: (value: boolean) => {
+                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_MATERIAL_SHADOW, value);
+                    this.material_preference.app_appearance_material_shadow = value;
+                  }
+                })
+
+                SubItemDivider()
+
                 SubItemEnumSelect({
                   icon: $r('sys.symbol.rectangle_split_3x1'),
                   title: $r('app.string.setting_immersive_style'),
@@ -181,6 +227,49 @@ export struct AppearanceSheet {
                     this.material_preference.app_appearance_immersive_style = value;
                   }
                 })
+
+                SubItemDivider()
+
+                SubItemColor({
+                  title: $r('app.string.setting_material_color'),
+                  description: $r('app.string.setting_material_color_desc'),
+                  colors: [{
+                    name: $r('app.string.setting_material_color'),
+                    color: this.material_preference.app_appearance_material_color
+                  }],
+                  onChange: (_index: number, color: number) => {
+                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_MATERIAL_COLOR, color);
+                    this.material_preference.app_appearance_material_color = color;
+                  }
+                })
+
+                SubItemDivider()
+
+                SubItemColor({
+                  title: $r('app.string.setting_light_color'),
+                  description: $r('app.string.setting_light_color_desc'),
+                  colors: [{
+                    name: $r('app.string.setting_light_color'),
+                    color: this.material_preference.app_appearance_light_color
+                  }],
+                  onChange: (_index: number, color: number) => {
+                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_LIGHT_COLOR, color);
+                    this.material_preference.app_appearance_light_color = color;
+                  }
+                })
+
+                SubItemDivider()
+
+                SubItemButton({
+                  text: $r('app.string.setting_material_reset_colors'),
+                  symbol: $r('sys.symbol.arrow_counterclockwise')
+                })
+                  .onClick(() => {
+                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_MATERIAL_COLOR, 0x00000000);
+                    AppPreference.setPreference(PREF_KEYS.APPEARANCE_LIGHT_COLOR, 0xFFFFFFFF);
+                    this.material_preference.app_appearance_material_color = 0x00000000;
+                    this.material_preference.app_appearance_light_color = 0xFFFFFFFF;
+                  })
 
               }
             }

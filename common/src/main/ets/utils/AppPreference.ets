@@ -185,6 +185,11 @@ export enum PREF_KEYS {
   APPEARANCE_IMMERSIVE_ENABLE = 'app_appearance_immersive_enable',
   /** 沉浸材质厚度偏好 */
   APPEARANCE_IMMERSIVE_STYLE = 'app_appearance_immersive_style',
+  APPEARANCE_IMMERSIVE_INTERACTIVE = 'app_appearance_immersive_interactive',
+  APPEARANCE_IMMERSIVE_LIGHT_EFFECT = 'app_appearance_immersive_light_effect',
+  APPEARANCE_MATERIAL_SHADOW = 'app_appearance_material_shadow',
+  APPEARANCE_MATERIAL_COLOR = 'app_appearance_material_color',
+  APPEARANCE_LIGHT_COLOR = 'app_appearance_light_color',
 
 }
 
@@ -392,6 +397,11 @@ export class MaterialPreference {
   @Trace app_appearance_immersive_enable: boolean = true;
   /** 沉浸材质厚度偏好（SettingImmersiveStyle 五档） */
   @Trace app_appearance_immersive_style: number = SettingImmersiveStyle.REGULAR;
+  @Trace app_appearance_immersive_interactive: boolean = true;
+  @Trace app_appearance_immersive_light_effect: boolean = true;
+  @Trace app_appearance_material_shadow: boolean = true;
+  @Trace app_appearance_material_color: number = 0x00000000;
+  @Trace app_appearance_light_color: number = 0xFFFFFFFF;
 
 }
 
@@ -525,6 +535,11 @@ export class AppPreference {
     [PREF_KEYS.APPEARANCE_IMMERSIVE_ENABLE, true],
     // 沉浸材质厚度偏好（默认常规）
     [PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE, SettingImmersiveStyle.REGULAR],
+    [PREF_KEYS.APPEARANCE_IMMERSIVE_INTERACTIVE, true],
+    [PREF_KEYS.APPEARANCE_IMMERSIVE_LIGHT_EFFECT, true],
+    [PREF_KEYS.APPEARANCE_MATERIAL_SHADOW, true],
+    [PREF_KEYS.APPEARANCE_MATERIAL_COLOR, 0x00000000],
+    [PREF_KEYS.APPEARANCE_LIGHT_COLOR, 0xFFFFFFFF],
 
   ]);
   private static appearance_default: Map<string, SettingValue> = new Map<string, SettingValue>([
@@ -737,6 +752,16 @@ export class AppPreference {
       AppPreference.getPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_ENABLE) as boolean;
     material_preference.app_appearance_immersive_style =
       AppPreference.getPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_STYLE) as number;
+    material_preference.app_appearance_immersive_interactive =
+      AppPreference.getPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_INTERACTIVE) as boolean;
+    material_preference.app_appearance_immersive_light_effect =
+      AppPreference.getPreference(PREF_KEYS.APPEARANCE_IMMERSIVE_LIGHT_EFFECT) as boolean;
+    material_preference.app_appearance_material_shadow =
+      AppPreference.getPreference(PREF_KEYS.APPEARANCE_MATERIAL_SHADOW) as boolean;
+    material_preference.app_appearance_material_color =
+      AppPreference.getPreference(PREF_KEYS.APPEARANCE_MATERIAL_COLOR) as number;
+    material_preference.app_appearance_light_color =
+      AppPreference.getPreference(PREF_KEYS.APPEARANCE_LIGHT_COLOR) as number;
 
   }
 
