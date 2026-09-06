@@ -547,8 +547,13 @@ export class BleTokenClient {
         }
         this.onDevicesChanged?.(this.getFoundDevices());
       });
-      // 配对状态订阅: 生命周期与扫描一致(页面存活期间持续监听)
+      // 配对状态订阅: 生命周期与扫描一致(页面存活期间持续监听);
+      // 只转发当前连接设备的事件(其他设备的配对/解绑不干扰当前连接的配对态,
+      // 页面侧据此可不对回调参数做 deviceId 严格过滤)
       connection.on('bondStateChange', (data: connection.BondStateParam) => {
+        if (data.deviceId !== this.currentDeviceId) {
+          return;
+        }
         const isBonded: boolean = data.state === connection.BondState.BOND_STATE_BONDED;
         this.bonded.set(data.deviceId, isBonded);
         hilog.info(DOMAIN, TAG, `client bond state: ${data.deviceId} -> ${isBonded}`);
@@ -647,6 +652,23 @@ export class BleTokenClient {
   }
 
   /**
+   * 查询当前连接设备的系统配对状态(bonded). 连接态下的权威判定,
+   * 不依赖配对回调时序: 配对事件偶发缺失时页面可据此兜底收敛.
+   */
+  public isCurrentDeviceBonded(): boolean {
+    if (this.currentDeviceId === '') {
+      return false;
+    }
+    try {
+      return connection.getPairState(this.currentDeviceId) === connection.BondState.BOND_STATE_BONDED;
+    } catch (err) {
+      let e: BusinessError = err as BusinessError;
+      hilog.warn(e.code, TAG, `isCurrentDeviceBonded getPairState failed: ${e.message}`);
+      return false;
+    }
+  }
+
+  /**
    * 连接指定设备(先释放旧连接).
    */
   public connect(deviceId: string): void {
@@ -655,8 +677,16 @@ export class BleTokenClient {
       this.currentDeviceId = deviceId;
       const client: ble.GattClientDevice = ble.createGattClientDevice(deviceId);
       client.on('BLEConnectionStateChange', (state: ble.BLEConnectionChangeState) => {
-        const connected: boolean = state.state === constant.ProfileConnectionState.STATE_CONNECTED;
         hilog.info(DOMAIN, TAG, `client connection state: ${state.state}`);
+        // 只上报终态: CONNECTING(1)/DISCONNECTING(3) 是过程态, 建连发起后必先
+        // 收到一次 CONNECTING; 若按 connected=false 上报, 页面会误判建连失败并
+        // 弹"手表端未就绪", 而实际随后 CONNECTED 到达、连接成功(真实失败无事件
+        // 时由调用方的建连超时兜底)
+        if (state.state !== constant.ProfileConnectionState.STATE_CONNECTED &&
+            state.state !== constant.ProfileConnectionState.STATE_DISCONNECTED) {
+          return;
+        }
+        const connected: boolean = state.state === constant.ProfileConnectionState.STATE_CONNECTED;
         if (connected) {
           // 连接后协商更大 MTU, 使 480 字节分片写入可行(setBLEMtuSize 为同步接口)
           try {

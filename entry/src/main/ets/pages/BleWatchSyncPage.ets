@@ -63,6 +63,8 @@ export struct BleWatchSyncPage {
   private scroller: Scroller = new Scroller();
   /** 建连超时定时器 ID(建连完成/失败与 aboutToDisappear 清理) */
   private connectTimeoutId: number = -1;
+  /** 配对状态轮询定时器 ID(配对成功/失败/断开与 aboutToDisappear 清理) */
+  private pairSyncTimerId: number = -1;
 
   aboutToAppear(): void {
     TokenStore.getInstance().initTokenStore().then(() => {
@@ -85,6 +87,10 @@ export struct BleWatchSyncPage {
       if (connected) {
         this.connectedDeviceId = deviceId;
         this.connectingDeviceId = '';
+        // 配对态以系统查询为准、不依赖回调时序: 连接建立即核对一次,
+        // 仍未 bonded 则启动轮询兜底(见 ensurePairStateSynced)
+        this.bonded = BleTokenClient.getInstance().isCurrentDeviceBonded();
+        this.ensurePairStateSynced(deviceId);
       } else if (this.connectingDeviceId === deviceId) {
         // 建连尝试中收到断开(含对端无响应被协议层拒绝): 立即失败, 不等超时
         this.connectingDeviceId = '';
@@ -94,24 +100,28 @@ export struct BleWatchSyncPage {
         this.connectedDeviceId = '';
         this.bonded = false;
         this.pairFailed = false;
+        this.clearPairSyncTimer();
       }
     });
-    // 配对状态: 连接后系统拉起配对流程, bonded 后才能传输 secret 载荷
-    BleTokenClient.getInstance().setOnPairChanged((deviceId: string, isBonded: boolean) => {
-      if (deviceId === this.connectedDeviceId || deviceId === this.connectingDeviceId) {
-        this.bonded = isBonded;
-        if (isBonded) {
-          this.pairFailed = false;
-        }
+    // 配对状态: 连接后系统拉起配对流程, bonded 后才能传输 secret 载荷.
+    // 客户端已只转发当前连接设备的事件, 此处不再按 deviceId 严格过滤:
+    // 回调参数与扫描结果的地址表示可能不同(随机/真实地址), 过滤会导致
+    // bonded 更新丢失、页面停留在"配对中"
+    BleTokenClient.getInstance().setOnPairChanged((_deviceId: string, isBonded: boolean) => {
+      this.bonded = isBonded;
+      if (isBonded) {
+        this.pairFailed = false;
+        this.clearPairSyncTimer();
       }
     });
-    // 配对流程失败(用户取消/系统拒绝): 提示并进入"可重试"状态
-    BleTokenClient.getInstance().setOnPairFailed((deviceId: string) => {
-      if (deviceId === this.connectedDeviceId || deviceId === this.connectingDeviceId) {
-        this.bonded = false;
-        this.pairFailed = true;
-        showSnackBar($r('app.string.watch_sync_pair_failed'), SnackBarNotifyType.WARNING);
-      }
+    // 配对流程失败(用户取消/系统拒绝): 提示并进入"可重试"状态.
+    // 该回调仅来自当前建连流程(客户端单连接设计), 与配对态回调同理不做
+    // deviceId 严格过滤, 避免地址表示差异导致"配对失败"提示丢失
+    BleTokenClient.getInstance().setOnPairFailed((_deviceId: string) => {
+      this.bonded = false;
+      this.pairFailed = true;
+      this.clearPairSyncTimer();
+      showSnackBar($r('app.string.watch_sync_pair_failed'), SnackBarNotifyType.WARNING);
     });
   }
 
@@ -155,6 +165,7 @@ export struct BleWatchSyncPage {
 
   aboutToDisappear(): void {
     this.clearConnectTimeout();
+    this.clearPairSyncTimer();
     this.stopScan();
     BleTokenClient.getInstance().disconnect();
     // 注销单例回调, 避免页面销毁后仍被触达
@@ -169,6 +180,44 @@ export struct BleWatchSyncPage {
       clearTimeout(this.connectTimeoutId);
       this.connectTimeoutId = -1;
     }
+  }
+
+  private clearPairSyncTimer(): void {
+    if (this.pairSyncTimerId !== -1) {
+      clearInterval(this.pairSyncTimerId);
+      this.pairSyncTimerId = -1;
+    }
+  }
+
+  /**
+   * 已连接未完成配对期间轮询系统配对状态(兜底): BLE 配对事件偶发缺失时,
+   * 页面会停留在"配对中"且传输被 bonded 门禁拦截. 每 1.5s 查询一次权威
+   * 状态(getPairState), 收敛即停; 20 次(约 30s)后仍无结果则退回事件驱动,
+   * 用户可断开重连触发新一轮核对.
+   */
+  private ensurePairStateSynced(deviceId: string): void {
+    this.clearPairSyncTimer();
+    if (this.bonded) {
+      return;
+    }
+    let tries: number = 0;
+    this.pairSyncTimerId = setInterval(() => {
+      if (this.connectedDeviceId !== deviceId) {
+        // 已断开/切换设备: 停止轮询
+        this.clearPairSyncTimer();
+        return;
+      }
+      if (BleTokenClient.getInstance().isCurrentDeviceBonded()) {
+        this.bonded = true;
+        this.pairFailed = false;
+        this.clearPairSyncTimer();
+        return;
+      }
+      tries++;
+      if (tries >= 20) {
+        this.clearPairSyncTimer();
+      }
+    }, 1500);
   }
 
   /** 设备显示名(广播名 → 响应包自定义名 → 系统已知名 → deviceId 兜底) */
