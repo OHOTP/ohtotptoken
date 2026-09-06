@@ -1,4 +1,4 @@
-import { dialogSystemMaterial } from 'common';
+import { dialogSystemMaterial, TokenGroup, TokenGroupStore, showSnackBar, SnackBarNotifyType } from 'common';
 import { BusinessError, systemDateTime } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { otpType, TokenConfig } from 'common';
@@ -53,6 +53,10 @@ export struct TokenItem {
   @Local menu_icon_edit: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.square_and_pencil')).fontSize('22vp');
   @Local menu_icon_copy: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.doc_text_on_doc_text')).fontSize('22vp');
   @Local menu_icon_sort: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.list_bullet')).fontSize('22vp');
+
+  @Local menu_icon_favorite: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.star')).fontSize('22vp');
+  @Local menu_icon_favorite_remove: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.star_fill')).fontSize('22vp');
+  @Local menu_icon_group: SymbolGlyphModifier = new SymbolGlyphModifier($r('sys.symbol.folder')).fontSize('22vp');
 
   private pendingMenuAction: (() => void) | undefined = undefined;
 
@@ -728,10 +732,49 @@ export struct TokenItem {
   }
 
   @Builder
+  GroupMoveMenu() {
+    Menu() {
+      MenuItem({ content: $r('app.string.token_group_ungrouped') })
+        .selected(!this.Config.TokenGroupId)
+        .onClick(() => this.requestGroupMove(''))
+      ForEach(TokenGroupStore.getInstance().state.groups, (group: TokenGroup) => {
+        MenuItem({ content: group.name })
+          .selected(this.Config.TokenGroupId === group.id)
+          .onClick(() => this.requestGroupMove(group.id))
+      }, (group: TokenGroup) => group.id)
+    }
+    .systemMaterial(dialogSystemMaterial())
+  }
+
+  private requestGroupMove(id: string): void {
+    this.requestContextMenuAction(() => {
+      tkStore.moveTokenToGroup(this.Config.TokenUUID, id).then(() => {
+        showSnackBar($r('app.string.token_group_move_success'), SnackBarNotifyType.SUCCESS);
+      }).catch(() => {
+        showSnackBar($r('app.string.token_group_error'), SnackBarNotifyType.ERROR);
+      });
+    });
+  }
+
+  @Builder
   TokenRightCtxMenu(_responseType: ResponseType) {
     Menu() {
       // NFC 外部令牌为会话级、不持久化，排序（RankScore 持久化）对其无意义，故不提供排序入口
       if (this.Config.TokenType !== otpType.NFC_external) {
+        MenuItem({ symbolStartIcon: this.Config.TokenFavorite ? this.menu_icon_favorite_remove : this.menu_icon_favorite,
+          content: this.Config.TokenFavorite ?
+          $r('app.string.token_favorite_remove') : $r('app.string.token_favorite_add') })
+          .onClick(() => this.requestContextMenuAction(() => {
+            const favorite = !this.Config.TokenFavorite;
+            tkStore.setTokenFavorite(this.Config.TokenUUID, favorite).then(() => {
+              showSnackBar(favorite ? $r('app.string.token_favorite_add_success') :
+                $r('app.string.token_favorite_remove_success'), SnackBarNotifyType.SUCCESS);
+            }).catch(() => {
+              showSnackBar($r('app.string.token_favorite_error'), SnackBarNotifyType.ERROR);
+            });
+          }))
+        MenuItem({ symbolStartIcon: this.menu_icon_group,
+          content: $r('app.string.token_group_move'), builder: () => this.GroupMoveMenu() })
         MenuItem({ symbolStartIcon: this.menu_icon_sort, content: $r('app.string.token_right_menu_sort') })
           .onClick(() => {
             this.requestContextMenuAction(() => {

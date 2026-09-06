@@ -22,6 +22,9 @@ export class TokenConfig {
   FortiToken: string;
   FortiDevID: string;
   RankScore: number;
+  /** 空值或旧数据缺失字段表示未分组。 */
+  TokenGroupId: string = '';
+  TokenFavorite: boolean = false;
   SteamMaFile: maFile | undefined = undefined;
   TokenIconPath: string | undefined = undefined;
   /** 外部OATH设备（NFC）令牌的静态验证码缓存：仅会话显示，不持久化 */

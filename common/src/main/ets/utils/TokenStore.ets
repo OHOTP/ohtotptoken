@@ -1,5 +1,6 @@
 import { KvManager } from "./KvManager";
-import { TokenConfig } from "./TokenConfig";
+import { TokenConfig, otpType } from "./TokenConfig";
+import { TokenGroupStore } from './TokenGroupStore';
 import { RdbManager } from "./RdbManager";
 import { common } from '@kit.AbilityKit';
 import { EVENT_NAMES, PREF_KEYS, AppPreference } from "./AppPreference";
@@ -81,6 +82,7 @@ export class TokenStore {
   }
 
   public async LoadTokenByDataBase(): Promise<void> {
+     await TokenGroupStore.getInstance().load();
      this.token_array = await this.kvMgr.getTokenArray(this.token_prefix)
      this.appCtx = AppStorage.get<common.UIAbilityContext>('appContext') as common.UIAbilityContext;
      await this.fillSecretsFromAsset();
@@ -224,6 +226,50 @@ export class TokenStore {
     await this.kvMgr.setValue<TokenConfig>(`${this.token_prefix}${token.TokenUUID}`, token);
   }
 
+  public async moveTokenToGroup(uuid: string, groupId: string): Promise<void> {
+    const token = this.token_array.find(item => item.TokenUUID === uuid);
+    if (!token || token.TokenType === otpType.NFC_external) {
+      return;
+    }
+    if (groupId !== '' && !TokenGroupStore.getInstance().state.groups.some(group => group.id === groupId)) {
+      throw new Error('Group no longer exists');
+    }
+    const previous = token.TokenGroupId;
+    token.TokenGroupId = groupId;
+    try {
+      await this.saveTokenKvOnly(token);
+    } catch (error) {
+      token.TokenGroupId = previous;
+      throw new Error((error as BusinessError).message);
+    }
+    this.emitTokenChanged();
+  }
+
+  public async setTokenFavorite(uuid: string, favorite: boolean): Promise<void> {
+    const token = this.token_array.find(item => item.TokenUUID === uuid);
+    if (!token || token.TokenType === otpType.NFC_external) {
+      return;
+    }
+    const previous = token.TokenFavorite;
+    token.TokenFavorite = favorite;
+    try {
+      await this.saveTokenKvOnly(token);
+    } catch (error) {
+      token.TokenFavorite = previous;
+      throw new Error((error as BusinessError).message);
+    }
+    this.emitTokenChanged();
+  }
+
+  public async deleteGroup(id: string): Promise<void> {
+    // 先归还令牌，再删除目录；中断时目录仍存在，可安全重试。
+    for (const token of this.token_array.filter(item => item.TokenGroupId === id)) {
+      await this.moveTokenToGroup(token.TokenUUID, '');
+    }
+    await TokenGroupStore.getInstance().remove(id);
+    this.emitTokenChanged();
+  }
+
   public async updateTokenRank(from: number, to: number): Promise<void> {
     this.token_array[from].RankScore = to;
     await this.saveTokenKvOnly(this.token_array[from]);
@@ -243,6 +289,8 @@ export class TokenStore {
 
   public async updateToken(token: TokenConfig): Promise<void> {
     const token_new = token;
+    token_new.TokenGroupId = token_new.TokenGroupId ?? '';
+    const previousGroupId = this.token_array.find(item => item.TokenUUID === token.TokenUUID)?.TokenGroupId ?? '';
     const token_uuids = this.token_array.map(t => t.TokenUUID);
     if (!token_uuids.includes(token_new.TokenUUID)) {
       token_new.RankScore = this.token_array.length;
@@ -250,10 +298,15 @@ export class TokenStore {
     } else {
       const token_index = token_uuids.findIndex(uuid => uuid === token_new.TokenUUID);
       token_new.RankScore = this.token_array[token_index].RankScore;
+      // 编辑表单重建 TokenConfig 时保留本地收藏状态；收藏操作走独立元数据入口。
+      token_new.TokenFavorite = this.token_array[token_index].TokenFavorite === true;
       this.token_array[token_index] = token_new;
     }
     await this.saveToken(token_new);
     this.emitTokenSingleUpdated(token_new);
+    if (previousGroupId !== token_new.TokenGroupId) {
+      this.emitTokenChanged();
+    }
   }
 
   public async deleteToken(token_uuid: string): Promise<void> {

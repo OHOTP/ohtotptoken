@@ -3,6 +3,7 @@ import { AppPreference, PREF_KEYS } from './AppPreference';
 import { CloudBackupCrypto, CloudBackupRecord, CloudBackupTokenError } from './CloudBackupCrypto';
 import { TokenStore } from './TokenStore';
 import { TokenConfig } from './TokenConfig';
+import { TokenGroup, TokenGroupStore } from './TokenGroupStore';
 import { fileIo as fs, cloudSync, fileUri } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
 import { buffer } from '@kit.ArkTS';
@@ -24,6 +25,7 @@ const BACKUP_FILE_EXT = '.enc';
  */
 class CloudBackupPayload {
   tokens: TokenConfig[] = [];
+  groups: TokenGroup[] = [];
   enabledPacks: string[] = [];
   packMeta: PackMetaEntry[] = [];
 }
@@ -139,6 +141,7 @@ export class CloudBackupManager {
     const enabledPacks = TokenIconPacks.enabled_packs;
     const payload = new CloudBackupPayload();
     payload.tokens = tokens;
+    payload.groups = [...TokenGroupStore.getInstance().state.groups];
     payload.enabledPacks = enabledPacks;
     const metaList: PackMetaEntry[] = [];
     for (const p of TokenIconPacks.aegis_icon_packs) {
@@ -417,6 +420,7 @@ export class CloudBackupManager {
       const payload = JSON.parse(decrypted) as CloudBackupPayload;
       if (payload && payload.tokens !== undefined && payload.tokens !== null) {
         tokens = payload.tokens;
+        await TokenGroupStore.getInstance().merge(payload.groups);
         if (payload.enabledPacks !== undefined && payload.enabledPacks !== null) {
           enabledPacks = payload.enabledPacks;
         }

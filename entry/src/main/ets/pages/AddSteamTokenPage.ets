@@ -1,4 +1,5 @@
 import { MaterialTheme } from '../components/MaterialTheme';
+import { TokenGroupSelect } from '../components/TokenGroupSelect';
 import { AppWindowInfo, EVENT_NAMES, maFile, otpType, readFileContent, ROUTE_NAMES, ScanBarCode,
   showSelectFilePicker, showSnackBar, SnackBarNotifyType, TokenConfig } from 'common';
 import { AppStorageV2 } from '@kit.ArkUI';
@@ -29,6 +30,7 @@ export struct AddSteamTokenPage {
   @Local issuer: string = 'Steam';
   @Local accountName: string = '';
   @Local iconPath: string = '';
+  @Local groupId: string = '';
   @Local isSaving: boolean = false;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
 
@@ -46,6 +48,7 @@ export struct AddSteamTokenPage {
     this.issuer = editConfig.TokenIssuer;
     this.accountName = editConfig.TokenName;
     this.iconPath = editConfig.TokenIconPath ?? '';
+    this.groupId = editConfig.TokenGroupId ?? '';
     this.steamMaFile = editConfig.SteamMaFile;
   }
 
@@ -141,6 +144,7 @@ export struct AddSteamTokenPage {
       conf.TokenUUID = this.activeEditConfig.TokenUUID;
     }
     conf.TokenIconPath = this.iconPath;
+    conf.TokenGroupId = this.groupId;
     conf.SteamMaFile = this.steamMaFile;
     const ok = await this.saveToken(conf);
     this.isSaving = false;
@@ -207,6 +211,8 @@ export struct AddSteamTokenPage {
                   value: this.accountName,
                   onChange: (value: string) => this.accountName = value
                 })
+                Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
+                TokenGroupSelect({ groupId: this.groupId, onChange: (id: string) => this.groupId = id })
               }
               .padding(ADD_TOKEN_SECTION_PADDING).width('100%')
               .borderRadius(ADD_TOKEN_SECTION_RADIUS)

@@ -22,6 +22,7 @@ function EmptyBuilder() {
 @ComponentV2
 export struct HomeTabs {
   @Require @Param tokens: TokenConfig[] = [];
+  @Param groupFiltered: boolean = false;
   @Require @Param window: AppWindowInfo = new AppWindowInfo();
   /** 底部页签类型（悬浮/平铺），由 Index 监听 BOTTOM_TABS_TYPE_CHANGED 事件驱动更新 */
   @Require @Param bottomTabsType: SettingBottomTabsType = SettingBottomTabsType.SUSPENSION;
@@ -36,6 +37,7 @@ export struct HomeTabs {
   @Param selectedTokenUUID: string = '';
   @Event onSelectToken: (conf: TokenConfig) => void = () => {};
   @Event onTabChange: (index: number) => void = () => {};
+  @Event onTokenListScroll: (offset: number) => void = () => {};
 
   // [冷启动优化] Setting Tab 懒加载标志,仅在用户首次切换到"我的"Tab 时构建组件树
   @Local settingTabInitialized: boolean = false;
@@ -57,6 +59,7 @@ export struct HomeTabs {
       PageScaffold() {
         TokenListPage({
           Tokens: this.tokens,
+          groupFiltered: this.groupFiltered,
           TabBarVisible: false,
           appBottomAvoidHeight: this.window.AvoidBottomHeight,
           appTopAvoidHeight: this.window.AvoidTopHeight,
@@ -65,6 +68,7 @@ export struct HomeTabs {
           updateTokenConfig: this.updateTokenConfig,
           updateTokenConfigs: this.updateTokenConfigs,
           listScroller: this.tokenListScroller,
+          onListScroll: (offset: number) => this.onTokenListScroll(offset),
           splitSelectionMode: false,
           selectedTokenUUID: this.selectedTokenUUID,
           onSelectToken: (conf: TokenConfig) => this.onSelectToken(conf)
@@ -76,6 +80,7 @@ export struct HomeTabs {
           TabContent() {
             TokenListPage({
               Tokens: this.tokens,
+              groupFiltered: this.groupFiltered,
               TabBarVisible: !this.window.UseSideNavigation,
               appBottomAvoidHeight: this.window.AvoidBottomHeight,
               appTopAvoidHeight: this.window.AvoidTopHeight,
@@ -84,6 +89,7 @@ export struct HomeTabs {
               updateTokenConfig: this.updateTokenConfig,
               updateTokenConfigs: this.updateTokenConfigs,
               listScroller: this.tokenListScroller,
+              onListScroll: (offset: number) => this.onTokenListScroll(offset),
               splitSelectionMode: this.window.AllowSplit,
               selectedTokenUUID: this.selectedTokenUUID,
               onSelectToken: (conf: TokenConfig) => this.onSelectToken(conf)
@@ -137,6 +143,7 @@ export struct HomeTabs {
         .clip(false)
         .backgroundColor($r('app.color.window_background'))
         .layoutWeight(1)
+        .width('100%')
         .barOverlap(!this.window.UseSideNavigation)
         .barBackgroundColor(Color.Transparent)
         .barBackgroundBlurStyle(this.window.UseSideNavigation ? BlurStyle.NONE : BlurStyle.Regular)
@@ -170,6 +177,8 @@ export struct HomeTabs {
           }
         })
       }
+      .width('100%')
+      .height('100%')
     }
   }
 }

@@ -1,4 +1,5 @@
 import { MaterialTheme } from '../components/MaterialTheme';
+import { TokenGroupSelect } from '../components/TokenGroupSelect';
 import { AppWindowInfo, EVENT_NAMES, HMACAlgorithm, otpType, ROUTE_NAMES, ScanBarCode, showSnackBar,
   SnackBarNotifyType, TokenConfig } from 'common';
 import { AppStorageV2 } from '@kit.ArkUI';
@@ -34,6 +35,7 @@ export struct AddTotpTokenPage {
   @Local period: number = 30;
   @Local counter: number = 0;
   @Local iconPath: string = '';
+  @Local groupId: string = '';
   @Local isSaving: boolean = false;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
 
@@ -56,6 +58,7 @@ export struct AddTotpTokenPage {
     this.period = editConfig.TokenPeriod;
     this.counter = editConfig.TokenCounter;
     this.iconPath = editConfig.TokenIconPath ?? '';
+    this.groupId = editConfig.TokenGroupId ?? '';
   }
 
   aboutToAppear(): void {
@@ -171,6 +174,7 @@ export struct AddTotpTokenPage {
       conf.TokenUUID = this.activeEditConfig.TokenUUID;
     }
     conf.TokenIconPath = this.iconPath;
+    conf.TokenGroupId = this.groupId;
     const ok = await this.saveToken(conf);
     this.isSaving = false;
     if (ok && !(this.window.AllowSplit && this.pageParams.editConfig !== undefined)) {
@@ -227,6 +231,8 @@ export struct AddTotpTokenPage {
                   value: this.accountName,
                   onChange: (value: string) => this.accountName = value
                 })
+                Divider().color($r('sys.color.comp_divider')).strokeWidth(0.5)
+                TokenGroupSelect({ groupId: this.groupId, onChange: (id: string) => this.groupId = id })
               }
               .padding(ADD_TOKEN_SECTION_PADDING)
               .width('100%')

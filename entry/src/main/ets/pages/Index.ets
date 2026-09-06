@@ -10,7 +10,7 @@ import { AppPreference, SettingTopEffectType, SettingBottomTabsType, EVENT_NAMES
 import lazy { privacyManager } from '@kit.StoreKit';
 import { hilog, hiTraceMeter } from '@kit.PerformanceAnalysisKit';
 import CommonEventManager from '@ohos.commonEventManager';
-import { TokenStore } from 'common';
+import { TokenStore, TokenGroupState, TokenGroupStore, ALL_TOKEN_GROUPS, FAVORITE_TOKEN_GROUP } from 'common';
 // [冷启动优化] 权限检查仅在 deferredInit 中使用
 import lazy { PermissionManager } from 'common';
 // [冷启动优化] 拖拽弹框仅在 onDragEnter 时触发
@@ -173,6 +173,46 @@ function TokenSortMenuBuilder(host: Index) {
 @ComponentV2
 struct Index {
   @Local CurrentTokens: TokenConfig[] = [];
+  @Local groupState: TokenGroupState = TokenGroupStore.getInstance().state;
+  @Local groupSidebarOpen: boolean = false;
+  @Local tokenTitleCollapse: number = 0;
+
+  onBackPress(): boolean {
+    if (this.groupSidebarOpen && !this.isAppLockOverlayVisible) {
+      this.groupSidebarOpen = false;
+      return true;
+    }
+    return false;
+  }
+
+  @Computed
+  get displayTokens(): TokenConfig[] {
+    if (this.groupState.selectedId === ALL_TOKEN_GROUPS) {
+      return this.CurrentTokens;
+    }
+    if (this.groupState.selectedId === FAVORITE_TOKEN_GROUP) {
+      return this.CurrentTokens.filter(token => token.TokenType !== otpType.NFC_external && token.TokenFavorite === true);
+    }
+    return this.CurrentTokens.filter(token => {
+      const id = token.TokenType === otpType.NFC_external ? '' : (token.TokenGroupId ?? '');
+      const knownId = this.groupState.groups.some(group => group.id === id) ? id : '';
+      return knownId === this.groupState.selectedId;
+    });
+  }
+
+  private selectGroup(id: string): void {
+    if (id === this.groupState.selectedId) {
+      return;
+    }
+    this.groupState.selectedId = id;
+    this.tokenTitleCollapse = 0;
+    this.tokenListScroller.scrollTo({ xOffset: 0, yOffset: 0 });
+    if (this.selectedTokenUUID !== '' &&
+      !this.displayTokens.some(token => token.TokenUUID === this.selectedTokenUUID)) {
+      this.selectedTokenUUID = '';
+      this.pageInfos.clear();
+    }
+  }
   @Local tokenSortMode: TokenListSortMode = TokenListSortMode.DEFAULT;
   @Local token_loading: Boolean = true;
   @Local window: AppWindowInfo = AppStorageV2.connect(AppWindowInfo) as AppWindowInfo;
@@ -753,6 +793,7 @@ struct Index {
   }
 
   private openFullScreenRoute(name: ROUTE_NAMES, param: Object | null): void {
+    this.groupSidebarOpen = false;
     this.pageInfos.pushPathByName(name, param);
     this.businessSplitEnabled = false;
   }
@@ -1065,7 +1106,9 @@ struct Index {
   @Builder
   HomeContentBuilder() {
     HomeTabs({
-      tokens: this.CurrentTokens,
+      onTokenListScroll: (offset: number) => { this.tokenTitleCollapse = Math.min(1, Math.max(0, offset / 56)); },
+      tokens: this.displayTokens,
+      groupFiltered: this.groupState.selectedId !== ALL_TOKEN_GROUPS,
       window: this.window,
       bottomTabsType: this.currentBottomTabsType,
       currentTabIndex: this.currentHomeTabIndex,
@@ -1099,6 +1142,10 @@ struct Index {
         applockVisible: this.isAppLockOverlayVisible,
         scrollEffectType: this.currentScrollEffectType,
         currentHomeTabIndex: this.currentHomeTabIndex,
+        onSelectGroup: (id: string) => this.selectGroup(id),
+        groupSidebarOpen: this.groupSidebarOpen,
+        tokenTitleCollapse: this.tokenTitleCollapse,
+        $groupSidebarOpen: (open: boolean) => { this.groupSidebarOpen = open; },
         window: this.window,
         businessSplitEnabled: this.businessSplitEnabled,
         tokenListScroller: this.tokenListScroller,

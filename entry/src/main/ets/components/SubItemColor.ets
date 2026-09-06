@@ -18,6 +18,7 @@ export struct SubItemColor {
   @Param disable: boolean = false;
   @Param icon: Resource | undefined = undefined;
   @Param description: string | Resource = '';
+  @Param rowPadding: Padding = SETTING_ROW_PADDING;
 
   private dialog_color_picker?: CustomDialogController;
 
@@ -122,7 +123,7 @@ export struct SubItemColor {
       .alignItems(HorizontalAlign.End)
     }
     .width('100%')
-    .padding(SETTING_ROW_PADDING)
+    .padding(this.rowPadding)
     .constraintSize({ minHeight: SETTING_ROW_MIN_HEIGHT })
     .alignItems(VerticalAlign.Center)
     .enabled(!this.disable)
