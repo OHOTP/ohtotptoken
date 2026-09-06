@@ -438,6 +438,8 @@ export enum ROUTE_NAMES {
   IconPickerPage = 'IconPickerPage',
   /** 手表同步页面 */
   WatchSyncPage = 'WatchSyncPage',
+  /** 手表同步(BLE)验证页面 */
+  BleWatchSyncPage = 'BleWatchSyncPage',
   /** “我的”页华为账号详情 */
   SettingAccount = 'setting/account',
   /** “我的”页备份与迁移详情 */

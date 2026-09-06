@@ -1,7 +1,7 @@
 import { QRCodeDialog } from 'uikit';
 import { TokenPreference, EVENT_NAMES } from 'common';
 import { TokenConfig, TokenIconPacks } from 'common';
-import { TokenStore, WearEngineServer, convertToken2URI } from 'common';
+import { TokenStore, WearEngineServer, BleTokenServer, BleSyncStatus, WearEngineClient, BluetoothPermissionResult, convertToken2URI } from 'common';
 import { systemDateTime } from '@kit.BasicServicesKit';
 import { AppStorageV2, ArcList, ArcListItem, LengthMetrics } from "@kit.ArkUI";
 import { common } from '@kit.AbilityKit';
@@ -28,26 +28,53 @@ export struct ArcTokenListPage {
   private timestampIntervalId: number = -1;
   /** 页面可见性: 不可见时暂停广播以省电, 回前台时 force 刷新一次 */
   private appIsShow: boolean = true;
+  /** TOKEN_CHANGED 事件处理器引用(aboutToDisappear 注销) */
+  private onTokenChangedHandler: () => void = () => {};
+  /** bleStatus 3 秒复位定时器 ID(aboutToDisappear 清理) */
+  private bleStatusTimerId: number = -1;
 
   aboutToAppear(): void {
     // token 数据变更(增删改/同步完成)时全量刷新列表
     if (this.appCtx.eventHub != undefined) {
-      this.appCtx.eventHub.on(EVENT_NAMES.TOKEN_CHANGED, () => this.onTokenChanged());
+      this.onTokenChangedHandler = () => this.onTokenChanged();
+      this.appCtx.eventHub.on(EVENT_NAMES.TOKEN_CHANGED, this.onTokenChangedHandler);
     }
     // BLE 接收完成回调: 刷新列表 + 显示接收提示 3 秒后复位
     WearEngineServer.getInstance().setOnTokensSaved(async (count: number) => {
       await this.onTokenChanged();
-      this.bleStatus = $r('app.string.app_wearable_ble_received');
-      setTimeout(() => {
-        this.bleStatus = undefined;
-      }, 3000);
+      this.showBleStatus($r('app.string.app_wearable_ble_received'));
     });
     // 设置应用完成回调: 显示设置已同步提示 3 秒后复位
     WearEngineServer.getInstance().setOnSettingsApplied(() => {
-      this.bleStatus = $r('app.string.app_wearable_ble_settings_done');
-      setTimeout(() => {
-        this.bleStatus = undefined;
-      }, 3000);
+      this.showBleStatus($r('app.string.app_wearable_ble_settings_done'));
+    });
+    // BLE 通道接收状态(接收中/成功/失败): 与 P2P 回调共用 bleStatus 状态区,
+    // 语义为最后事件胜出(showBleStatus 重置 3 秒复位计时); 列表刷新由 onTokensSaved 驱动
+    BleTokenServer.getInstance().setOnTokensSaved(async (count: number) => {
+      await this.onTokenChanged();
+    });
+    BleTokenServer.getInstance().setOnSettingsApplied(() => {
+      this.showBleStatus($r('app.string.app_wearable_ble_settings_done'));
+    });
+    BleTokenServer.getInstance().setOnSyncStatus((status: BleSyncStatus) => {
+      if (status === BleSyncStatus.RECEIVING) {
+        this.showBleStatus($r('app.string.app_wearable_ble_receiving'));
+      } else if (status === BleSyncStatus.SUCCESS) {
+        this.showBleStatus($r('app.string.app_wearable_ble_received'));
+      } else {
+        this.showBleStatus($r('app.string.app_wearable_ble_failed'));
+      }
+    });
+    // BLE GATT Server 依赖 ACCESS_BLUETOOTH(user_grant): 先查后申请,
+    // 授权成功后启动(幂等, 已启动/启动中则收敛); 失败仅记日志, 不影响 P2P 通道
+    WearEngineClient.getInstance().requestBluetoothPermission().then((result: BluetoothPermissionResult) => {
+      if (result === BluetoothPermissionResult.GRANTED) {
+        BleTokenServer.getInstance().start();
+      } else {
+        hilog.warn(0x0000, 'ArcTokenListPage', `ACCESS_BLUETOOTH result ${result}, BLE receive unavailable`);
+      }
+    }).catch((err: BusinessError) => {
+      hilog.error(err.code, 'ArcTokenListPage', `requestBluetoothPermission failed: ${err.message}`);
     });
     this.onTokenChanged();
 
@@ -65,6 +92,31 @@ export struct ArcTokenListPage {
       clearInterval(this.timestampIntervalId);
       this.timestampIntervalId = -1;
     }
+    if (this.bleStatusTimerId !== -1) {
+      clearTimeout(this.bleStatusTimerId);
+      this.bleStatusTimerId = -1;
+    }
+    if (this.appCtx.eventHub != undefined) {
+      this.appCtx.eventHub.off(EVENT_NAMES.TOKEN_CHANGED, this.onTokenChangedHandler);
+    }
+    // 注销 WearEngineServer/BleTokenServer 单例回调, 避免页面销毁后仍被触达
+    WearEngineServer.getInstance().setOnTokensSaved(undefined);
+    WearEngineServer.getInstance().setOnSettingsApplied(undefined);
+    BleTokenServer.getInstance().setOnTokensSaved(undefined);
+    BleTokenServer.getInstance().setOnSettingsApplied(undefined);
+    BleTokenServer.getInstance().setOnSyncStatus(undefined);
+  }
+
+  /** 显示同步状态提示, 3 秒后复位(重复触发时重置计时) */
+  showBleStatus(status: Resource): void {
+    this.bleStatus = status;
+    if (this.bleStatusTimerId !== -1) {
+      clearTimeout(this.bleStatusTimerId);
+    }
+    this.bleStatusTimerId = setTimeout(() => {
+      this.bleStatus = undefined;
+      this.bleStatusTimerId = -1;
+    }, 3000);
   }
 
   onPageShow(): void {

@@ -442,6 +442,12 @@ export struct TokenItem {
                 .color(this.TokenLeftPeriod <= this.token_color_change_threshold ?
                   this.token_progress_color_near_next :
                   this.token_progress_color_normal)
+              // 线性进度没有右侧进度环, 剩余秒数补在进度条下方(与环内数字等价, 避免倒计时不可见)
+              Text(this.TokenLeftPeriod.toString())
+                .textAlign(TextAlign.End)
+                .width(this.tokenNumberWidth)
+                .fontColor($r('app.color.str_gray'))
+                .fontSize(10)
             }
             if (this.Config.TokenType == otpType.HOTP) {
               Text(this.TokenCounter + (this.token_preference.app_appearance_show_next_token_enable ? ":" + this.TokenNumberNext : ""))

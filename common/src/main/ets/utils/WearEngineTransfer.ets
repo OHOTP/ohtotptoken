@@ -73,9 +73,57 @@ export const WEAR_SYNC_PREF_KEYS: string[] = [
 ];
 
 /** 设置同步载荷项 */
-interface SettingValuePair {
+export interface SettingValuePair {
   key: string;
   value: SettingValue;
+}
+
+/**
+ * 令牌批次入库(P2P/BLE 两通道共享): 按 issuer+name 匹配本地令牌并复用其 UUID,
+ * 逐条 upsert(内部完成 TokenSecret 双写 ASSET + 加密 KV)后全量重排序.
+ *
+ * 手机端与手表端令牌 UUID 不同(各端独立生成), 直接 updateToken 会按 UUID 判为
+ * 新增导致重复令牌; 复用本地 UUID 同时维持排序/删除等引用的稳定性.
+ *
+ * @returns 入库令牌数
+ */
+export async function saveTokensBatch(tokens: TokenConfig[]): Promise<number> {
+  const tkStore: TokenStore = TokenStore.getInstance();
+  const existing = await tkStore.getTokens();
+  for (let i = 0; i < tokens.length; i++) {
+    for (let j = 0; j < existing.length; j++) {
+      if (existing[j].TokenIssuer === tokens[i].TokenIssuer &&
+        existing[j].TokenName === tokens[i].TokenName) {
+        tokens[i].TokenUUID = existing[j].TokenUUID;
+        break;
+      }
+    }
+  }
+  for (let i = 0; i < tokens.length; i++) {
+    await tkStore.updateToken(tokens[i]);
+  }
+  tkStore.sortTokens();
+  return tokens.length;
+}
+
+/**
+ * 应用手机端下发的设置载荷(P2P/BLE 两通道共享): 仅应用 WEAR_SYNC_PREF_KEYS
+ * 白名单内的键(防手机端扩展键误写入手表), 逐键写入后刷新 TokenPreference
+ * (@Trace 字段), 手表 UI 立即按新设置重绘.
+ *
+ * @returns 实际应用的键数
+ */
+export async function applyWearSettings(pairs: Array<SettingValuePair>): Promise<number> {
+  let applied: number = 0;
+  for (let i = 0; i < pairs.length; i++) {
+    if (WEAR_SYNC_PREF_KEYS.includes(pairs[i].key)) {
+      AppPreference.setPreference(pairs[i].key, pairs[i].value);
+      applied++;
+    }
+  }
+  AppPreference.loadTokenAppearance();
+  hilog.info(DOMAIN, TAG, `wear settings applied: ${applied}/${pairs.length} keys`);
+  return applied;
 }
 
 /**
@@ -363,13 +411,13 @@ export class WearEngineServer {
     return WearEngineServer.instance;
   }
 
-  /** 注册令牌入库完成回调(UI 提示用) */
-  public setOnTokensSaved(cb: (count: number) => void): void {
+  /** 注册令牌入库完成回调(UI 提示用); 传 undefined 注销 */
+  public setOnTokensSaved(cb: ((count: number) => void) | undefined): void {
     this.onTokensSaved = cb;
   }
 
-  /** 注册设置应用完成回调(UI 提示用) */
-  public setOnSettingsApplied(cb: () => void): void {
+  /** 注册设置应用完成回调(UI 提示用); 传 undefined 注销 */
+  public setOnSettingsApplied(cb: (() => void) | undefined): void {
     this.onSettingsApplied = cb;
   }
 
@@ -489,44 +537,21 @@ export class WearEngineServer {
       const decoder = new util.TextDecoder('utf-8');
       const tokens = JSON.parse(decoder.decodeToString(plain)) as TokenConfig[];
       hilog.info(DOMAIN, TAG, `received ${tokens.length} tokens, saving...`);
-      const tkStore: TokenStore = TokenStore.getInstance();
-      // 已存在令牌覆盖: 按 issuer+name 匹配本地令牌, 复用本地 TokenUUID 更新
-      const existing = await tkStore.getTokens();
-      for (let i = 0; i < tokens.length; i++) {
-        for (let j = 0; j < existing.length; j++) {
-          if (existing[j].TokenIssuer === tokens[i].TokenIssuer &&
-            existing[j].TokenName === tokens[i].TokenName) {
-            tokens[i].TokenUUID = existing[j].TokenUUID;
-            break;
-          }
-        }
-      }
-      for (let i = 0; i < tokens.length; i++) {
-        await tkStore.updateToken(tokens[i]);
-      }
-      tkStore.sortTokens();
-      this.onTokensSaved?.(tokens.length);
+      // 共享入库: issuer+name 覆盖、updateToken(ASSET 双写)、sortTokens
+      const saved = await saveTokensBatch(tokens);
+      this.onTokensSaved?.(saved);
     } catch (err) {
       const e = err as BusinessError;
       hilog.error(e.code, TAG, `assembleAndDispatch failed: ${e.message}`);
     }
   }
 
-  /** 应用手机端下发的设置载荷(白名单过滤后写入手表 Preferences) */
+  /** 应用手机端下发的设置载荷(白名单过滤后写入手表 Preferences, 共享实现) */
   private async applySettings(plain: Uint8Array): Promise<void> {
     try {
       const decoder = new util.TextDecoder('utf-8');
       const pairs = JSON.parse(decoder.decodeToString(plain)) as Array<SettingValuePair>;
-      let applied: number = 0;
-      for (let i = 0; i < pairs.length; i++) {
-        if (WEAR_SYNC_PREF_KEYS.includes(pairs[i].key)) {
-          AppPreference.setPreference(pairs[i].key, pairs[i].value);
-          applied++;
-        }
-      }
-      // 刷新 TokenPreference(@Trace 字段), 手表 UI 立即按新设置重绘
-      AppPreference.loadTokenAppearance();
-      hilog.info(DOMAIN, TAG, `settings applied: ${applied}/${pairs.length} keys`);
+      await applyWearSettings(pairs);
       this.onSettingsApplied?.();
     } catch (err) {
       const e = err as BusinessError;

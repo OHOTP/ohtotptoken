@@ -8,6 +8,7 @@
     "pages/ShowCloudBackupHistoryPage",
     "pages/WebPage",
     "pages/TokenCardConfigPage",
-    "pages/WatchSyncPage"
+    "pages/WatchSyncPage",
+    "pages/BleWatchSyncPage"
   ]
 }

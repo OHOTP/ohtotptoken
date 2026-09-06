@@ -1147,7 +1147,11 @@
     },
     {
       "name": "watch_sync_title",
-      "value": "手表同步"
+      "value": "手表同步（P2P）"
+    },
+    {
+      "name": "watch_sync_title_ble",
+      "value": "手表同步（BLE）"
     },
     {
       "name": "watch_sync_connect_section",
@@ -1166,28 +1170,20 @@
       "value": "扫描"
     },
     {
-      "name": "watch_sync_scanning",
-      "value": "扫描中…"
-    },
-    {
       "name": "watch_sync_scan_hint",
       "value": "点击扫描查找附近手表"
     },
     {
-      "name": "watch_sync_connect",
-      "value": "连接"
-    },
-    {
-      "name": "watch_sync_reconnect",
-      "value": "重连"
+      "name": "watch_sync_scanning",
+      "value": "扫描中…"
     },
     {
       "name": "watch_sync_connecting",
       "value": "连接中…"
     },
     {
-      "name": "watch_sync_not_connected_warn",
-      "value": "请先连接手表"
+      "name": "watch_sync_connect",
+      "value": "连接"
     },
     {
       "name": "watch_sync_pairing",
@@ -1196,6 +1192,14 @@
     {
       "name": "watch_sync_pair_failed",
       "value": "配对失败，请重试"
+    },
+    {
+      "name": "watch_sync_not_connected_warn",
+      "value": "请先连接手表"
+    },
+    {
+      "name": "watch_sync_watch_not_ready",
+      "value": "手表端未就绪，请重试"
     },
     {
       "name": "watch_sync_token_list",
@@ -1239,23 +1243,31 @@
     },
     {
       "name": "setting_watch_sync",
-      "value": "手表同步"
+      "value": "手表同步（P2P）"
+    },
+    {
+      "name": "setting_watch_sync_ble",
+      "value": "手表同步（BLE）"
     },
     {
       "name": "app_wearable_ble_waiting",
       "value": "等待手机端同步"
     },
     {
+      "name": "app_wearable_ble_receiving",
+      "value": "正在接收令牌…"
+    },
+    {
       "name": "app_wearable_ble_received",
       "value": "已接收令牌，正在刷新"
     },
     {
-      "name": "app_wearable_ble_settings_done",
-      "value": "设置已同步"
+      "name": "app_wearable_ble_failed",
+      "value": "接收失败，请在手机端重发"
     },
     {
-      "name": "app_wearable_ble_server_failed",
-      "value": "蓝牙接收服务启动失败"
+      "name": "app_wearable_ble_settings_done",
+      "value": "设置已同步"
     },
     {
       "name": "ble_access_permission_reason",

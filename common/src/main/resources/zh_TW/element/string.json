@@ -1147,7 +1147,11 @@
     },
     {
       "name": "watch_sync_title",
-      "value": "手錶同步"
+      "value": "手錶同步（P2P）"
+    },
+    {
+      "name": "watch_sync_title_ble",
+      "value": "手錶同步（BLE）"
     },
     {
       "name": "watch_sync_connect_section",
@@ -1166,28 +1170,20 @@
       "value": "掃描"
     },
     {
-      "name": "watch_sync_scanning",
-      "value": "掃描中…"
-    },
-    {
       "name": "watch_sync_scan_hint",
       "value": "點擊掃描查找附近手錶"
     },
     {
-      "name": "watch_sync_connect",
-      "value": "連接"
-    },
-    {
-      "name": "watch_sync_reconnect",
-      "value": "重新連接"
+      "name": "watch_sync_scanning",
+      "value": "掃描中…"
     },
     {
       "name": "watch_sync_connecting",
-      "value": "連接中…"
+      "value": "連線中…"
     },
     {
-      "name": "watch_sync_not_connected_warn",
-      "value": "請先連接手錶"
+      "name": "watch_sync_connect",
+      "value": "連接"
     },
     {
       "name": "watch_sync_pairing",
@@ -1196,6 +1192,14 @@
     {
       "name": "watch_sync_pair_failed",
       "value": "配對失敗，請重試"
+    },
+    {
+      "name": "watch_sync_not_connected_warn",
+      "value": "請先連接手錶"
+    },
+    {
+      "name": "watch_sync_watch_not_ready",
+      "value": "手錶端未就緒，請重試"
     },
     {
       "name": "watch_sync_token_list",
@@ -1239,23 +1243,31 @@
     },
     {
       "name": "setting_watch_sync",
-      "value": "手錶同步"
+      "value": "手錶同步（P2P）"
+    },
+    {
+      "name": "setting_watch_sync_ble",
+      "value": "手錶同步（BLE）"
     },
     {
       "name": "app_wearable_ble_waiting",
       "value": "等待手機端同步"
     },
     {
+      "name": "app_wearable_ble_receiving",
+      "value": "正在接收令牌…"
+    },
+    {
       "name": "app_wearable_ble_received",
       "value": "已接收令牌，正在刷新"
     },
     {
-      "name": "app_wearable_ble_settings_done",
-      "value": "設定已同步"
+      "name": "app_wearable_ble_failed",
+      "value": "接收失敗，請在手機端重發"
     },
     {
-      "name": "app_wearable_ble_server_failed",
-      "value": "藍牙接收服務啟動失敗"
+      "name": "app_wearable_ble_settings_done",
+      "value": "設定已同步"
     },
     {
       "name": "ble_access_permission_reason",

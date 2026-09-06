@@ -39,16 +39,6 @@
           "when": "inuse"
         },
         "reason": "$string:ble_access_permission_reason"
-      },
-      {
-        "name": "ohos.permission.DISTRIBUTED_DATASYNC",
-        "reason": "$string:distributed_data_sync",
-        "usedScene": {
-          "abilities": [
-            "EntryAbility"
-          ],
-          "when": "always"
-        }
       }
     ],
     "deliveryWithInstall": true,

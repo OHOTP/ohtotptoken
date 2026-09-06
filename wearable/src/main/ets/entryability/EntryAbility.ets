@@ -6,7 +6,7 @@ import {
 } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppStorageV2, window } from '@kit.ArkUI';
-import { AppPreference, AppWindowInfo, TokenStore, WearEngineServer } from 'common';
+import { AppPreference, AppWindowInfo, TokenStore, WearEngineServer, BleTokenServer } from 'common';
 import { wearEngine } from '@kit.WearEngine';
 
 const TAG: string = 'WearableEntry';
@@ -38,7 +38,7 @@ export default class EntryAbility extends UIAbility {
 
       await AppPreference.loadSettings();
 
-      // 后台初始化: TokenStore(ASSET 回填) → Wear Engine P2P 接收注册
+      // 后台初始化: TokenStore(ASSET 回填) → P2P 接收注册与 BLE GATT Server 并行就绪
       // 不阻塞首帧渲染; 失败仅记日志(initDataSync 内部 catch)
       this.initDataSync();
 
@@ -87,22 +87,43 @@ export default class EntryAbility extends UIAbility {
   }
 
   /**
-   * 手表端初始化链路: TokenStore 初始化 → Wear Engine P2P 消息接收注册.
+   * 手表端初始化链路: TokenStore 初始化 → P2P 接收注册与 BLE GATT Server 并行就绪.
    *
    * 分布式 KV 同步方案已废弃(数据库安全等级 S4 无法同步到 SL1 手表),
-   * 令牌改由 Wear Engine 应用间消息通信下发(手机 WatchSyncPage → P2P → TokenStore → ASSET).
+   * 令牌改由手机端手动下发: Wear Engine P2P(WatchSyncPage)与 BLE GATT(BleWatchSyncPage)
+   * 两条通道并行常驻、互不阻塞, 入库均走 WearEngineTransfer 共享实现.
    */
   private async initDataSync(): Promise<void> {
+    // 两通道入库均依赖 TokenStore 就绪(kvMgr/ASSET 回填), 必须先行初始化
     try {
-      // 必须先初始化 TokenStore(kvMgr/ASSET 回填), 消息入库依赖其就绪
       await TokenStore.getInstance().initTokenStore();
-      // 获取已连接对端(手机)设备并注册消息接收
+    } catch (err) {
+      hilog.error(0x0000, TAG, `initTokenStore failed: ${JSON.stringify(err)}`);
+      return;
+    }
+    // P2P 与 BLE 并行启动, 各自独立 try/catch: 任一通道失败(权限/蓝牙未就绪)不阻塞另一通道
+    this.startP2pReceive();
+    this.startBleReceive();
+  }
+
+  /** P2P 通道: 获取已连接对端(手机)并注册消息接收, 失败仅记日志 */
+  private async startP2pReceive(): Promise<void> {
+    try {
       const deviceClient: wearEngine.DeviceClient = wearEngine.getDeviceClient(this.context);
       const connected = await deviceClient.getConnectedDevices();
       const randomIds: Array<string> = connected.map((device: wearEngine.Device) => device.randomId);
       await WearEngineServer.getInstance().registerReceiver(randomIds);
     } catch (err) {
-      hilog.error(0x0000, TAG, `initDataSync failed: ${JSON.stringify(err)}`);
+      hilog.error(0x0000, TAG, `startP2pReceive failed: ${JSON.stringify(err)}`);
+    }
+  }
+
+  /** BLE 通道: 启动 GATT Server 与广播(内部含 5 次 × 1s 延时重试), 失败仅记日志 */
+  private async startBleReceive(): Promise<void> {
+    try {
+      await BleTokenServer.getInstance().start();
+    } catch (err) {
+      hilog.error(0x0000, TAG, `startBleReceive failed: ${JSON.stringify(err)}`);
     }
   }
 }
