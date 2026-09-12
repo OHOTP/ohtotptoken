@@ -26,6 +26,7 @@ const code = [
   'common/src/main/ets/utils/SteamAuth.ets',
   'common/src/main/ets/utils/TokenConfig.ets',
   'common/src/main/ets/utils/TokenBatchProgress.ets',
+  'common/src/main/ets/utils/TokenKvBatch.ets',
   'common/src/main/ets/utils/KvManager.ets',
   'common/src/main/ets/utils/TokenStore.ets',
   'common/src/main/ets/utils/OtpAuthParser.ets'

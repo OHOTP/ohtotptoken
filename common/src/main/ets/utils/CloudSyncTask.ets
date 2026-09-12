@@ -12,7 +12,7 @@ import { fileIo as fs } from '@kit.CoreFileKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { buffer, util } from '@kit.ArkTS';
 import { CloudBackupRecord, CloudBackupTokenHeader } from './CloudBackupCrypto';
-import { padZero } from './CommonUtils';
+import { formatRecordDate, isBackupFileName, parseBackupTimestamp } from './CommonUtils';
 
 
 
@@ -28,8 +28,6 @@ export async function checkCloudBackupRecords(cloudDir: string): Promise<number>
   let recordCount: number = 0;
   const TAG = 'CloudSyncTask';
   const DOMAIN = 0xFF00;
-  const BACKUP_FILE_PREFIX = 'otp_backup_';
-  const BACKUP_FILE_EXT = '.enc';
   try {
     try {
       await fs.stat(cloudDir);
@@ -45,8 +43,7 @@ export async function checkCloudBackupRecords(cloudDir: string): Promise<number>
 
     const files: Array<string> = fs.listFileSync(cloudDir);
     for (let i = 0; i < files.length; i++) {
-      const fileName: string = files[i];
-      if (fileName.startsWith(BACKUP_FILE_PREFIX) && fileName.endsWith(BACKUP_FILE_EXT)) {
+      if (isBackupFileName(files[i])) {
         recordCount++;
       }
     }
@@ -73,22 +70,19 @@ export async function loadBackupHistoryRecords(cloudDir: string): Promise<CloudB
   const records: CloudBackupRecord[] = [];
   const TAG = 'CloudSyncTask';
   const DOMAIN = 0xFF00;
-  const BACKUP_FILE_PREFIX = 'otp_backup_';
-  const BACKUP_FILE_EXT = '.enc';
 
   try {
     const files: Array<string> = fs.listFileSync(cloudDir);
     for (let i = 0; i < files.length; i++) {
       const fileName: string = files[i];
-      if (!fileName.startsWith(BACKUP_FILE_PREFIX) || !fileName.endsWith(BACKUP_FILE_EXT)) {
+      if (!isBackupFileName(fileName)) {
         continue;
       }
 
       const filePath: string = `${cloudDir}/${fileName}`;
       try {
         const stat = await fs.stat(filePath);
-        const timestampStr: string = fileName.replace(BACKUP_FILE_PREFIX, '').replace(BACKUP_FILE_EXT, '');
-        const timestamp: number = parseInt(timestampStr);
+        const timestamp: number = parseBackupTimestamp(fileName);
 
         if (isNaN(timestamp)) {
           continue;
@@ -119,9 +113,7 @@ export async function loadBackupHistoryRecords(cloudDir: string): Promise<CloudB
           hilog.warn(DOMAIN, TAG, `loadBackupHistoryRecords: parse header failed for ${fileName}`);
         }
 
-        const d: Date = new Date(timestamp);
-        const dateStr: string =
-          `${d.getFullYear()}-${padZero(d.getMonth() + 1)}-${padZero(d.getDate())} ${padZero(d.getHours())}:${padZero(d.getMinutes())}`;
+        const dateStr: string = formatRecordDate(timestamp);
 
         const record: CloudBackupRecord = {
           id: fileName,

@@ -1,5 +1,6 @@
 import { PreferenceManager } from "./PreferenceManager";
 import { AppStorageV2 } from "@kit.ArkUI";
+import { hilog } from '@kit.PerformanceAnalysisKit';
 
 /**
  * 事件名称常量
@@ -645,7 +646,11 @@ export class AppPreference {
    */
   public static setPreference(key: string, value: SettingValue): void {
     AppPreference.settings.set(key, value);
-    AppPreference.prefMgr.setValue<SettingValue>(key, value);
+    // 内存缓存是权威读取来源；持久化失败（如 LocalUnit/无上下文环境）不产生未处理拒绝，
+    // 但留 warn 痕迹（磁盘满等真实故障重启即丢，需可诊断）。
+    AppPreference.prefMgr.setValue<SettingValue>(key, value).catch(() => {
+      hilog.warn(0xFF00, 'AppPreference', 'persist failed for key: ' + key);
+    });
   }
 
   /**

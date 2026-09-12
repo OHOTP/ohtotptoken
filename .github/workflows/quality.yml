@@ -67,6 +67,11 @@ jobs:
         with:
           submodules: true
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Setup HarmonyOS CLI tools
         uses: ErBWs/setup-ohos@v2
         with:
@@ -103,6 +108,14 @@ jobs:
             exit 1
           fi
           echo "All LocalUnit tests passed - $SUMMARY"
+
+      # hvigorw test regenerates coverageReport.json alongside test_result.txt.
+      # Gate: logic-layer (common + entry crypto/steam/oath/utils, device-only
+      # files excluded per docs/TEST_PLAN.md) line & branch coverage must not
+      # regress against scripts/coverage-baseline.json.
+      - name: Check logic-layer coverage regression
+        run: node scripts/check-coverage.mjs
+        shell: bash
 
   build:
     name: Build HAP (all modules)

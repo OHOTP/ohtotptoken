@@ -3,6 +3,7 @@ import { TokenConfig, otpType } from "./TokenConfig";
 import { TokenStore } from "./TokenStore";
 import { generateOTP } from "./TokenUtils";
 import { AppPreference, PREF_KEYS } from "./AppPreference";
+import { KeyValueStore } from "./StoragePorts";
 import { systemDateTime } from "@kit.BasicServicesKit";
 
 export interface CardConfig {
@@ -40,7 +41,8 @@ export function emptyCardData(formId: string, formName: string): Record<string, 
 
 export class TokenCardStore {
   private static instance: TokenCardStore;
-  private prefMgr: PreferenceManager = PreferenceManager.getInstance();
+  // 卡片配置的 KV 端口：生产 PreferenceManager（preferences），测试注入内存实现。
+  private prefStore: KeyValueStore = PreferenceManager.getInstance();
 
   private constructor() {}
 
@@ -51,17 +53,22 @@ export class TokenCardStore {
     return TokenCardStore.instance;
   }
 
+  /** 测试注入：LocalUnit 下 preferences 不可用，替换为内存 KV。 */
+  useStoreForTest(store: KeyValueStore): void {
+    this.prefStore = store;
+  }
+
   async saveCardConfig(config: CardConfig): Promise<void> {
-    await this.prefMgr.setValue<string>(`${CARD_CONFIG_PREFIX}${config.formId}`, JSON.stringify(config));
-    const configs = await this.prefMgr.getValue<string[]>(CARD_CONFIGS_KEY) ?? [];
+    await this.prefStore.setValue<string>(`${CARD_CONFIG_PREFIX}${config.formId}`, JSON.stringify(config));
+    const configs = await this.prefStore.getValue<string[]>(CARD_CONFIGS_KEY) ?? [];
     if (!configs.includes(config.formId)) {
       configs.push(config.formId);
-      await this.prefMgr.setValue<string[]>(CARD_CONFIGS_KEY, configs);
+      await this.prefStore.setValue<string[]>(CARD_CONFIGS_KEY, configs);
     }
   }
 
   async getCardConfig(formId: string): Promise<CardConfig | null> {
-    const raw = await this.prefMgr.getValue<string>(`${CARD_CONFIG_PREFIX}${formId}`);
+    const raw = await this.prefStore.getValue<string>(`${CARD_CONFIG_PREFIX}${formId}`);
     if (raw) {
       return JSON.parse(raw) as CardConfig;
     }
@@ -69,17 +76,17 @@ export class TokenCardStore {
   }
 
   async removeCardConfig(formId: string): Promise<void> {
-    await this.prefMgr.deleteValue(`${CARD_CONFIG_PREFIX}${formId}`);
-    const configs = await this.prefMgr.getValue<string[]>(CARD_CONFIGS_KEY) ?? [];
+    await this.prefStore.deleteValue(`${CARD_CONFIG_PREFIX}${formId}`);
+    const configs = await this.prefStore.getValue<string[]>(CARD_CONFIGS_KEY) ?? [];
     const idx = configs.indexOf(formId);
     if (idx >= 0) {
       configs.splice(idx, 1);
-      await this.prefMgr.setValue<string[]>(CARD_CONFIGS_KEY, configs);
+      await this.prefStore.setValue<string[]>(CARD_CONFIGS_KEY, configs);
     }
   }
 
   async getCardConfigList(): Promise<string[]> {
-    const configs = await this.prefMgr.getValue<string[]>(CARD_CONFIGS_KEY);
+    const configs = await this.prefStore.getValue<string[]>(CARD_CONFIGS_KEY);
     return configs ?? [];
   }
 

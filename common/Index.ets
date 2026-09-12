@@ -48,3 +48,6 @@ export * from './src/main/ets/utils/importers/URIImporter';
 export * from './src/main/ets/utils/proto/ProtoReader';
 export * from './src/main/ets/utils/proto/ProtoWriter';
 export * from './src/main/ets/utils/GoogleAuthMigration';
+export * from './src/main/ets/utils/StoragePorts';
+export * from './src/main/ets/utils/TokenKvBatch';
+export * from './src/main/ets/utils/TransferProtocol';

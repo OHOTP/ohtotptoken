@@ -4,11 +4,78 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { AppPreference, EVENT_NAMES, PREF_KEYS } from './AppPreference';
 import { distributedDeviceManager } from '@kit.DistributedServiceKit';
 import { TokenConfig } from './TokenConfig';
-import { TokenBatchProgressCallback, TokenBatchStage, reportTokenBatchProgress } from './TokenBatchProgress';
+import { TokenBatchProgressCallback } from './TokenBatchProgress';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { fileIo as fs } from "@kit.CoreFileKit";
+import { KvBatchEntry, LegacyTokenKv, TokenKvStore, TransactionalKv } from './StoragePorts';
+import { commitTokenBatchInChunks, migrateLegacyTokenEntries } from './TokenKvBatch';
 
-export class KvManager {
+/** SingleKVStore 事务原语适配 TokenKvBatch 的 TransactionalKv 端口。 */
+class KvStoreTransactionAdapter implements TransactionalKv {
+  private store: distributedKVStore.SingleKVStore;
+
+  constructor(store: distributedKVStore.SingleKVStore) {
+    this.store = store;
+  }
+
+  async startTransaction(): Promise<void> {
+    await this.store.startTransaction();
+  }
+
+  async putBatch(entries: KvBatchEntry[]): Promise<void> {
+    const distEntries: distributedKVStore.Entry[] = entries.map((entry: KvBatchEntry): distributedKVStore.Entry => {
+      return { key: entry.key, value: { type: distributedKVStore.ValueType.STRING, value: entry.value } };
+    });
+    await this.store.putBatch(distEntries);
+  }
+
+  async deleteBatch(keys: string[]): Promise<void> {
+    await this.store.deleteBatch(keys);
+  }
+
+  async commit(): Promise<void> {
+    await this.store.commit();
+  }
+
+  async rollback(): Promise<void> {
+    await this.store.rollback();
+  }
+}
+
+/** SingleKVStore 读写适配 TokenKvBatch 的旧版本迁移端口。 */
+class KvStoreLegacyAdapter implements LegacyTokenKv {
+  private store: distributedKVStore.SingleKVStore;
+
+  constructor(store: distributedKVStore.SingleKVStore) {
+    this.store = store;
+  }
+
+  async getRawEntries(prefix: string): Promise<KvBatchEntry[]> {
+    const entries = await this.store.getEntries(prefix);
+    return entries.map((entry: distributedKVStore.Entry): KvBatchEntry => {
+      return { key: entry.key, value: entry.value.value as string };
+    });
+  }
+
+  async getString(key: string): Promise<string | null> {
+    try {
+      const data = await this.store.get(key);
+      return data ? data as string : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async setString(key: string, value: string): Promise<void> {
+    await this.store.put(key, value);
+  }
+
+  async deleteValue(key: string): Promise<void> {
+    await this.store.delete(key);
+  }
+}
+
+export class KvManager implements TokenKvStore {
   //单版本分布式键值数据库
   private _kvMgr: distributedKVStore.KVManager | undefined = undefined;
   private _kvStore: distributedKVStore.SingleKVStore | undefined = undefined;
@@ -24,14 +91,11 @@ export class KvManager {
     return pending;
   }
 
-  /** 原子提交令牌变更；按平台 MAX_BATCH_SIZE=128 分块，不逐条 put/delete。 */
+  /** 原子提交令牌变更；分块/事务编排委托 TokenKvBatch.commitTokenBatchInChunks。 */
   async saveTokenBatch(prefix: string, tokens: TokenConfig[], deletedUuids: string[] = [],
     onProgress?: TokenBatchProgressCallback): Promise<void> {
-    const entries: distributedKVStore.Entry[] = tokens.map((token: TokenConfig): distributedKVStore.Entry => {
-      return {
-        key: `${prefix}${token.TokenUUID}`,
-        value: { type: distributedKVStore.ValueType.STRING, value: JSON.stringify(token) }
-      };
+    const entries: KvBatchEntry[] = tokens.map((token: TokenConfig): KvBatchEntry => {
+      return { key: `${prefix}${token.TokenUUID}`, value: JSON.stringify(token) };
     });
     const keys = deletedUuids.map(uuid => `${prefix}${uuid}`);
     if (entries.length === 0 && keys.length === 0) {
@@ -42,26 +106,7 @@ export class KvManager {
       if (!store) {
         throw new Error('Token batch failed: KV store not initialized');
       }
-      const total = entries.length + keys.length;
-      reportTokenBatchProgress(onProgress, TokenBatchStage.SAVING, 0, total);
-      await store.startTransaction();
-      try {
-        for (let offset = 0; offset < entries.length; offset += 128) {
-          await store.putBatch(entries.slice(offset, offset + 128));
-          reportTokenBatchProgress(onProgress, TokenBatchStage.SAVING, Math.min(offset + 128, entries.length), total);
-        }
-        for (let offset = 0; offset < keys.length; offset += 128) {
-          await store.deleteBatch(keys.slice(offset, offset + 128));
-          reportTokenBatchProgress(onProgress, TokenBatchStage.SAVING,
-            entries.length + Math.min(offset + 128, keys.length), total);
-        }
-        reportTokenBatchProgress(onProgress, TokenBatchStage.COMMITTING);
-        await store.commit();
-      } catch (error) {
-        reportTokenBatchProgress(onProgress, TokenBatchStage.ROLLING_BACK);
-        await store.rollback();
-        throw new Error((error as BusinessError).message);
-      }
+      await commitTokenBatchInChunks(new KvStoreTransactionAdapter(store), entries, keys, onProgress);
     });
   }
 
@@ -76,6 +121,11 @@ export class KvManager {
       KvManager.instance = new KvManager();
     }
     return KvManager.instance;
+  }
+
+  /** TokenKvStore 端口的初始化入口（主进程：读取 AppStorage 上下文并建库）。 */
+  init(): Promise<void> {
+    return this.initKvManager();
   }
 
   /**
@@ -245,25 +295,13 @@ export class KvManager {
   }
 
   // 使用getEntries模拟一个可以兼容的数组 这样可以规避多设备覆盖的问题
+  // 旧版本键迁移委托 TokenKvBatch.migrateLegacyTokenEntries。
   async getTokenArray(prefix: string): Promise<TokenConfig[]> {
     let token_array: TokenConfig[] = [];
     if (this._kvStore) {
       try {
         // load from old version
-        const old_prefixKey = "$.SA_token_uuids_";
-        const old_entries = await this._kvStore.getEntries(old_prefixKey);
-        for (let i = 0; i < old_entries.length; i++) {
-          const old_key = old_entries[i].key;
-          // remove old prefix list
-          this.deleteValue(old_key);
-          // convert old to new token store format
-          const old_token_uuid = old_key.substring(old_prefixKey.length);
-          const old_token_key = "token_" + old_token_uuid;
-          const old_token_value = await this.getString(old_token_key);
-          const new_token_key = prefix + old_token_uuid;
-          await this.setString(new_token_key, old_token_value??'');
-          await this.deleteValue(old_token_key);
-        }
+        await migrateLegacyTokenEntries(new KvStoreLegacyAdapter(this._kvStore), prefix);
 
         const entries = await this._kvStore.getEntries(prefix);
         entries.forEach((item) => {

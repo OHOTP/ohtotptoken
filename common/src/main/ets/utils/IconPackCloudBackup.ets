@@ -1,13 +1,13 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { fileIo as fs, cloudSync, fileUri } from '@kit.CoreFileKit';
+import { cloudSync, fileUri } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
 import { zlib } from '@kit.BasicServicesKit';
-import { buffer } from '@kit.ArkTS';
 import { AppPreference, PREF_KEYS, BUILTIN_DEFAULT_PACK_ID, EVENT_NAMES } from './AppPreference';
-import { TokenIconPacks } from './TokenUtils';
+import { TokenIconPacks, AegisIconPack } from './TokenUtils';
 import { SyncTimeHelper } from './SyncTimeHelper';
 import { HuaweiAccountManager } from './HuaweiAccountManager';
 import { DeviceInfoHelper } from './DeviceInfoHelper';
+import { FsGateway, FileIoFsGateway } from './StoragePorts';
 
 const TAG = 'IconPackCloudBackup';
 const DOMAIN = 0xFF00;
@@ -19,6 +19,121 @@ const META_JSON_NAME = 'icon_packs_meta.json';
  * checkCloudBackupNewer 只读取此文件而不用解压整个 zip，大幅降低冷启动开销。
  */
 const SYNC_META_FILE = 'icon_packs_sync_meta.json';
+
+/** zip 压缩/解压端口（生产：zlib，LocalUnit 不可用）。 */
+export interface IconPackArchiver {
+  compress(srcDir: string, destZip: string): Promise<void>;
+  decompress(zipPath: string, destDir: string): Promise<void>;
+}
+
+class ZlibIconPackArchiver implements IconPackArchiver {
+  async compress(srcDir: string, destZip: string): Promise<void> {
+    const options: zlib.Options = {
+      level: zlib.CompressLevel.COMPRESS_LEVEL_DEFAULT_COMPRESSION,
+    };
+    await zlib.compressFile(srcDir, destZip, options);
+  }
+
+  async decompress(zipPath: string, destDir: string): Promise<void> {
+    await zlib.decompressFile(zipPath, destDir);
+  }
+}
+
+/**
+ * 恢复时的启用列表合并策略（纯函数）：
+ * 以云端 enabledPacks 为基础（为空则回退内置默认包），追加本地独有的包（不丢失本地新增包）。
+ */
+export function mergeEnabledPacks(cloudEnabledPacks: string[], localPackUuids: string[]): string[] {
+  const basePacks = cloudEnabledPacks && cloudEnabledPacks.length > 0
+    ? cloudEnabledPacks
+    : [BUILTIN_DEFAULT_PACK_ID];
+  const merged = [...basePacks];
+  for (const localUuid of localPackUuids) {
+    if (!merged.includes(localUuid)) {
+      merged.push(localUuid);
+    }
+  }
+  return merged;
+}
+
+/** 设备标识端口（生产：DeviceInfoHelper，LocalUnit 不可用）。 */
+export interface IconPackDevicePort {
+  deviceId(): string;
+  deviceName(): string;
+}
+
+class DeviceInfoAdapter implements IconPackDevicePort {
+  deviceId(): string {
+    return DeviceInfoHelper.getInstance().getDeviceId();
+  }
+
+  deviceName(): string {
+    return DeviceInfoHelper.getInstance().getDeviceName();
+  }
+}
+
+/**
+ * 图标包注册表端口（Phase 3，docs/TEST_PLAN.md 第 4 节）。
+ * 恢复成功链路（deletedPacks 清理 → 磁盘重载 → enabledPacks 合并应用）经此端口
+ * 访问 TokenIconPacks 静态状态，LocalUnit 注入内存假实现全测；
+ * 生产适配器保证真机行为不变（磁盘加载/偏好读写归 TokenIconPacks/AppPreference）。
+ */
+export interface IconPackRegistry {
+  /** 当前已加载的自定义图标包（含无效包） */
+  listPacks(): AegisIconPack[];
+  /** 从 user_icons 目录重载用户图标 */
+  loadUserIcons(userIconDir: string): Promise<void>;
+  /** 从设备目录加载图标包（pack.json 解析 + 磁盘读取） */
+  addPackFromDevice(path: string): Promise<void>;
+  /** 删除图标包（清理预览缓存、enabledPacks 过滤、磁盘目录删除） */
+  removePack(pack: AegisIconPack): Promise<void>;
+  getEnabledPacks(): string[];
+  setEnabledPacks(packs: string[]): void;
+  /** 从偏好重新加载 enabledPacks 到内存（恢复前的干净基线） */
+  reloadEnabledPacksFromPreference(): void;
+}
+
+/** {@link IconPackRegistry} 生产实现：委托 TokenIconPacks 静态接口。 */
+class TokenIconPacksRegistry implements IconPackRegistry {
+  listPacks(): AegisIconPack[] {
+    return TokenIconPacks.aegis_icon_packs;
+  }
+
+  async loadUserIcons(userIconDir: string): Promise<void> {
+    await TokenIconPacks.addUserIconPack(userIconDir);
+  }
+
+  async addPackFromDevice(path: string): Promise<void> {
+    await TokenIconPacks.addAegisIconPack(path);
+  }
+
+  async removePack(pack: AegisIconPack): Promise<void> {
+    await TokenIconPacks.removeAegisIconPack(pack);
+  }
+
+  getEnabledPacks(): string[] {
+    return TokenIconPacks.enabled_packs;
+  }
+
+  setEnabledPacks(packs: string[]): void {
+    TokenIconPacks.enabled_packs = packs;
+  }
+
+  reloadEnabledPacksFromPreference(): void {
+    TokenIconPacks.enabled_packs = AppPreference.loadEnabledPacks();
+  }
+}
+
+/** LocalUnit 测试注入项（目录就绪时跳过 init() 的 AppStorage 依赖）。 */
+export interface IconPackBackupTestDeps {
+  fs?: FsGateway;
+  archiver?: IconPackArchiver;
+  device?: IconPackDevicePort;
+  registry?: IconPackRegistry;
+  filesDir?: string;
+  cloudDir?: string;
+  cacheDir?: string;
+}
 
 /**
  * 图标包云备份同步状态机
@@ -104,6 +219,10 @@ class SyncMetaRecord {
  * 不需要真正的锁。所有公开异步方法在入口处 tryTransition，在 finally 中回到 IDLE。
  *
  * 状态机生命周期：纯内存态，不持久化。应用重启后 singleton 重建，自动恢复 IDLE。
+ *
+ * ## Phase 2 解耦
+ * 文件系统经 {@link FsGateway} 端口、压缩经 {@link IconPackArchiver} 端口访问，
+ * 状态机/去抖/合并决策在 LocalUnit 下可测（见 docs/TEST_PLAN.md 第 4 节）。
  */
 export class IconPackCloudBackup {
   private static instance: IconPackCloudBackup | null = null;
@@ -114,6 +233,9 @@ export class IconPackCloudBackup {
   private fileSync: cloudSync.FileSync | null = null;
   /** 状态机当前状态，纯内存态，重启自动重置 */
   private syncState: IconPackSyncState = IconPackSyncState.IDLE;
+  private testDeps: IconPackBackupTestDeps | null = null;
+  private readonly productionFs: FsGateway = new FileIoFsGateway();
+  private readonly productionRegistry: IconPackRegistry = new TokenIconPacksRegistry();
 
   private constructor() {
   }
@@ -123,6 +245,44 @@ export class IconPackCloudBackup {
       IconPackCloudBackup.instance = new IconPackCloudBackup();
     }
     return IconPackCloudBackup.instance;
+  }
+
+  /** 测试注入：LocalUnit 下 fileIo/zlib 不可用，替换文件系统/压缩端口与目录。 */
+  useDepsForTest(deps: IconPackBackupTestDeps): void {
+    this.testDeps = deps;
+    if (deps.cloudDir !== undefined || deps.filesDir !== undefined || deps.cacheDir !== undefined) {
+      // 语义上 context 已就绪：init() 直接短路，不再读 AppStorage
+      this.context = new Object() as common.UIAbilityContext;
+      this.cloudDir = deps.cloudDir !== undefined ? deps.cloudDir : this.cloudDir;
+      this.filesDir = deps.filesDir !== undefined ? deps.filesDir : this.filesDir;
+      this.cacheDir = deps.cacheDir !== undefined ? deps.cacheDir : this.cacheDir;
+    }
+  }
+
+  /** 重置测试注入（恢复生产端口与未初始化状态）。 */
+  resetForTest(): void {
+    this.testDeps = null;
+    this.context = undefined;
+    this.cloudDir = '';
+    this.filesDir = '';
+    this.cacheDir = '';
+    this.syncState = IconPackSyncState.IDLE;
+  }
+
+  private get fs(): FsGateway {
+    return this.testDeps?.fs !== undefined ? this.testDeps.fs : this.productionFs;
+  }
+
+  private get archiver(): IconPackArchiver {
+    return this.testDeps?.archiver !== undefined ? this.testDeps.archiver : new ZlibIconPackArchiver();
+  }
+
+  private get devicePort(): IconPackDevicePort {
+    return this.testDeps?.device !== undefined ? this.testDeps.device : new DeviceInfoAdapter();
+  }
+
+  private get registry(): IconPackRegistry {
+    return this.testDeps?.registry !== undefined ? this.testDeps.registry : this.productionRegistry;
   }
 
   async init(): Promise<void> {
@@ -200,12 +360,12 @@ export class IconPackCloudBackup {
     let hasContent = false;
 
     try {
-      const packFiles = fs.listFileSync(iconPackDir);
+      const packFiles = await this.fs.listFiles(iconPackDir);
       if (packFiles.length > 0) hasContent = true;
     } catch (_) {}
 
     try {
-      const userFiles = fs.listFileSync(userIconDir);
+      const userFiles = await this.fs.listFiles(userIconDir);
       if (userFiles.length > 0) hasContent = true;
     } catch (_) {}
 
@@ -216,7 +376,7 @@ export class IconPackCloudBackup {
 
     const now = Date.now();
     const packEntries: PackMetaEntry[] = [];
-    for (const p of TokenIconPacks.aegis_icon_packs) {
+    for (const p of this.registry.listPacks()) {
       const entry = new PackMetaEntry();
       entry.uuid = p.uuid;
       entry.name = p.name;
@@ -227,7 +387,7 @@ export class IconPackCloudBackup {
     const meta = new IconPackMetaRecord();
     meta.version = 1;
     meta.timestamp = now;
-    meta.enabledPacks = TokenIconPacks.enabled_packs;
+    meta.enabledPacks = this.registry.getEnabledPacks();
     meta.deletedPacks = [];
     meta.packs = packEntries;
 
@@ -237,53 +397,48 @@ export class IconPackCloudBackup {
 
     try {
       // 1. 清理并创建 staging 目录（防止上次中断残留旧文件污染本次备份）
+      await this.removeDirRecursive(stagingDir);
       try {
-        await this.removeDirRecursive(stagingDir);
-      } catch (_) {}
-      try {
-        await fs.mkdir(stagingDir);
+        await this.fs.makeDir(stagingDir);
       } catch (_) {}
 
       // 2. 写入元数据文件
-      const metaFile = fs.openSync(metaPath, fs.OpenMode.WRITE_ONLY | fs.OpenMode.CREATE | fs.OpenMode.TRUNC);
-      fs.writeSync(metaFile.fd, JSON.stringify(meta));
-      fs.closeSync(metaFile);
+      await this.fs.writeTextFile(metaPath, JSON.stringify(meta));
 
-      // 3. 递归拷贝 icon_packs 和 user_icons 到 staging（必须用 copyDirRecursive，fs.copyFile 不支持目录）
+      // 3. 递归拷贝 icon_packs 和 user_icons 到 staging（fs.copyFile 不支持目录）
       try {
         const destIconDir = stagingDir + '/icon_packs';
-        await fs.mkdir(destIconDir);
+        try {
+          await this.fs.makeDir(destIconDir);
+        } catch (_) {}
         await this.copyDirRecursive(iconPackDir, destIconDir);
       } catch (_) {}
       try {
         const destUserDir = stagingDir + '/user_icons';
-        await fs.mkdir(destUserDir);
+        try {
+          await this.fs.makeDir(destUserDir);
+        } catch (_) {}
         await this.copyDirRecursive(userIconDir, destUserDir);
       } catch (_) {}
 
       // 4. 压缩 staging 目录为 zip
-      const options: zlib.Options = {
-        level: zlib.CompressLevel.COMPRESS_LEVEL_DEFAULT_COMPRESSION,
-      };
-      await zlib.compressFile(stagingDir, tempZipPath, options);
+      await this.archiver.compress(stagingDir, tempZipPath);
 
       // 5. 将 zip 复制到 cloudDir
       const cloudZipPath = this.cloudDir + '/' + ICON_PACK_BACKUP_ZIP;
-      await fs.copyFile(tempZipPath, cloudZipPath);
+      await this.fs.copyFile(tempZipPath, cloudZipPath);
 
       // 6. 写入伴生元数据文件（~1-2KB，含设备信息、时间戳、图标包列表）
       const syncMeta = new SyncMetaRecord();
       syncMeta.version = 1;
       syncMeta.timestamp = now;
-      syncMeta.deviceId = DeviceInfoHelper.getInstance().getDeviceId();
-      syncMeta.deviceName = DeviceInfoHelper.getInstance().getDeviceName();
-      syncMeta.enabledPacks = TokenIconPacks.enabled_packs;
+      syncMeta.deviceId = this.devicePort.deviceId();
+      syncMeta.deviceName = this.devicePort.deviceName();
+      syncMeta.enabledPacks = this.registry.getEnabledPacks();
       syncMeta.deletedPacks = [];
       syncMeta.packs = packEntries;
       const syncMetaPath = this.cloudDir + '/' + SYNC_META_FILE;
-      const syncMetaFile = fs.openSync(syncMetaPath, fs.OpenMode.WRITE_ONLY | fs.OpenMode.CREATE | fs.OpenMode.TRUNC);
-      fs.writeSync(syncMetaFile.fd, JSON.stringify(syncMeta));
-      fs.closeSync(syncMetaFile);
+      await this.fs.writeTextFile(syncMetaPath, JSON.stringify(syncMeta));
 
       // 7. 触发云端同步（zip + 伴生文件一起上传）
       await this.syncToCloud();
@@ -297,7 +452,7 @@ export class IconPackCloudBackup {
     } finally {
       await this.removeDirRecursive(stagingDir);
       try {
-        await fs.unlink(tempZipPath);
+        await this.fs.deleteFile(tempZipPath);
       } catch (_) {}
     }
   }
@@ -333,12 +488,12 @@ export class IconPackCloudBackup {
 
     const syncMetaPath = this.cloudDir + '/' + SYNC_META_FILE;
     try {
-      const stat = await fs.stat(syncMetaPath);
+      const stat = await this.fs.stat(syncMetaPath);
       if (stat.location === 2) {
         await this.cacheFile(syncMetaPath);
       }
 
-      const content = await this.readFileContent(syncMetaPath);
+      const content = await this.fs.readTextFile(syncMetaPath);
       const meta = JSON.parse(content) as SyncMetaRecord;
       const cloudTs = meta.timestamp || 0;
       hilog.info(DOMAIN, TAG, `checkCloudBackupNewer: cloudTs=${cloudTs}, localTs=${lastRestoreTs}, device=${meta.deviceName}`);
@@ -376,7 +531,7 @@ export class IconPackCloudBackup {
     const cloudZipPath = this.cloudDir + '/' + ICON_PACK_BACKUP_ZIP;
     try {
       // 若文件仍在云端（location=2），先缓存到本地
-      const stat = await fs.stat(cloudZipPath);
+      const stat = await this.fs.stat(cloudZipPath);
       if (stat.location === 2) {
         await this.cacheFile(cloudZipPath);
       }
@@ -384,19 +539,19 @@ export class IconPackCloudBackup {
       // 解压到临时目录（cacheDir，不直接写 filesDir）
       const tempDir = this.cacheDir + '/icon_pack_restore';
       try {
-        await fs.mkdir(tempDir);
+        await this.fs.makeDir(tempDir);
       } catch (_) {}
 
-      await zlib.decompressFile(cloudZipPath, tempDir);
+      await this.archiver.decompress(cloudZipPath, tempDir);
 
       // 确保目标目录存在
       const iconPackDir = this.filesDir + '/icon_packs';
       const userIconDir = this.filesDir + '/user_icons';
       try {
-        fs.mkdirSync(iconPackDir);
+        await this.fs.makeDir(iconPackDir);
       } catch (_) {}
       try {
-        fs.mkdirSync(userIconDir);
+        await this.fs.makeDir(userIconDir);
       } catch (_) {}
 
       // 选择性拷贝：只还原 icon_packs 和 user_icons 子目录
@@ -412,7 +567,7 @@ export class IconPackCloudBackup {
       // 读取元数据
       let meta: IconPackMetaRecord | null = null;
       try {
-        const metaContent = await this.readFileContent(tempDir + '/' + META_JSON_NAME);
+        const metaContent = await this.fs.readTextFile(tempDir + '/' + META_JSON_NAME);
         meta = JSON.parse(metaContent) as IconPackMetaRecord;
       } catch (_) {}
 
@@ -423,10 +578,10 @@ export class IconPackCloudBackup {
         // 处理云端标记为已删除的图标包
         if (meta.deletedPacks && meta.deletedPacks.length > 0) {
           for (const deletedUuid of meta.deletedPacks) {
-            const pack = TokenIconPacks.aegis_icon_packs.find(p => p.uuid === deletedUuid);
+            const pack = this.registry.listPacks().find(p => p.uuid === deletedUuid);
             if (pack) {
               try {
-                await TokenIconPacks.removeAegisIconPack(pack);
+                await this.registry.removePack(pack);
               } catch (e) {
                 hilog.warn(DOMAIN, TAG, `restoreIconPacks: failed to delete pack ${deletedUuid}: ${JSON.stringify(e)}`);
               }
@@ -434,22 +589,14 @@ export class IconPackCloudBackup {
           }
         }
 
-        // 在 merge 前重新从磁盘加载图标包，使 TokenIconPacks 内存状态包含新拷贝的文件
+        // 在 merge 前重新从磁盘加载图标包，使注册表内存状态包含新拷贝的文件
         await this.refreshIconPackState();
 
         // 合并策略：以云端 enabledPacks 为基础，追加本地独有的包（不丢失本地新增包）
-        const basePacks = meta.enabledPacks && meta.enabledPacks.length > 0
-          ? meta.enabledPacks
-          : [BUILTIN_DEFAULT_PACK_ID];
-        let merged = [...basePacks];
-        const localPacks = TokenIconPacks.aegis_icon_packs.map(p => p.uuid);
-        for (const localUuid of localPacks) {
-          if (!merged.includes(localUuid)) {
-            merged.push(localUuid);
-          }
-        }
+        const localPacks = this.registry.listPacks().map(p => p.uuid);
+        const merged = mergeEnabledPacks(meta.enabledPacks, localPacks);
 
-        TokenIconPacks.enabled_packs = merged;
+        this.registry.setEnabledPacks(merged);
         AppPreference.saveEnabledPacks(merged);
         AppPreference.setPreference(PREF_KEYS.ICON_PACK_CLOUD_SYNC_TIME, `${meta.timestamp}`);
 
@@ -467,23 +614,23 @@ export class IconPackCloudBackup {
   }
 
   /**
-   * 从磁盘重新加载图标包到 TokenIconPacks 内存（在 merge enabledPacks 前调用）
+   * 从磁盘重新加载图标包到注册表内存（在 merge enabledPacks 前调用）
    * 包含：user_icons 目录 + icon_packs 下所有子目录 + enabled_packs 偏好
    */
   private async refreshIconPackState(): Promise<void> {
     const iconPackDir = this.filesDir + '/icon_packs';
     const userIconDir = this.filesDir + '/user_icons';
 
-    await TokenIconPacks.addUserIconPack(userIconDir);
+    await this.registry.loadUserIcons(userIconDir);
     try {
-      const paths = await fs.listFile(iconPackDir);
+      const paths = await this.fs.listFiles(iconPackDir);
       for (const path of paths) {
         const fullPath = iconPackDir + '/' + path;
-        if (TokenIconPacks.aegis_icon_packs.some(pack => pack.on_device_path === fullPath)) {
+        if (this.registry.listPacks().some(pack => pack.on_device_path === fullPath)) {
           continue;
         }
         try {
-          await TokenIconPacks.addAegisIconPack(fullPath);
+          await this.registry.addPackFromDevice(fullPath);
         } catch (err) {
           hilog.warn(DOMAIN, TAG, `refreshIconPackState: failed to load pack ${path}: ${JSON.stringify(err)}`);
         }
@@ -491,7 +638,7 @@ export class IconPackCloudBackup {
     } catch (err) {
       hilog.warn(DOMAIN, TAG, `refreshIconPackState: failed to list ${iconPackDir}: ${JSON.stringify(err)}`);
     }
-    TokenIconPacks.enabled_packs = AppPreference.loadEnabledPacks();
+    this.registry.reloadEnabledPacksFromPreference();
   }
 
   /** 查询云端图标包备份状态（是否存在、包数量、大小、来源设备等），供 UI 展示 */
@@ -509,7 +656,7 @@ export class IconPackCloudBackup {
 
     const cloudZipPath = this.cloudDir + '/' + ICON_PACK_BACKUP_ZIP;
     try {
-      const stat = await fs.stat(cloudZipPath);
+      const stat = await this.fs.stat(cloudZipPath);
       result.exists = true;
       result.size = stat.size;
     } catch (_) {}
@@ -517,11 +664,11 @@ export class IconPackCloudBackup {
     // 从伴生元数据文件读取详细信息（包列表、来源设备等）
     const syncMetaPath = this.cloudDir + '/' + SYNC_META_FILE;
     try {
-      const smStat = await fs.stat(syncMetaPath);
+      const smStat = await this.fs.stat(syncMetaPath);
       if (smStat.location === 2) {
         await this.cacheFile(syncMetaPath);
       }
-      const content = await this.readFileContent(syncMetaPath);
+      const content = await this.fs.readTextFile(syncMetaPath);
       const meta = JSON.parse(content) as SyncMetaRecord;
       result.packCount = meta.packs?.length ?? 0;
       result.sourceDeviceId = meta.deviceId ?? '';
@@ -529,7 +676,7 @@ export class IconPackCloudBackup {
       result.packs = meta.packs ?? [];
     } catch (_) {
       // 伴生文件不存在（旧版本备份），回退到本地内存
-      result.packCount = TokenIconPacks.aegis_icon_packs.length;
+      result.packCount = this.registry.listPacks().length;
     }
 
     return result;
@@ -548,10 +695,10 @@ export class IconPackCloudBackup {
     try {
       const cloudZipPath = this.cloudDir + '/' + ICON_PACK_BACKUP_ZIP;
       try {
-        await fs.unlink(cloudZipPath);
+        await this.fs.deleteFile(cloudZipPath);
       } catch (_) {}
       try {
-        await fs.unlink(this.cloudDir + '/' + SYNC_META_FILE);
+        await this.fs.deleteFile(this.cloudDir + '/' + SYNC_META_FILE);
       } catch (_) {}
       await this.syncToCloud();
       hilog.info(DOMAIN, TAG, 'clearCloudBackup: completed');
@@ -580,10 +727,14 @@ export class IconPackCloudBackup {
 
   /** 触发 FileSync.start() 将 cloudDir 变更同步到云端（复用实例避免重复创建） */
   private async syncToCloud(): Promise<void> {
-    if (!this.fileSync) {
-      this.fileSync = new cloudSync.FileSync();
+    // 测试注入下无需真实云同步
+    if (this.testDeps !== null) {
+      return;
     }
     try {
+      if (!this.fileSync) {
+        this.fileSync = new cloudSync.FileSync();
+      }
       await this.fileSync.start();
       hilog.info(DOMAIN, TAG, 'syncToCloud: started');
     } catch (e) {
@@ -593,9 +744,13 @@ export class IconPackCloudBackup {
 
   /** 将云端文件（location=2）缓存到本地，以便读取内容 */
   private async cacheFile(filePath: string): Promise<void> {
-    const uri = fileUri.getUriFromPath(filePath);
-    const cache = new cloudSync.CloudFileCache();
+    // 测试注入下假文件系统内容均在本地，跳过云端缓存拉取
+    if (this.testDeps !== null) {
+      return;
+    }
     try {
+      const uri = fileUri.getUriFromPath(filePath);
+      const cache = new cloudSync.CloudFileCache();
       await cache.start(uri);
       hilog.info(DOMAIN, TAG, `cacheFile: cached ${filePath}`);
     } catch (e) {
@@ -603,41 +758,23 @@ export class IconPackCloudBackup {
     }
   }
 
-  private async readFileContent(filePath: string): Promise<string> {
-    let file: fs.File | null = null;
-    try {
-      const stat = await fs.stat(filePath);
-      file = await fs.open(filePath, fs.OpenMode.READ_ONLY);
-      const bufferArray = new ArrayBuffer(stat.size);
-      const readLen = await fs.read(file.fd, bufferArray);
-      const uint8Array = new Uint8Array(bufferArray.slice(0, readLen));
-      return buffer.from(uint8Array).toString('utf-8');
-    } finally {
-      if (file) {
-        try {
-          await fs.close(file);
-        } catch (_) {}
-      }
-    }
-  }
-
   private async removeDirRecursive(dirPath: string): Promise<void> {
     try {
-      const files = await fs.listFile(dirPath);
+      const files = await this.fs.listFiles(dirPath);
       for (const file of files) {
         const fullPath = dirPath + '/' + file;
         try {
-          const stat = await fs.stat(fullPath);
-          if (stat.isDirectory()) {
+          const stat = await this.fs.stat(fullPath);
+          if (stat.isDirectory) {
             await this.removeDirRecursive(fullPath);
           } else {
-            await fs.unlink(fullPath);
+            await this.fs.deleteFile(fullPath);
           }
         } catch (e) {
           hilog.warn(DOMAIN, TAG, `removeDirRecursive: failed to remove ${fullPath}: ${JSON.stringify(e)}`);
         }
       }
-      await fs.rmdir(dirPath);
+      await this.fs.removeDir(dirPath);
     } catch (e) {
       hilog.warn(DOMAIN, TAG, `removeDirRecursive: failed to process ${dirPath}: ${JSON.stringify(e)}`);
     }
@@ -645,19 +782,19 @@ export class IconPackCloudBackup {
 
   private async copyDirRecursive(srcDir: string, destDir: string): Promise<void> {
     try {
-      const files = await fs.listFile(srcDir);
+      const files = await this.fs.listFiles(srcDir);
       for (const file of files) {
         const srcPath = srcDir + '/' + file;
         const destPath = destDir + '/' + file;
         try {
-          const stat = await fs.stat(srcPath);
-          if (stat.isDirectory()) {
+          const stat = await this.fs.stat(srcPath);
+          if (stat.isDirectory) {
             try {
-              await fs.mkdir(destPath);
+              await this.fs.makeDir(destPath);
             } catch (_) {}
             await this.copyDirRecursive(srcPath, destPath);
           } else {
-            await fs.copyFile(srcPath, destPath);
+            await this.fs.copyFile(srcPath, destPath);
           }
         } catch (e) {
           hilog.warn(DOMAIN, TAG, `copyDirRecursive: failed to copy ${srcPath}: ${JSON.stringify(e)}`);

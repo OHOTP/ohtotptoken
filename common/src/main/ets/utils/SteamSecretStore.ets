@@ -1,3 +1,4 @@
+import { NamedSecretStore } from './StoragePorts';
 import { AssetSecretStore } from './AssetSecretStore';
 import { joinSecretChunks, splitSecretChunks, SteamAuth } from './SteamAuth';
 
@@ -25,7 +26,7 @@ const MAX_REFRESH_CHUNKS = 8;
 
 export class SteamSecretStore {
   private static instance: SteamSecretStore;
-  private assets: AssetSecretStore = AssetSecretStore.getInstance();
+  private assets: NamedSecretStore = AssetSecretStore.getInstance();
 
   private constructor() {}
 
@@ -34,6 +35,11 @@ export class SteamSecretStore {
       SteamSecretStore.instance = new SteamSecretStore();
     }
     return SteamSecretStore.instance;
+  }
+
+  /** 测试注入：LocalUnit 下 asset 不可用，替换为内存别名密钥后端。 */
+  useBackendForTest(assets: NamedSecretStore): void {
+    this.assets = assets;
   }
 
   private alias(tokenUUID: string, field: string): string {

@@ -8,6 +8,17 @@ import { TokenStore } from './TokenStore';
 import { AppPreference, PREF_KEYS, SettingValue } from './AppPreference';
 import { PermissionManager } from './PermissionManager';
 import { decryptBlePayload, encryptBlePayload } from './CryptoUtils';
+import {
+  TransferBatch,
+  TransferFrameBuilder,
+  TransferFrameEvent,
+  TransferFrameEventKind,
+  TransferFrameOptions,
+  TransferFrameReceiver,
+  concatenateChunks,
+  reuseLocalTokenUuids,
+  utf8Decode,
+} from './TransferProtocol';
 
 const TAG = 'WearEngineTransfer';
 const DOMAIN = 0xFF03;
@@ -23,18 +34,18 @@ const DOMAIN = 0xFF03;
  * - 传输信任链由华为账号/Wear Engine 背书
  * - 应用层 AES-256-GCM(encryptBlePayload/decryptBlePayload)纵深防御
  *
- * 消息协议(分片, 复用 BLE 分片思想):
+ * 消息协议(分片, 复用 BLE 分片思想, 协议纯类见 TransferProtocol):
  * - P2P 单条消息上限 4096 字节, 本实现每帧 ≤ P2P_FRAME_MAX(4000B) 留余量
- * - 首帧: JSON 头 {"total": 数据总字节数, "count": 消息数, "type": "tokens"|"settings"}
+ * - 首帧: JSON 头 {"total": 数据总字节数, "count": 消息数, "type": "tokens"|"settings"},
+ *   以 FRAME_HEADER_PREFIX 前缀与加密数据帧区分
  * - 后续帧: ≤ P2P_FRAME_MAX 的加密载荷分片
  * - 接收方按 total 重组, 解密后按 type 分发
  */
 
 /** P2P 单帧最大载荷(4096 上限留余量) */
 const P2P_FRAME_MAX = 4000;
-/** 首帧头与数据帧的区分: 数据帧以魔数字节开头, 头帧为纯 JSON */
+/** 首帧头与数据帧的区分: 数据帧以魔数字节开头, 头帧为前缀 + JSON */
 const FRAME_HEADER_PREFIX = 'OTPW';
-const FRAME_HEADER_PREFIX_BYTES: Uint8Array = new util.TextEncoder().encodeInto(FRAME_HEADER_PREFIX);
 
 /** 消息类型常量(与 BLE 方案一致) */
 const MSG_TYPE_TOKENS = 'tokens';
@@ -90,15 +101,7 @@ export interface SettingValuePair {
 export async function saveTokensBatch(tokens: TokenConfig[]): Promise<number> {
   const tkStore: TokenStore = TokenStore.getInstance();
   const existing = await tkStore.getTokens();
-  for (let i = 0; i < tokens.length; i++) {
-    for (let j = 0; j < existing.length; j++) {
-      if (existing[j].TokenIssuer === tokens[i].TokenIssuer &&
-        existing[j].TokenName === tokens[i].TokenName) {
-        tokens[i].TokenUUID = existing[j].TokenUUID;
-        break;
-      }
-    }
-  }
+  reuseLocalTokenUuids(tokens, existing);
   for (let i = 0; i < tokens.length; i++) {
     await tkStore.updateToken(tokens[i]);
   }
@@ -139,22 +142,7 @@ export enum BluetoothPermissionResult {
   DENIED = -1
 }
 
-/** 首帧头结构 */
-interface TransferHeader {
-  total: number;
-  count: number;
-  type?: string;
-}
-
-/** 分片接收状态 */
-interface ReceiveState {
-  inProgress: boolean;
-  total: number;
-  count: number;
-  type: string;
-  received: number;
-  chunks: Array<Uint8Array>;
-}
+/** 首帧头结构(协议定义见 TransferProtocol.TransferHeader) */
 
 /**
  * 手机端 Wear Engine P2P 客户端: 设备列表查询/拉起手表应用/分片发送令牌与设置.
@@ -353,28 +341,19 @@ export class WearEngineClient {
   /**
    * 分片发送公共实现: AES-256-GCM 加密 → 首帧头(JSON) → ≤P2P_FRAME_MAX 数据帧.
    * 帧格式: 头帧以 FRAME_HEADER_PREFIX 开头, 数据帧为原始字节, 接收方按首帧 total 重组.
+   * 帧构建委托 {@link TransferFrameBuilder}。
    */
   private async sendPayload(randomId: string, plain: Uint8Array, count: number, type: string): Promise<void> {
     await this.ensureAppParam();
     this.ensureClients();
     const encrypted: Uint8Array = await encryptBlePayload(plain);
-    const total: number = encrypted.byteLength;
 
-    // 首帧: 头 JSON
-    const headerBytes: Uint8Array = new util.TextEncoder().encodeInto(
-      `${FRAME_HEADER_PREFIX}${JSON.stringify({ total: total, count: count, type: type })}`);
-    await this.sendFrame(randomId, headerBytes);
-
-    // 数据分片(每帧 ≤ P2P_FRAME_MAX)
-    let offset: number = 0;
-    while (offset < total) {
-      const end: number = Math.min(offset + P2P_FRAME_MAX, total);
-      const chunk: Uint8Array = new Uint8Array(end - offset);
-      chunk.set(encrypted.subarray(offset, end));
-      await this.sendFrame(randomId, chunk);
-      offset = end;
+    const builder = new TransferFrameBuilder(FRAME_HEADER_PREFIX, P2P_FRAME_MAX);
+    const frames = builder.buildFrames(encrypted, count, type);
+    for (let i = 0; i < frames.length; i++) {
+      await this.sendFrame(randomId, frames[i].bytes);
     }
-    hilog.info(DOMAIN, TAG, `sendPayload done: type=${type}, count=${count}, ${total} bytes`);
+    hilog.info(DOMAIN, TAG, `sendPayload done: type=${type}, count=${count}, ${encrypted.byteLength} bytes`);
   }
 
   private async sendFrame(randomId: string, data: Uint8Array): Promise<void> {
@@ -389,9 +368,9 @@ export class WearEngineClient {
 export class WearEngineServer {
   private static instance: WearEngineServer;
   private p2pClient: wearEngine.P2pClient | null = null;
-  private receive: ReceiveState = {
-    inProgress: false, total: 0, count: 0, type: MSG_TYPE_TOKENS, received: 0, chunks: []
-  };
+  /** 分片协议接收状态机(Phase 3 抽至 TransferProtocol, OTPW 前缀模式 + 不设 total 上限) */
+  private receiver: TransferFrameReceiver =
+    new TransferFrameReceiver({ headerPrefix: FRAME_HEADER_PREFIX, maxTotal: 0 } as TransferFrameOptions);
   private onTokensSaved: ((count: number) => void) | undefined = undefined;
   private onSettingsApplied: (() => void) | undefined = undefined;
   /** 对端(手机)应用参数: bundleName/fingerprint 运行时从本应用签名信息动态获取 */
@@ -485,48 +464,37 @@ export class WearEngineServer {
     this.registeredRandomIds = [];
   }
 
-  /** 帧协议处理: 首帧头(FRAME_HEADER_PREFIX 前缀 JSON) → 数据帧累积 → total 齐后重组分发 */
+  /**
+   * 帧协议处理: 首帧头(前缀 JSON) → 数据帧累积 → total 齐后重组分发.
+   * 帧判定委托 {@link TransferFrameReceiver}: 非法头帧静默忽略且保留批次（有意收口:
+   * 旧实现 JSON 解析抛错会经外层 catch 重置批次致传输挂死, 现统一为无副作用忽略）,
+   * 孤儿数据帧静默忽略（与抽离前行为一致）, 收齐后异步分发.
+   */
   private handleMessage(message: wearEngine.P2pMessage): void {
     try {
-      const bytes: Uint8Array = message.content;
-      if (this.startsWith(bytes, FRAME_HEADER_PREFIX_BYTES)) {
-        // 首帧: 头 JSON {total, count, type}
-        const decoder = new util.TextDecoder('utf-8');
-        const headerText = decoder.decodeToString(bytes.subarray(FRAME_HEADER_PREFIX_BYTES.byteLength));
-        const header = JSON.parse(headerText) as TransferHeader;
-        if (header.total <= 0) {
-          hilog.error(DOMAIN, TAG, `invalid transfer header: ${headerText}`);
-          return;
-        }
-        this.receive = {
-          inProgress: true, total: header.total, count: header.count,
-          type: header.type ?? MSG_TYPE_TOKENS, received: 0, chunks: []
-        };
-        hilog.info(DOMAIN, TAG, `receive start: total=${header.total}, count=${header.count}, type=${this.receive.type}`);
-      } else if (this.receive.inProgress) {
-        this.receive.chunks.push(bytes);
-        this.receive.received += bytes.byteLength;
-        if (this.receive.received >= this.receive.total) {
-          this.assembleAndDispatch();
-        }
+      const event: TransferFrameEvent = this.receiver.onFrame(message.content);
+      if (event.kind === TransferFrameEventKind.BATCH_STARTED) {
+        hilog.info(DOMAIN, TAG,
+          `receive start: total=${event.header?.total}, count=${event.header?.count}, type=${event.header?.type}`);
+      } else if (event.kind === TransferFrameEventKind.BATCH_COMPLETE && event.batch !== null) {
+        this.assembleAndDispatch(event.batch);
       }
     } catch (err) {
       const e = err as BusinessError;
       hilog.error(e.code, TAG, `handleMessage failed: ${e.message}`);
-      this.receive = { inProgress: false, total: 0, count: 0, type: MSG_TYPE_TOKENS, received: 0, chunks: [] };
+      this.receiver.reset();
     }
   }
 
   /** 重组全部数据分片 → 解密 → 按 type 分发 */
-  private async assembleAndDispatch(): Promise<void> {
-    const full: Uint8Array = new Uint8Array(this.receive.total);
-    let offset: number = 0;
-    for (let i = 0; i < this.receive.chunks.length; i++) {
-      full.set(this.receive.chunks[i], offset);
-      offset += this.receive.chunks[i].byteLength;
+  private async assembleAndDispatch(batch: TransferBatch): Promise<void> {
+    if (batch.receivedBytes !== batch.total) {
+      // 分片总量与头不符(交叠写入/重复投递): 判失败并丢弃本批次, 不进入解密
+      hilog.error(DOMAIN, TAG, `chunk size mismatch: got ${batch.receivedBytes}, expect ${batch.total}, discarding`);
+      return;
     }
-    const msgType: string = this.receive.type;
-    this.receive = { inProgress: false, total: 0, count: 0, type: MSG_TYPE_TOKENS, received: 0, chunks: [] };
+    const full: Uint8Array = concatenateChunks(batch.total, batch.chunks);
+    const msgType: string = batch.type;
     try {
       // 应用层解密: 失败视为载荷被篡改或密钥版本不匹配, 丢弃且不入库
       const plain: Uint8Array | null = await decryptBlePayload(full);
@@ -538,8 +506,7 @@ export class WearEngineServer {
         await this.applySettings(plain);
         return;
       }
-      const decoder = new util.TextDecoder('utf-8');
-      const tokens = JSON.parse(decoder.decodeToString(plain)) as TokenConfig[];
+      const tokens = JSON.parse(utf8Decode(plain)) as TokenConfig[];
       hilog.info(DOMAIN, TAG, `received ${tokens.length} tokens, saving...`);
       // 共享入库: issuer+name 覆盖、updateToken(ASSET 双写)、sortTokens
       const saved = await saveTokensBatch(tokens);
@@ -553,25 +520,12 @@ export class WearEngineServer {
   /** 应用手机端下发的设置载荷(白名单过滤后写入手表 Preferences, 共享实现) */
   private async applySettings(plain: Uint8Array): Promise<void> {
     try {
-      const decoder = new util.TextDecoder('utf-8');
-      const pairs = JSON.parse(decoder.decodeToString(plain)) as Array<SettingValuePair>;
+      const pairs = JSON.parse(utf8Decode(plain)) as Array<SettingValuePair>;
       await applyWearSettings(pairs);
       this.onSettingsApplied?.();
     } catch (err) {
       const e = err as BusinessError;
       hilog.error(e.code, TAG, `applySettings failed: ${e.message}`);
     }
-  }
-
-  private startsWith(data: Uint8Array, prefix: Uint8Array): boolean {
-    if (data.length < prefix.length) {
-      return false;
-    }
-    for (let i = 0; i < prefix.length; i++) {
-      if (data[i] !== prefix[i]) {
-        return false;
-      }
-    }
-    return true;
   }
 }

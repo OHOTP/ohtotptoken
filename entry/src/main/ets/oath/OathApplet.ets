@@ -1,6 +1,5 @@
 import { cryptoFramework } from '@kit.CryptoArchitectureKit';
 import { util } from '@kit.ArkTS';
-import { BusinessError } from '@kit.BasicServicesKit';
 import { Logger } from 'common';
 import { TagTransport } from './TagTransport';
 
@@ -39,6 +38,57 @@ const SW1_MORE_DATA = 0x61;
 const SW_SECURITY_CONDITION_NOT_SATISFIED = 0x6982;
 
 let logger = Logger;
+
+// ---------- 密码学端口 ----------
+
+/**
+ * OATH 会话所需密码学端口（Phase 2 解耦）。
+ * 生产实现走 cryptoFramework（LocalUnit 不可用）；测试注入确定性实现，
+ * 仅验证协议编排（挑战/响应一致性由同一实现两侧计算保证）。
+ * PBKDF2/HMAC-SHA1 数值正确性由真机 ohosTest 的 RFC 向量保证。
+ */
+export interface OathCryptoPort {
+  pbkdf2Sha1Derive(password: string, salt: Uint8Array, iterations: number, keySize: number): Promise<Uint8Array>;
+  hmacSha1(key: Uint8Array, message: Uint8Array): Promise<Uint8Array>;
+  randomBytes(len: number): Uint8Array;
+  /** UTF-8 解码（util.TextDecoder 在 LocalUnit 下静默失效，经端口注入） */
+  utf8Decode(data: Uint8Array): string;
+}
+
+class CryptoFrameworkOathCrypto implements OathCryptoPort {
+  async pbkdf2Sha1Derive(password: string, salt: Uint8Array, iterations: number, keySize: number): Promise<Uint8Array> {
+    const spec: cryptoFramework.PBKDF2Spec = {
+      algName: 'PBKDF2',
+      password: password,
+      salt: salt,
+      iterations: iterations,
+      keySize: keySize
+    };
+    const kdf = cryptoFramework.createKdf('PBKDF2|SHA1');
+    const secret = await kdf.generateSecret(spec);
+    return secret.data;
+  }
+
+  async hmacSha1(key: Uint8Array, message: Uint8Array): Promise<Uint8Array> {
+    const keyBlob: cryptoFramework.DataBlob = { data: key };
+    const symKeyGenerator = cryptoFramework.createSymKeyGenerator('HMAC');
+    const symKey = symKeyGenerator.convertKeySync(keyBlob);
+    const mac = cryptoFramework.createMac('SHA1');
+    mac.initSync(symKey);
+    mac.updateSync({ data: message });
+    const macResult = mac.doFinalSync();
+    return macResult.data;
+  }
+
+  randomBytes(len: number): Uint8Array {
+    const random = cryptoFramework.createRandom();
+    return random.generateRandomSync(len).data;
+  }
+
+  utf8Decode(data: Uint8Array): string {
+    return textDecoder.decodeToString(data);
+  }
+}
 
 // ---------- 数据类型 ----------
 
@@ -142,12 +192,7 @@ function getResponseData(response: number[]): number[] {
 
 // ---------- 编解码工具 ----------
 
-const textEncoder = new util.TextEncoder();
 const textDecoder = util.TextDecoder.create('utf-8');
-
-function utf8BytesToString(bytes: Uint8Array): string {
-  return textDecoder.decodeToString(bytes);
-}
 
 /** 大端字节序列（用于 8 字节 challenge 时间步） */
 function bigEndianBytes(value: number, len: number): number[] {
@@ -184,8 +229,7 @@ interface ParsedCredId {
  * TOTP 用正则 ^((\d+)/)?(([^:]+):)?(.+)$ 提取 period/issuer/name；
  * HOTP 以首个 ':' 分割 issuer/name（无 issuer 则为空串）。
  */
-function parseCredId(credIdBytes: Uint8Array, oathType: OathType): ParsedCredId {
-  const data = utf8BytesToString(credIdBytes);
+function parseCredId(data: string, oathType: OathType): ParsedCredId {
   if (oathType === 'TOTP') {
     const pattern = new RegExp('^((\\d+)/)?(([^:]+):)?(.+)$');
     const match = pattern.exec(data);
@@ -248,14 +292,16 @@ interface CalcResult {
  */
 export class OathSession {
   private transport: TagTransport;
+  private crypto: OathCryptoPort;
   private version: string = '';
   private salt: Uint8Array = new Uint8Array(0);
   /** SELECT 响应中的 challenge，存在即锁定（需 VALIDATE 解锁） */
   private challenge: Uint8Array | undefined = undefined;
   private closed: boolean = false;
 
-  constructor(transport: TagTransport) {
+  constructor(transport: TagTransport, crypto?: OathCryptoPort) {
     this.transport = transport;
+    this.crypto = crypto !== undefined ? crypto : new CryptoFrameworkOathCrypto();
   }
 
   /** 是否锁定（存在 challenge 即需认证） */
@@ -335,7 +381,6 @@ export class OathSession {
     this.challenge = undefined;
     logger.info('VALIDATE ok');
   }
-
   /**
    * CALCULATE ALL：APDU 00 A4 00 01 0A 74 08 <8字节大端 timestamp//30>。
    * 解析 [0x71 name, 响应TLV] 列表；61xx 分片经 SEND REMAINING（00 A5 00 00 00）循环取回。
@@ -370,14 +415,14 @@ export class OathSession {
         continue;
       }
       const oathType: OathType = respTlv.tag === TAG_HOTP ? 'HOTP' : 'TOTP';
-      const parsed = parseCredId(nameTlv.value, oathType);
+      const parsed = parseCredId(this.utf8BytesToString(nameTlv.value), oathType);
       // touch 凭据：免交互流程无法取码，跳过（FR-016）
       if (respTlv.tag === TAG_TOUCH) {
         logger.info(`skip touch credential: ${parsed.name}`);
         continue;
       }
       const credential: OathCredential = {
-        credentialId: utf8BytesToString(nameTlv.value),
+        credentialId: this.utf8BytesToString(nameTlv.value),
         rawId: nameTlv.value,
         issuer: parsed.issuer,
         name: parsed.name,
@@ -485,35 +530,23 @@ export class OathSession {
     return buf;
   }
 
+  /** 凭据名等 UTF-8 解码（经 OathCryptoPort，LocalUnit 可注入） */
+  private utf8BytesToString(bytes: Uint8Array): string {
+    return this.crypto.utf8Decode(bytes);
+  }
+
   /** PBKDF2-HMAC-SHA1 派生 16 字节访问密钥（与 ykman _derive_key 等价） */
   private async deriveKey(password: string): Promise<Uint8Array> {
-    const spec: cryptoFramework.PBKDF2Spec = {
-      algName: 'PBKDF2',
-      password: password,
-      salt: this.salt,
-      iterations: 1000,
-      keySize: 16
-    };
-    const kdf = cryptoFramework.createKdf('PBKDF2|SHA1');
-    const secret = await kdf.generateSecret(spec);
-    return secret.data;
+    return this.crypto.pbkdf2Sha1Derive(password, this.salt, 1000, 16);
   }
 
-  /** HMAC-SHA1 计算（参照 TokenUtils.ets 的 genSymKeyByData/doHmacBySync 写法） */
+  /** HMAC-SHA1 计算（经 OathCryptoPort，生产为 cryptoFramework） */
   private async hmacSha1(key: Uint8Array, message: Uint8Array): Promise<Uint8Array> {
-    const keyBlob: cryptoFramework.DataBlob = { data: key };
-    const symKeyGenerator = cryptoFramework.createSymKeyGenerator('HMAC');
-    const symKey = symKeyGenerator.convertKeySync(keyBlob);
-    const mac = cryptoFramework.createMac('SHA1');
-    mac.initSync(symKey);
-    mac.updateSync({ data: message });
-    const macResult = mac.doFinalSync();
-    return macResult.data;
+    return this.crypto.hmacSha1(key, message);
   }
 
-  /** 生成 len 字节系统随机数 */
+  /** 生成 len 字节系统随机数（经 OathCryptoPort） */
   private randomBytes(len: number): Uint8Array {
-    const random = cryptoFramework.createRandom();
-    return random.generateRandomSync(len).data;
+    return this.crypto.randomBytes(len);
   }
 }

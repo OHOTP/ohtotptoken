@@ -19,14 +19,20 @@ export class ResponsiveLayoutState {
  * 将物理像素窗口尺寸统一转换为 vp 后计算布局，避免组件各自复制断点逻辑。
  */
 export class ResponsiveLayoutPolicy {
+  /** 设备端入口：px → vp 换算后委托 {@link resolveVp}。 */
   static resolve(uiContext: UIContext, size: window.Size): ResponsiveLayoutState {
+    return ResponsiveLayoutPolicy.resolveVp(uiContext.px2vp(size.width), uiContext.px2vp(size.height));
+  }
+
+  /** 纯计算入口：直接接收 vp 数值，LocalUnit 可离线覆盖断点决策。 */
+  static resolveVp(widthVp: number, heightVp: number): ResponsiveLayoutState {
     const state = new ResponsiveLayoutState();
-    state.widthVp = uiContext.px2vp(size.width);
-    state.heightVp = uiContext.px2vp(size.height);
-    state.heightToWidthRatio = state.widthVp > 0 ? state.heightVp / state.widthVp : 0;
+    state.widthVp = widthVp;
+    state.heightVp = heightVp;
+    state.heightToWidthRatio = widthVp > 0 ? heightVp / widthVp : 0;
     // 一级导航位置只取决于横向断点；业务分栏还需满足宽高比，二者不能共用同一布尔值。
-    state.useSideNavigation = state.widthVp >= RESPONSIVE_SIDE_NAV_MIN_WIDTH_VP;
-    state.allowSplit = state.widthVp >= RESPONSIVE_SPLIT_MIN_WIDTH_VP &&
+    state.useSideNavigation = widthVp >= RESPONSIVE_SIDE_NAV_MIN_WIDTH_VP;
+    state.allowSplit = widthVp >= RESPONSIVE_SPLIT_MIN_WIDTH_VP &&
       state.heightToWidthRatio < RESPONSIVE_SPLIT_MAX_ASPECT_RATIO;
     return state;
   }

@@ -2,9 +2,9 @@ import { KvManager } from "./KvManager";
 import { TokenConfig, otpType, copyTokenConfig, sanitizedTokenForTransfer } from "./TokenConfig";
 import { TokenGroupStore } from './TokenGroupStore';
 import { TokenBatchProgressCallback, TokenBatchStage, reportTokenBatchProgress } from './TokenBatchProgress';
-import { RdbManager } from "./RdbManager";
 import { common } from '@kit.AbilityKit';
 import { EVENT_NAMES, PREF_KEYS, AppPreference } from "./AppPreference";
+import { SecretStore, TokenKvStore } from './StoragePorts';
 import { AssetSecretStore } from './AssetSecretStore';
 import { SteamSecretStore } from './SteamSecretStore';
 import { SteamAuth } from './SteamAuth';
@@ -40,9 +40,11 @@ const DOMAIN = 0xFF00;
  * 此变更需确保 BackupRestoreHelper / CloudBackupManager 等备份恢复路径兼容。
  */
 export class TokenStore {
+  // 设备专属能力（换机分布式同步/整库文件备份）不参与端口注入，保持具体引用。
   private kvMgr: KvManager = KvManager.getInstance();
-  private rdbMgr: RdbManager = RdbManager.getInstance();
-  private assetStore: AssetSecretStore = AssetSecretStore.getInstance();
+  // 令牌主存储与密钥读写走端口（Phase 2 解耦，见 docs/TEST_PLAN.md 第 4 节）。
+  private kvBackend: TokenKvStore = KvManager.getInstance();
+  private assetStore: SecretStore = AssetSecretStore.getInstance();
   private steamSecretStore: SteamSecretStore = SteamSecretStore.getInstance();
   private token_array: TokenConfig[] = [];
   private appCtx: common.UIAbilityContext | undefined = undefined;
@@ -51,6 +53,22 @@ export class TokenStore {
 
   private token_prefix: string = "_token_uuid_";
   private mutationQueue: Promise<void> = Promise.resolve();
+
+  /**
+   * 测试注入：LocalUnit 下 distributedKVStore/asset 不可用，
+   * 替换 KV/密钥端口并清空内存状态，隔离用例间污染。
+   */
+  public useBackendsForTest(kv: TokenKvStore, secrets: SecretStore, steam?: SteamSecretStore): void {
+    this.kvBackend = kv;
+    this.assetStore = secrets;
+    if (steam !== undefined) {
+      this.steamSecretStore = steam;
+    }
+    this.token_array = [];
+    this.init_done = false;
+    this.mutationQueue = Promise.resolve();
+    this.appCtx = undefined;
+  }
 
   // 排序、单条编辑、批量操作和重新加载共享队列，避免 await 期间互相覆盖内存快照。
   private enqueueMutation(operation: () => Promise<void>): Promise<void> {
@@ -87,7 +105,7 @@ export class TokenStore {
     if (this.init_done) {
       return;
     }
-    await this.kvMgr.initKvManager();
+    await this.kvBackend.init();
     await this.LoadTokenByDataBase();
     this.init_done = true;
   }
@@ -95,7 +113,7 @@ export class TokenStore {
   public async LoadTokenByDataBase(): Promise<void> {
     return this.enqueueMutation(async () => {
       await TokenGroupStore.getInstance().load();
-      this.token_array = await this.kvMgr.getTokenArray(this.token_prefix);
+      this.token_array = await this.kvBackend.getTokenArray(this.token_prefix);
       // KV 里的对象是 JSON 裸数据：TokenConfig/SteamAuth 都没有原型方法，
       // 统一用 copyTokenConfig 重建实例，否则后续调用实例方法会崩溃
       this.token_array = this.token_array.map((token: TokenConfig): TokenConfig => copyTokenConfig(token));
@@ -227,7 +245,7 @@ export class TokenStore {
    * 否则尝试从 ASSET 回填。ASSET 不可用时 KV 中的 Secret 作为安全后裔。
    */
   public async queryToken(token_uuid: string): Promise<TokenConfig> {
-    let token = await this.kvMgr.getValue<TokenConfig>(`${this.token_prefix}${token_uuid}`);
+    let token = await this.kvBackend.getValue<TokenConfig>(`${this.token_prefix}${token_uuid}`);
     if (token && token.TokenSecret.length === 0) {
       const secret = await this.assetStore.querySecret(token_uuid);
       if (secret !== null) {
@@ -267,7 +285,7 @@ export class TokenStore {
    * 用于 RankScore 等非 Secret 字段变更场景，避免不必要的 TEE 硬件调用。
    */
   private async saveTokenKvOnly(token: TokenConfig): Promise<void> {
-    await this.kvMgr.setValue<TokenConfig>(`${this.token_prefix}${token.TokenUUID}`, token);
+    await this.kvBackend.setValue<TokenConfig>(`${this.token_prefix}${token.TokenUUID}`, token);
   }
 
   public async moveTokenToGroup(uuid: string, groupId: string): Promise<void> {
@@ -311,7 +329,7 @@ export class TokenStore {
         return updated;
       });
       if (changed.length > 0) {
-        await this.kvMgr.saveTokenBatch(this.token_prefix, changed, [], onProgress);
+        await this.kvBackend.saveTokenBatch(this.token_prefix, changed, [], onProgress);
         this.token_array = next;
         this.emitTokenChanged();
       }
@@ -343,7 +361,7 @@ export class TokenStore {
         next[i] = updated;
         changed.push(updated);
       }
-      await this.kvMgr.saveTokenBatch(this.token_prefix, changed);
+      await this.kvBackend.saveTokenBatch(this.token_prefix, changed);
       this.token_array = next;
       this.emitTokenChanged();
     });
@@ -403,7 +421,7 @@ export class TokenStore {
     // KV 副本必须剥离 Steam 凭证与 mafile 密钥：TokenConfig 会被手表同步原样序列化，
     // 高权限字段（identity_secret / refresh_token / revocation_code）只允许留在 ASSET。
     const kvWrites = writes.map((token: TokenConfig): TokenConfig => sanitizedTokenForTransfer(token));
-    await this.kvMgr.saveTokenBatch(this.token_prefix, kvWrites, [], onProgress);
+    await this.kvBackend.saveTokenBatch(this.token_prefix, kvWrites, [], onProgress);
     this.token_array = next;
     const secretWrites = writes.filter(token => originalSecrets.get(token.TokenUUID) !== token.TokenSecret);
     if (secretWrites.length > 0) {
@@ -465,7 +483,7 @@ export class TokenStore {
           changed.push(updated);
         }
       }
-      await this.kvMgr.saveTokenBatch(this.token_prefix, changed, removed.map(token => token.TokenUUID), onProgress);
+      await this.kvBackend.saveTokenBatch(this.token_prefix, changed, removed.map(token => token.TokenUUID), onProgress);
       this.token_array = next;
       reportTokenBatchProgress(onProgress, TokenBatchStage.REMOVING_SECRETS, 0, removed.length);
       for (let i = 0; i < removed.length; i++) {

@@ -2,6 +2,8 @@ import { asset } from '@kit.AssetStoreKit';
 import { util } from '@kit.ArkTS';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BusinessError } from '@kit.BasicServicesKit';
+import { SecretStore } from './StoragePorts';
+import { utf8ByteLength } from './SteamAuth';
 
 const TAG = 'AssetSecretStore';
 const DOMAIN = 0xFF00;
@@ -36,7 +38,7 @@ function uint8ArrayToString(arr: Uint8Array): string {
  * - DATA_LABEL_NORMAL_1: 写入时附加统一标签，供未来属性级批量查询使用
  *   注意：存量 ASSET 条目无此标签，未来采用标签查询前需执行一次性 re-upsert 迁移
  */
-export class AssetSecretStore {
+export class AssetSecretStore implements SecretStore {
   private static instance: AssetSecretStore;
 
   private constructor() {}
@@ -53,7 +55,7 @@ export class AssetSecretStore {
     if (secret.length === 0) {
       return false;
     }
-    return stringToUint8Array(secret).byteLength <= MAX_SECRET_BYTES;
+    return utf8ByteLength(secret) <= MAX_SECRET_BYTES;
   }
 
   /** 构建 ASSET ALIAS: {ALIAS_PREFIX}{tokenUUID} */

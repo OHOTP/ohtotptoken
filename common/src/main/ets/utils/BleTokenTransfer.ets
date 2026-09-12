@@ -6,6 +6,16 @@ import { TokenConfig, sanitizedTokenForTransfer } from './TokenConfig';
 import { AppPreference } from './AppPreference';
 import { decryptBlePayload, encryptBlePayload } from './CryptoUtils';
 import { WEAR_SYNC_PREF_KEYS, SettingValuePair, saveTokensBatch, applyWearSettings } from './WearEngineTransfer';
+import {
+  TransferBatch,
+  TransferFrameBuilder,
+  TransferFrameEvent,
+  TransferFrameEventKind,
+  TransferFrameOptions,
+  TransferFrameReceiver,
+  concatenateChunks,
+  utf8Decode,
+} from './TransferProtocol';
 
 const TAG = 'BleTokenTransfer';
 const DOMAIN = 0xFF01;
@@ -97,23 +107,6 @@ function withTimeout<T>(op: Promise<T>, timeoutMs: number, timeoutMsg: string): 
   });
 }
 
-/** 传输头部帧结构 */
-interface TransferHeader {
-  total: number;
-  count: number;
-  /** 消息类型: 缺省为 tokens(向后兼容旧版发送端) */
-  type?: string;
-}
-
-interface ReceiveState {
-  inProgress: boolean;
-  total: number;
-  count: number;
-  type: string;
-  received: number;
-  chunks: Array<Uint8Array>;
-}
-
 /** 消息类型常量 */
 const MSG_TYPE_TOKENS = 'tokens';
 const MSG_TYPE_SETTINGS = 'settings';
@@ -140,15 +133,12 @@ export class BleTokenServer {
   private gattServer: ble.GattServer | undefined = undefined;
   /** 进行中的启动流程(单飞: 并发 start 共享同一结果, 收敛后按需补启) */
   private startPromise: Promise<void> | undefined = undefined;
-  private receive: ReceiveState = BleTokenServer.newReceiveState();
+  /** 分片协议接收状态机(Phase 3 抽至 TransferProtocol, 无前缀模式 + 512KB 上限) */
+  private receiver: TransferFrameReceiver =
+    new TransferFrameReceiver({ headerPrefix: '', maxTotal: MAX_RECEIVE } as TransferFrameOptions);
   private onTokensSaved: ((count: number) => void) | undefined = undefined;
   private onSettingsApplied: (() => void) | undefined = undefined;
   private onSyncStatus: ((status: BleSyncStatus, count: number) => void) | undefined = undefined;
-
-  /** 空白接收状态(批次开始/结束/失败时统一以此重置) */
-  private static newReceiveState(): ReceiveState {
-    return { inProgress: false, total: 0, count: 0, type: MSG_TYPE_TOKENS, received: 0, chunks: [] };
-  }
 
   public static getInstance(): BleTokenServer {
     if (!BleTokenServer.instance) {
@@ -300,7 +290,7 @@ export class BleTokenServer {
 
   /** 重置接收状态机: 丢弃未完整接收的批次残留 */
   private resetReceive(): void {
-    this.receive = BleTokenServer.newReceiveState();
+    this.receiver.reset();
   }
 
   /** 释放 GattServer 实例: 逐段注销监听并 close, 单段失败不阻断其余段(防句柄滞留) */
@@ -329,45 +319,37 @@ export class BleTokenServer {
    * 分片协议接收: 首帧为头 JSON, 之后为数据分片, 收满后重组分发.
    * 头帧到达即视为新批次开始(重置接收状态), 并上报"接收中"状态.
    * 收尾帧(收满 total)的写应答延后到处理完成后回发, 使手机端拿到真实入库结果.
+   *
+   * 帧判定委托 {@link TransferFrameReceiver}: 无前缀模式下数据分片为加密随机字节,
+   * 不可能解析出合法头, 解析成功即视为头帧(批次中途到达则丢弃残留, 干净重启).
    */
   private handleWrite(req: ble.CharacteristicWriteRequest): void {
-    let batchComplete = false;
+    let completed: TransferBatch | null = null;
     try {
       const bytes: Uint8Array = new Uint8Array(req.value);
-      if (!this.receive.inProgress) {
-        // 首帧: 头 JSON {"total":N,"count":M,"type":T}; 复用 tryParseHeader 校验
-        // (JSON 标量如 "5" 经 typeof 守卫拒绝, 避免写 total=undefined 卡住批次)
-        const header = this.tryParseHeader(bytes);
-        if (header === null) {
-          hilog.error(DOMAIN, TAG, 'invalid transfer header');
-          this.resetReceive();
-          this.onSyncStatus?.(BleSyncStatus.FAILED, 0);
-          this.sendWriteResponse(req, false);
-          return;
-        }
-        this.startBatch(header);
-      } else {
-        // 批次中途检测新头帧: 手机端超时中断后立即重试时, 上一半批残留 inProgress,
-        // 新头帧若被当数据分片并入会致本次重试必败; 数据分片为加密随机字节,
-        // 不可能解析出合法头, 解析成功即视为新批次开始(残留丢弃, 干净重启)
-        const retryHeader = this.tryParseHeader(bytes);
-        if (retryHeader !== null) {
-          hilog.warn(DOMAIN, TAG, `stale batch discarded, new batch header received: total=${retryHeader.total}`);
-          this.startBatch(retryHeader);
-        } else {
-          this.receive.chunks.push(bytes);
-          this.receive.received += bytes.byteLength;
-          if (this.receive.received >= this.receive.total) {
-            batchComplete = true;
-          }
-        }
-      }
-      if (batchComplete) {
-        // 收尾帧: 应答延后到处理完成(成功 status 0 / 失败非 0), 手机端据此给出真实反馈
-        this.assembleAndSave(req);
-      } else {
-        // 非收尾帧: GATT 写事务必须有响应, 否则客户端写入会阻塞直至超时失败
+      const event: TransferFrameEvent = this.receiver.onFrame(bytes);
+      if (event.kind === TransferFrameEventKind.BATCH_STARTED) {
+        // 头帧: 开新批次并上报"接收中"
+        hilog.info(DOMAIN, TAG,
+          `receive start: total=${event.header?.total}, count=${event.header?.count}, type=${event.header?.type}`);
+        this.onSyncStatus?.(BleSyncStatus.RECEIVING, 0);
         this.sendWriteResponse(req, true);
+      } else if (event.kind === TransferFrameEventKind.CHUNK_ACCEPTED) {
+        // 非收尾数据帧: GATT 写事务必须有响应, 否则客户端写入会阻塞直至超时失败
+        this.sendWriteResponse(req, true);
+      } else if (event.kind === TransferFrameEventKind.BATCH_COMPLETE) {
+        // 收尾帧: 应答延后到处理完成(成功 status 0 / 失败非 0), 手机端据此给出真实反馈
+        completed = event.batch;
+      } else {
+        // 孤儿帧(非法传输头): 重置状态并上报失败, 回失败应答
+        hilog.error(DOMAIN, TAG, 'invalid transfer header');
+        this.receiver.reset();
+        this.onSyncStatus?.(BleSyncStatus.FAILED, 0);
+        this.sendWriteResponse(req, false);
+        return;
+      }
+      if (completed !== null) {
+        this.assembleAndSave(completed, req);
       }
     } catch (err) {
       let e: BusinessError = err as BusinessError;
@@ -376,30 +358,6 @@ export class BleTokenServer {
       this.onSyncStatus?.(BleSyncStatus.FAILED, 0);
       this.sendWriteResponse(req, false);
     }
-  }
-
-  /** 开启新批次: 重置接收状态机并上报"接收中" */
-  private startBatch(header: TransferHeader): void {
-    this.receive = {
-      inProgress: true, total: header.total, count: header.count,
-      type: header.type ?? MSG_TYPE_TOKENS, received: 0, chunks: []
-    };
-    this.onSyncStatus?.(BleSyncStatus.RECEIVING, 0);
-    hilog.info(DOMAIN, TAG, `receive start: total=${header.total}, count=${header.count}, type=${this.receive.type}`);
-  }
-
-  /** 尝试把帧解析为合法传输头(批次中途新头帧检测用); 非头帧/非法头返回 null */
-  private tryParseHeader(bytes: Uint8Array): TransferHeader | null {
-    try {
-      const decoder = new util.TextDecoder('utf-8');
-      const header = JSON.parse(decoder.decodeToString(bytes)) as TransferHeader;
-      if (header && typeof header.total === 'number' && header.total > 0 && header.total <= MAX_RECEIVE) {
-        return header;
-      }
-    } catch (err) {
-      // 加密数据分片解码/解析必然失败, 属正常路径
-    }
-    return null;
   }
 
   /** 回发写应答: status 0 表示成功, 非 0 使手机端写入失败(真实结果反馈) */
@@ -423,30 +381,22 @@ export class BleTokenServer {
 
   /**
    * 重组全部数据分片, 解密后按 type 分发: 令牌走共享入库, 设置走共享应用.
-   * 分片先快照到局部变量并立即重置接收状态机(后续新批次可立即开始, 互不残留),
+   * 收齐时接收状态机已复位(后续新批次可立即开始, 互不残留),
    * 重组/解密/处理的任何失败路径均上报失败并丢弃本批次, 收尾帧回失败应答.
    *
+   * @param batch 收齐的批次快照
    * @param finalReq 收尾帧写请求(处理完成后回发应答; 无则静默处理)
    */
-  private async assembleAndSave(finalReq?: ble.CharacteristicWriteRequest): Promise<void> {
-    const chunks: Array<Uint8Array> = this.receive.chunks;
-    const total: number = this.receive.total;
-    const msgType: string = this.receive.type;
-    this.resetReceive();
+  private async assembleAndSave(batch: TransferBatch, finalReq?: ble.CharacteristicWriteRequest): Promise<void> {
     let ok = false;
     try {
-      const full: Uint8Array = new Uint8Array(total);
-      let offset: number = 0;
-      for (let i = 0; i < chunks.length; i++) {
-        full.set(chunks[i], offset);
-        offset += chunks[i].byteLength;
-      }
-      if (offset !== total) {
+      if (batch.receivedBytes !== batch.total) {
         // 分片总量与头不符(交叠写入/异常发送方): 判失败, 丢弃本批次
-        hilog.error(DOMAIN, TAG, `chunk size mismatch: got ${offset}, expect ${total}`);
+        hilog.error(DOMAIN, TAG, `chunk size mismatch: got ${batch.receivedBytes}, expect ${batch.total}`);
         this.onSyncStatus?.(BleSyncStatus.FAILED, 0);
         return;
       }
+      const full: Uint8Array = concatenateChunks(batch.total, batch.chunks);
       // 应用层解密(AES-256-GCM): 失败视为载荷被篡改或密钥版本不匹配, 丢弃且不入库
       const plain: Uint8Array | null = await decryptBlePayload(full);
       if (plain === null) {
@@ -454,13 +404,12 @@ export class BleTokenServer {
         this.onSyncStatus?.(BleSyncStatus.FAILED, 0);
         return;
       }
-      const decoder = new util.TextDecoder('utf-8');
-      if (msgType === MSG_TYPE_SETTINGS) {
-        const pairs = JSON.parse(decoder.decodeToString(plain)) as Array<SettingValuePair>;
+      if (batch.type === MSG_TYPE_SETTINGS) {
+        const pairs = JSON.parse(utf8Decode(plain)) as Array<SettingValuePair>;
         await applyWearSettings(pairs);
         this.onSettingsApplied?.();
       } else {
-        const tokens = JSON.parse(decoder.decodeToString(plain)) as TokenConfig[];
+        const tokens = JSON.parse(utf8Decode(plain)) as TokenConfig[];
         hilog.info(DOMAIN, TAG, `received ${tokens.length} tokens, saving...`);
         const saved = await saveTokensBatch(tokens);
         this.onTokensSaved?.(saved);
@@ -757,7 +706,8 @@ export class BleTokenClient {
   }
 
   /**
-   * 分片协议公共实现: 配对门禁 → 服务发现 → 应用层加密 → 首帧头(type) → 数据分片.
+   * 分片发送公共实现: 配对门禁 → 服务发现 → 应用层加密 → 首帧头(type) → 数据分片.
+   * 帧构建委托 {@link TransferFrameBuilder}(无前缀, ≤MAX_CHUNK, 收尾帧标记放宽超时).
    */
   private async sendPayload(plain: Uint8Array, count: number, type: string): Promise<void> {
     if (!this.gattClient) {
@@ -772,25 +722,16 @@ export class BleTokenClient {
       await withTimeout(this.gattClient.getServices(), GATT_OP_TIMEOUT_MS, 'BLE getServices timeout');
     hilog.info(DOMAIN, TAG, `services discovered: ${services.length}`);
 
-    const encoder = new util.TextEncoder();
     // 应用层加密(AES-256-GCM): 载荷格式 [MAGIC][iv][tag][ciphertext], 分片协议不变
     const encrypted: Uint8Array = await encryptBlePayload(plain);
-    const total: number = encrypted.byteLength;
 
-    // 首帧: 头 {"total":N,"count":M,"type":T}
-    const headerBytes: Uint8Array = encoder.encodeInto(JSON.stringify({ total: total, count: count, type: type }));
-    await this.writeFrame(headerBytes);
-
-    // 数据分片(收尾帧用放宽超时: 其应答延后到手表端处理完成)
-    let offset: number = 0;
-    while (offset < total) {
-      const end: number = Math.min(offset + MAX_CHUNK, total);
-      const chunk: Uint8Array = new Uint8Array(end - offset);
-      chunk.set(encrypted.subarray(offset, end));
-      await this.writeFrame(chunk, offset + chunk.byteLength >= total);
-      offset = end;
+    // 首帧: 头 {"total":N,"count":M,"type":T}; 数据分片(收尾帧用放宽超时: 其应答延后到手表端处理完成)
+    const builder = new TransferFrameBuilder('', MAX_CHUNK);
+    const frames = builder.buildFrames(encrypted, count, type);
+    for (let i = 0; i < frames.length; i++) {
+      await this.writeFrame(frames[i].bytes, frames[i].isFinal);
     }
-    hilog.info(DOMAIN, TAG, `sendPayload done: type=${type}, count=${count}, ${total} encrypted bytes`);
+    hilog.info(DOMAIN, TAG, `sendPayload done: type=${type}, count=${count}, ${encrypted.byteLength} encrypted bytes`);
   }
 
   private async writeFrame(data: Uint8Array, isFinal: boolean = false): Promise<void> {

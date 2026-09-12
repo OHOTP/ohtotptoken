@@ -1,9 +1,13 @@
 import { AppStorageV2 } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
 import { KvManager } from './KvManager';
+import { TokenGroupKvBackend } from './StoragePorts';
 
 export const ALL_TOKEN_GROUPS: string = '__all__';
 export const FAVORITE_TOKEN_GROUP: string = '__favorites__';
+
+// TokenGroupKvBackend 已并入 StoragePorts 端口族（Phase 2）；
+// 通过 common/Index 的 `export * from StoragePorts` 继续按原名导出。
 
 export class TokenGroup {
   id: string = '';
@@ -29,14 +33,20 @@ export class TokenGroupState {
 export class TokenGroupStore {
   private static instance: TokenGroupStore = new TokenGroupStore();
   private readonly key: string = '_token_groups_v1';
+  private kvBackend: TokenGroupKvBackend = KvManager.getInstance();
   readonly state: TokenGroupState = AppStorageV2.connect(TokenGroupState, () => new TokenGroupState())!;
 
   static getInstance(): TokenGroupStore {
     return TokenGroupStore.instance;
   }
 
+  /** 测试注入：LocalUnit 下 distributedKVStore 不可用，替换为内存后端。 */
+  useKvBackendForTest(kv: TokenGroupKvBackend): void {
+    this.kvBackend = kv;
+  }
+
   async load(): Promise<void> {
-    const groups = await KvManager.getInstance().getValue<TokenGroup[]>(this.key) ?? [];
+    const groups = await this.kvBackend.getValue<TokenGroup[]>(this.key) ?? [];
     this.state.groups = groups.map(group => new TokenGroup(group.id, group.name, group.color));
     this.reconcileSelection();
   }
@@ -50,7 +60,7 @@ export class TokenGroupStore {
   }
 
   private async save(groups: TokenGroup[]): Promise<void> {
-    await KvManager.getInstance().setValue(this.key, groups);
+    await this.kvBackend.setValue(this.key, groups);
     this.state.groups = groups;
     this.reconcileSelection();
   }

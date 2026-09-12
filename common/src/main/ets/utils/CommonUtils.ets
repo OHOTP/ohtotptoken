@@ -29,3 +29,25 @@ export function delay(ms: number): Promise<void> {
     setTimeout(() => resolve(), ms);
   });
 }
+
+// ---- 云备份文件名规则（CloudBackupManager 与 CloudSyncTask 共享）----
+
+/** 备份文件命名规则：`otp_backup_{毫秒时间戳}.enc` */
+export const BACKUP_FILE_PREFIX = 'otp_backup_';
+export const BACKUP_FILE_EXT = '.enc';
+
+/** 是否为备份文件（按前缀/后缀过滤） */
+export function isBackupFileName(fileName: string): boolean {
+  return fileName.startsWith(BACKUP_FILE_PREFIX) && fileName.endsWith(BACKUP_FILE_EXT);
+}
+
+/** 从备份文件名解析毫秒时间戳；非法（NaN）由调用方跳过 */
+export function parseBackupTimestamp(fileName: string): number {
+  return parseInt(fileName.replace(BACKUP_FILE_PREFIX, '').replace(BACKUP_FILE_EXT, ''));
+}
+
+/** 备份记录展示日期（与 SyncTimeHelper.formatTimestamp 同一格式） */
+export function formatRecordDate(timestamp: number): string {
+  const d: Date = new Date(timestamp);
+  return `${d.getFullYear()}-${padZero(d.getMonth() + 1)}-${padZero(d.getDate())} ${padZero(d.getHours())}:${padZero(d.getMinutes())}`;
+}

@@ -4,20 +4,116 @@ import { CloudBackupCrypto, CloudBackupRecord, CloudBackupTokenError } from './C
 import { TokenStore } from './TokenStore';
 import { TokenConfig, sanitizedTokenForBackup } from './TokenConfig';
 import { TokenGroup, TokenGroupStore } from './TokenGroupStore';
-import { fileIo as fs, cloudSync, fileUri } from '@kit.CoreFileKit';
+import { cloudSync, fileUri } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
-import { buffer } from '@kit.ArkTS';
 import { DeviceInfoHelper } from './DeviceInfoHelper';
 import { HuaweiAccountManager } from './HuaweiAccountManager';
 import { SyncTimeHelper } from './SyncTimeHelper';
 import { TokenIconPacks } from './TokenUtils';
 import { IconPackCloudBackup, PackMetaEntry } from './IconPackCloudBackup';
+import { FsGateway, FileIoFsGateway } from './StoragePorts';
+import { BACKUP_FILE_EXT, BACKUP_FILE_PREFIX, isBackupFileName, parseBackupTimestamp } from './CommonUtils';
 
 const TAG = 'CloudBackupManager';
 const DOMAIN = 0xFF00;
 const MAX_BACKUP_COUNT = 5;
-const BACKUP_FILE_PREFIX = 'otp_backup_';
-const BACKUP_FILE_EXT = '.enc';
+
+/** 华为账号状态端口（生产：HuaweiAccountManager 单例）。 */
+export interface CloudBackupAccountPort {
+  isUserLogin(): boolean;
+  unionId(): string;
+}
+
+/** 设备标识端口（生产：DeviceInfoHelper 单例）。 */
+export interface CloudBackupDevicePort {
+  deviceId(): string;
+  deviceName(): string;
+}
+
+/** 令牌数据端口（生产：TokenStore 单例）。 */
+export interface CloudBackupTokenPort {
+  getTokens(): Promise<TokenConfig[]>;
+  updateToken(token: TokenConfig): Promise<void>;
+}
+
+/** 分组目录端口（生产：TokenGroupStore 单例）。 */
+export interface CloudBackupGroupPort {
+  currentGroups(): TokenGroup[];
+  merge(groups: TokenGroup[] | undefined): Promise<void>;
+}
+
+/** 图标包云备份端口（生产：IconPackCloudBackup 单例）。 */
+export interface CloudBackupIconPort {
+  backupIconPacks(): Promise<boolean>;
+  clearCloudBackup(): Promise<boolean>;
+}
+
+/** 云端同步触发端口（生产：cloudSync.FileSync）。 */
+export interface CloudSyncStarter {
+  start(): Promise<void>;
+}
+
+/** LocalUnit 测试注入项（cloudDir 就绪时跳过 init() 的 AppStorage 依赖）。 */
+export interface CloudBackupTestDeps {
+  fs?: FsGateway;
+  account?: CloudBackupAccountPort;
+  device?: CloudBackupDevicePort;
+  tokens?: CloudBackupTokenPort;
+  groups?: CloudBackupGroupPort;
+  icons?: CloudBackupIconPort;
+  sync?: CloudSyncStarter;
+  cloudDir?: string;
+}
+
+class HuaweiAccountAdapter implements CloudBackupAccountPort {
+  isUserLogin(): boolean {
+    return HuaweiAccountManager.getInstance().userLogin;
+  }
+
+  unionId(): string {
+    return HuaweiAccountManager.getInstance().userAccount.unionId;
+  }
+}
+
+class DeviceInfoAdapter implements CloudBackupDevicePort {
+  deviceId(): string {
+    return DeviceInfoHelper.getInstance().getDeviceId();
+  }
+
+  deviceName(): string {
+    return DeviceInfoHelper.getInstance().getDeviceName();
+  }
+}
+
+class TokenStoreAdapter implements CloudBackupTokenPort {
+  async getTokens(): Promise<TokenConfig[]> {
+    return TokenStore.getInstance().getTokens();
+  }
+
+  async updateToken(token: TokenConfig): Promise<void> {
+    await TokenStore.getInstance().updateToken(token);
+  }
+}
+
+class TokenGroupStoreAdapter implements CloudBackupGroupPort {
+  currentGroups(): TokenGroup[] {
+    return TokenGroupStore.getInstance().state.groups;
+  }
+
+  merge(groups: TokenGroup[] | undefined): Promise<void> {
+    return TokenGroupStore.getInstance().merge(groups);
+  }
+}
+
+class IconPackCloudBackupAdapter implements CloudBackupIconPort {
+  backupIconPacks(): Promise<boolean> {
+    return IconPackCloudBackup.getInstance().backupIconPacks();
+  }
+
+  clearCloudBackup(): Promise<boolean> {
+    return IconPackCloudBackup.getInstance().clearCloudBackup();
+  }
+}
 
 /**
  * 云备份载荷：将 TokenConfig[] 包装为结构化格式，附带图标包启用列表和元数据。
@@ -55,14 +151,19 @@ class CloudBackupPayload {
  * 每台设备（按 ODID 区分）最多保留 {@link MAX_BACKUP_COUNT} 份备份，
  * 超出时自动删除最旧的一份。
  *
+ * ## Phase 2 解耦
+ * 文件系统经 {@link FsGateway} 端口、账号/设备/令牌/分组/图标包经各自端口访问，
+ * LocalUnit 注入内存/假实现测试编排逻辑（见 docs/TEST_PLAN.md 第 4 节）。
+ *
  * @module CloudBackupManager
  */
 export class CloudBackupManager {
   private static instance: CloudBackupManager | null = null;
-  private crypto: CloudBackupCrypto = CloudBackupCrypto.getInstance();
   private context: common.UIAbilityContext | undefined = undefined;
   private cloudDir: string = '';
   private fileSync: cloudSync.FileSync | null = null;
+  private testDeps: CloudBackupTestDeps | null = null;
+  private readonly productionFs: FsGateway = new FileIoFsGateway();
 
   private constructor() {
   }
@@ -72,6 +173,53 @@ export class CloudBackupManager {
       CloudBackupManager.instance = new CloudBackupManager();
     }
     return CloudBackupManager.instance;
+  }
+
+  /** 测试注入：LocalUnit 下云文件/账号/设备 API 不可用，替换全部端口。 */
+  useDepsForTest(deps: CloudBackupTestDeps): void {
+    this.testDeps = deps;
+    if (deps.cloudDir !== undefined && deps.cloudDir.length > 0) {
+      // 语义上 context/cloudDir 已就绪：init() 直接短路，不再读 AppStorage
+      this.context = new Object() as common.UIAbilityContext;
+      this.cloudDir = deps.cloudDir;
+    }
+  }
+
+  /** 测试复位：恢复生产端口与未初始化状态（与 IconPackCloudBackup.resetForTest 对称，防单例跨套件污染）。 */
+  resetForTest(): void {
+    this.testDeps = null;
+    this.context = undefined;
+    this.cloudDir = '';
+    this.fileSync = null;
+  }
+
+  private get fsPort(): FsGateway {
+    return this.testDeps?.fs !== undefined ? this.testDeps.fs : this.productionFs;
+  }
+
+  private get accountPort(): CloudBackupAccountPort {
+    return this.testDeps?.account !== undefined ? this.testDeps.account : new HuaweiAccountAdapter();
+  }
+
+  private get devicePort(): CloudBackupDevicePort {
+    return this.testDeps?.device !== undefined ? this.testDeps.device : new DeviceInfoAdapter();
+  }
+
+  private get tokenPort(): CloudBackupTokenPort {
+    return this.testDeps?.tokens !== undefined ? this.testDeps.tokens : new TokenStoreAdapter();
+  }
+
+  private get groupPort(): CloudBackupGroupPort {
+    return this.testDeps?.groups !== undefined ? this.testDeps.groups : new TokenGroupStoreAdapter();
+  }
+
+  private get iconPort(): CloudBackupIconPort {
+    return this.testDeps?.icons !== undefined ? this.testDeps.icons : new IconPackCloudBackupAdapter();
+  }
+
+  /** 每次调用时取加密实例：测试用 useEngineForTest 替换单例后这里拿到的就是新实例。 */
+  private get crypto(): CloudBackupCrypto {
+    return CloudBackupCrypto.getInstance();
   }
 
   /** 初始化云备份管理器：获取 UIAbilityContext、确保云端目录存在。幂等，重复调用安全。 */
@@ -97,12 +245,12 @@ export class CloudBackupManager {
   /** 确保云端备份目录存在，不存在则递归创建 */
   private async ensureCloudDirExists(): Promise<void> {
     try {
-      const stat = await fs.stat(this.cloudDir);
+      const stat = await this.fsPort.stat(this.cloudDir);
       hilog.info(DOMAIN, TAG, `ensureCloudDirExists: exists, location=${stat.location}`);
     } catch (e) {
       hilog.warn(DOMAIN, TAG, `ensureCloudDirExists: not exist, creating`);
       try {
-        await fs.mkdir(this.cloudDir);
+        await this.fsPort.makeDir(this.cloudDir);
         hilog.info(DOMAIN, TAG, 'ensureCloudDirExists: created');
       } catch (err) {
         hilog.error(DOMAIN, TAG, `ensureCloudDirExists: create error=${JSON.stringify(err)}`);
@@ -123,27 +271,26 @@ export class CloudBackupManager {
       return false;
     }
 
-    const accountMgr = HuaweiAccountManager.getInstance();
-    if (!accountMgr.userLogin) {
+    if (!this.accountPort.isUserLogin()) {
       hilog.warn(DOMAIN, TAG, 'backupToCloud: Huawei account not logged in, aborting');
       return false;
     }
 
-    const encryptKey = accountMgr.userAccount.unionId;
+    const encryptKey = this.accountPort.unionId();
     const mode = this.crypto.getMode(true);
-    const deviceId = DeviceInfoHelper.getInstance().getDeviceId();
-    const deviceName = DeviceInfoHelper.getInstance().getDeviceName();
+    const deviceId = this.devicePort.deviceId();
+    const deviceName = this.devicePort.deviceName();
 
     hilog.info(DOMAIN, TAG, `backupToCloud: starting backup, mode=${mode}`);
 
     // 构造 CloudBackupPayload：包含令牌、图标包启用列表、图标包元数据
     // 注意：载荷会被序列化后上传云端，必须剥离 Steam 高权限凭证
     // （identity_secret / refresh_token / revocation_code），TokenSecret 保留以便恢复后显示动态码
-    const tokens = await TokenStore.getInstance().getTokens();
+    const tokens = await this.tokenPort.getTokens();
     const enabledPacks = TokenIconPacks.enabled_packs;
     const payload = new CloudBackupPayload();
     payload.tokens = tokens.map((token: TokenConfig): TokenConfig => sanitizedTokenForBackup(token));
-    payload.groups = [...TokenGroupStore.getInstance().state.groups];
+    payload.groups = [...this.groupPort.currentGroups()];
     payload.enabledPacks = enabledPacks;
     const metaList: PackMetaEntry[] = [];
     for (const p of TokenIconPacks.aegis_icon_packs) {
@@ -172,10 +319,8 @@ export class CloudBackupManager {
     const filePath = `${this.cloudDir}/${fileName}`;
 
     try {
-      const file = fs.openSync(filePath, fs.OpenMode.WRITE_ONLY | fs.OpenMode.CREATE | fs.OpenMode.TRUNC);
-      const writeLen = fs.writeSync(file.fd, token);
-      fs.closeSync(file);
-      hilog.info(DOMAIN, TAG, `backupToCloud: wrote ${writeLen} bytes to ${fileName}`);
+      await this.fsPort.writeTextFile(filePath, token);
+      hilog.info(DOMAIN, TAG, `backupToCloud: wrote ${token.length} chars to ${fileName}`);
     } catch (e) {
       hilog.error(DOMAIN, TAG, `backupToCloud: write error=${JSON.stringify(e)}`);
       return false;
@@ -196,7 +341,7 @@ export class CloudBackupManager {
     hilog.info(DOMAIN, TAG, 'backupToCloud: completed successfully');
 
     // 图标包文件备份：fire-and-forget，不阻塞 token 备份成功返回
-    IconPackCloudBackup.getInstance().backupIconPacks().then((iconResult) => {
+    this.iconPort.backupIconPacks().then((iconResult) => {
       hilog.info(DOMAIN, TAG, `backupToCloud: icon pack backup result=${iconResult}`);
     }).catch((err: Error) => {
       hilog.error(DOMAIN, TAG, `backupToCloud: icon pack backup failed: ${err.message}`);
@@ -208,7 +353,7 @@ export class CloudBackupManager {
   /**
    * 从云端恢复最新的备份数据
    *
-   * 解密后逐条调用 `TokenStore.updateToken` 写入本地 KV。
+   * 解密后逐条调用令牌端口写入本地 KV。
    * @returns 是否成功
    */
   async restoreFromCloud(): Promise<boolean> {
@@ -218,8 +363,7 @@ export class CloudBackupManager {
       return false;
     }
 
-    const accountMgr = HuaweiAccountManager.getInstance();
-    if (!accountMgr.userLogin) {
+    if (!this.accountPort.isUserLogin()) {
       hilog.warn(DOMAIN, TAG, 'restoreFromCloud: Huawei account not logged in, aborting');
       return false;
     }
@@ -244,7 +388,7 @@ export class CloudBackupManager {
       return false;
     }
 
-    if (!HuaweiAccountManager.getInstance().userLogin) {
+    if (!this.accountPort.isUserLogin()) {
       hilog.warn(DOMAIN, TAG, 'clearCloudStorage: Huawei account not logged in, aborting');
       return false;
     }
@@ -258,7 +402,7 @@ export class CloudBackupManager {
       }
       AppPreference.setPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME, '0');
       // 同步清除图标包云端备份（fire-and-forget）
-      IconPackCloudBackup.getInstance().clearCloudBackup();
+      this.iconPort.clearCloudBackup();
       hilog.info(DOMAIN, TAG, 'clearCloudStorage: completed');
       return true;
     } catch (e) {
@@ -275,12 +419,12 @@ export class CloudBackupManager {
       return false;
     }
 
-    if (!HuaweiAccountManager.getInstance().userLogin) {
+    if (!this.accountPort.isUserLogin()) {
       hilog.warn(DOMAIN, TAG, 'clearDeviceCloudStorage: Huawei account not logged in, aborting');
       return false;
     }
 
-    const deviceId = DeviceInfoHelper.getInstance().getDeviceId();
+    const deviceId = this.devicePort.deviceId();
     hilog.info(DOMAIN, TAG, `clearDeviceCloudStorage: clearing device=${deviceId}`);
 
     try {
@@ -291,7 +435,7 @@ export class CloudBackupManager {
       }
       AppPreference.setPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME, '0');
       // 同步清除图标包云端备份（fire-and-forget）
-      IconPackCloudBackup.getInstance().clearCloudBackup();
+      this.iconPort.clearCloudBackup();
       hilog.info(DOMAIN, TAG, `clearDeviceCloudStorage: completed, deleted ${deviceRecords.length}`);
       return true;
     } catch (e) {
@@ -313,13 +457,13 @@ export class CloudBackupManager {
       return false;
     }
 
-    if (!HuaweiAccountManager.getInstance().userLogin) {
+    if (!this.accountPort.isUserLogin()) {
       hilog.warn(DOMAIN, TAG, 'clearDeviceNameCloudStorage: Huawei account not logged in, aborting');
       return false;
     }
 
-    const currentDeviceId = DeviceInfoHelper.getInstance().getDeviceId();
-    const currentDeviceName = DeviceInfoHelper.getInstance().getDeviceName();
+    const currentDeviceId = this.devicePort.deviceId();
+    const currentDeviceName = this.devicePort.deviceName();
     hilog.info(DOMAIN, TAG, `clearDeviceNameCloudStorage: name=${currentDeviceName}, excluding odid=${currentDeviceId}`);
 
     try {
@@ -332,7 +476,7 @@ export class CloudBackupManager {
       }
       if (staleRecords.length > 0) {
         // 仅在有实际删除时才清除图标包备份（避免不必要的云操作）
-        IconPackCloudBackup.getInstance().clearCloudBackup();
+        this.iconPort.clearCloudBackup();
       }
       hilog.info(DOMAIN, TAG, `clearDeviceNameCloudStorage: completed, deleted ${staleRecords.length}`);
       return true;
@@ -360,7 +504,7 @@ export class CloudBackupManager {
       return;
     }
 
-    if (!HuaweiAccountManager.getInstance().userLogin) {
+    if (!this.accountPort.isUserLogin()) {
       return;
     }
 
@@ -389,20 +533,19 @@ export class CloudBackupManager {
       return false;
     }
 
-    const accountMgr = HuaweiAccountManager.getInstance();
-    if (!accountMgr.userLogin) {
+    if (!this.accountPort.isUserLogin()) {
       hilog.warn(DOMAIN, TAG, 'restoreFromBackupRecord: Huawei account not logged in, aborting');
       return false;
     }
 
-    const encryptKey = accountMgr.userAccount.unionId;
+    const encryptKey = this.accountPort.unionId();
     const mode = this.crypto.getMode(true);
 
     hilog.info(DOMAIN, TAG, `restoreFromBackupRecord: id=${recordId}`);
 
     const filePath = `${this.cloudDir}/${recordId}`;
     try {
-      const stat = await fs.stat(filePath);
+      const stat = await this.fsPort.stat(filePath);
       hilog.info(DOMAIN, TAG, `restoreFromBackupRecord: file size=${stat.size}, location=${stat.location}`);
 
       if (stat.location === 2) {
@@ -410,7 +553,7 @@ export class CloudBackupManager {
         await this.cacheFile(filePath);
       }
 
-      const tokenContent = await this.readFileContent(filePath);
+      const tokenContent = await this.fsPort.readTextFile(filePath);
       hilog.info(DOMAIN, TAG, `restoreFromBackupRecord: read ${tokenContent.length} chars`);
 
       const decrypted = await this.crypto.decrypt(tokenContent, mode, encryptKey);
@@ -422,7 +565,7 @@ export class CloudBackupManager {
       const payload = JSON.parse(decrypted) as CloudBackupPayload;
       if (payload && payload.tokens !== undefined && payload.tokens !== null) {
         tokens = payload.tokens;
-        await TokenGroupStore.getInstance().merge(payload.groups);
+        await this.groupPort.merge(payload.groups);
         if (payload.enabledPacks !== undefined && payload.enabledPacks !== null) {
           enabledPacks = payload.enabledPacks;
         }
@@ -439,7 +582,7 @@ export class CloudBackupManager {
       hilog.info(DOMAIN, TAG, `restoreFromBackupRecord: token count=${tokens.length}`);
 
       for (const token of tokens) {
-        await TokenStore.getInstance().updateToken(token);
+        await this.tokenPort.updateToken(token);
       }
 
       hilog.info(DOMAIN, TAG, 'restoreFromBackupRecord: completed successfully');
@@ -474,7 +617,7 @@ export class CloudBackupManager {
   private async deleteBackupFile(fileName: string): Promise<boolean> {
     const filePath = `${this.cloudDir}/${fileName}`;
     try {
-      await fs.unlink(filePath);
+      await this.fsPort.deleteFile(filePath);
       hilog.info(DOMAIN, TAG, `deleteBackupFile: deleted ${fileName}`);
       return true;
     } catch (e) {
@@ -487,18 +630,17 @@ export class CloudBackupManager {
   private async listBackupRecords(): Promise<CloudBackupRecord[]> {
     const records: CloudBackupRecord[] = [];
     try {
-      const files = fs.listFileSync(this.cloudDir);
+      const files = await this.fsPort.listFiles(this.cloudDir);
 
       for (const fileName of files) {
-        if (!fileName.startsWith(BACKUP_FILE_PREFIX) || !fileName.endsWith(BACKUP_FILE_EXT)) {
+        if (!isBackupFileName(fileName)) {
           continue;
         }
 
         const filePath = `${this.cloudDir}/${fileName}`;
         try {
-          const stat = await fs.stat(filePath);
-          const timestampStr = fileName.replace(BACKUP_FILE_PREFIX, '').replace(BACKUP_FILE_EXT, '');
-          const timestamp = parseInt(timestampStr);
+          const stat = await this.fsPort.stat(filePath);
+          const timestamp = parseBackupTimestamp(fileName);
 
           if (isNaN(timestamp)) {
             continue;
@@ -509,7 +651,7 @@ export class CloudBackupManager {
           let deviceId = '';
           let deviceName = '';
           try {
-            const tokenContent = await this.readFileContent(filePath);
+            const tokenContent = await this.fsPort.readTextFile(filePath);
             const header = this.crypto.parseTokenHeader(tokenContent);
             tokenCount = header.tokenCount;
             fileSize = header.size;
@@ -547,24 +689,21 @@ export class CloudBackupManager {
     return records;
   }
 
-  /** 读取文件全部内容为 UTF-8 字符串 */
-  private async readFileContent(filePath: string): Promise<string> {
-    const stat = await fs.stat(filePath);
-    const file = fs.openSync(filePath, fs.OpenMode.READ_ONLY);
-    const bufferArray = new ArrayBuffer(stat.size);
-    const readLen = fs.readSync(file.fd, bufferArray);
-    fs.closeSync(file);
-    const uint8Array = new Uint8Array(bufferArray.slice(0, readLen));
-    return buffer.from(uint8Array).toString('utf-8');
-  }
-
   /** 触发 FileSync 将本地变更同步到云端 */
   private async syncToCloud(): Promise<void> {
-    if (!this.fileSync) {
-      this.fileSync = new cloudSync.FileSync();
+    if (this.testDeps?.sync !== undefined) {
+      try {
+        await this.testDeps.sync.start();
+        hilog.info(DOMAIN, TAG, 'syncToCloud: started');
+      } catch (e) {
+        hilog.error(DOMAIN, TAG, `syncToCloud: error=${JSON.stringify(e)}`);
+      }
+      return;
     }
-
     try {
+      if (!this.fileSync) {
+        this.fileSync = new cloudSync.FileSync();
+      }
       await this.fileSync.start();
       hilog.info(DOMAIN, TAG, 'syncToCloud: started');
     } catch (e) {
@@ -574,9 +713,13 @@ export class CloudBackupManager {
 
   /** 将云端文件缓存到本地（location=2 时文件仅存在云端，需先拉取） */
   private async cacheFile(filePath: string): Promise<void> {
-    const uri = fileUri.getUriFromPath(filePath);
-    const cache = new cloudSync.CloudFileCache();
+    // 测试注入下假文件系统内容均在本地，跳过云端缓存拉取
+    if (this.testDeps !== null) {
+      return;
+    }
     try {
+      const uri = fileUri.getUriFromPath(filePath);
+      const cache = new cloudSync.CloudFileCache();
       await cache.start(uri);
       hilog.info(DOMAIN, TAG, `cacheFile: cached ${filePath}`);
     } catch (e) {
