@@ -711,14 +711,23 @@ export struct ShowCloudSyncDetailsPage {
       : clearType === ClearCloudType.DEVICE_NAME
         ? mgr.clearDeviceNameCloudStorage()
         : mgr.clearDeviceCloudStorage();
-    clearPromise.then(() => {
+    clearPromise.then((success: boolean) => {
       this.Is_loaded = false;
-      if (clearType !== ClearCloudType.DEVICE_NAME) {
+      if (success && clearType !== ClearCloudType.DEVICE_NAME) {
         const yesterdayTs = SyncTimeHelper.getYesterdayEndTs();
         AppPreference.setPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME, `${yesterdayTs}`);
         this.lastSyncTime = SyncTimeHelper.formatTimestamp(yesterdayTs);
       }
-      showSnackBar($r('app.string.cloud_sync_clear_storage_success'), SnackBarNotifyType.SUCCESS);
+      if (success) {
+        showSnackBar($r('app.string.cloud_sync_clear_storage_success'), SnackBarNotifyType.SUCCESS);
+      } else {
+        // 部分文件删除失败（如云端文件缓存/网络异常），如实提示避免误报成功
+        showSnackBar($r('app.string.cloud_sync_clear_storage_failed'), SnackBarNotifyType.WARNING);
+      }
+    }).catch((err: BusinessError) => {
+      this.Is_loaded = false;
+      hilog.error(DOMAIN, TAG, `clear cloud storage failed: ${err.code} ${err.message}`);
+      showSnackBar($r('app.string.cloud_sync_clear_storage_failed'), SnackBarNotifyType.WARNING);
     });
   }
 

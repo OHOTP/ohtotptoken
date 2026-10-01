@@ -789,6 +789,18 @@
       "value": "Cloud backup cleared"
     },
     {
+      "name": "cloud_sync_clear_storage_failed",
+      "value": "Failed to clear some backups, check network and retry"
+    },
+    {
+      "name": "cloud_backup_unknown_device",
+      "value": "Unknown device"
+    },
+    {
+      "name": "cloud_backup_meta_not_synced",
+      "value": "Metadata not synced"
+    },
+    {
       "name": "cloud_sync_encryption_huawei_account",
       "value": "Huawei Account Encryption"
     },

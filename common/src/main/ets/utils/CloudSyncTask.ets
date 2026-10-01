@@ -59,7 +59,9 @@ export async function checkCloudBackupRecords(cloudDir: string): Promise<number>
  * 在 TaskPool 后台线程中加载完整备份历史记录。
  * 1. 遍历云端目录，筛选 otp_backup_*.enc 文件
  * 2. 读取每个文件内容，解析 JWT-like header 获取 tokenCount/deviceId/deviceName 等元数据
- * 3. 云端文件（location=2）读取失败时降级为仅 stat 信息
+ * 3. 云端仅存文件（location=2）本地没有文件体，须由主线程先调
+ *    CloudBackupManager.cacheCloudOnlyBackups() 预缓存；未缓存成功时
+ *    读取失败降级为仅 stat 信息（deviceId 为空，UI 兜底显示"未知设备"）
  * 4. 按时间戳降序排列返回
  * @param cloudDir 云端目录路径（由主线程传入，避免在子线程访问 AppStorage/单例）
  * @returns 备份记录数组

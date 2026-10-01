@@ -125,7 +125,7 @@ export interface CryptoEngine {
   aesGcmOpen(cipher: Uint8Array, key: Uint8Array, iv: Uint8Array, aad: Uint8Array, tag: Uint8Array): Promise<Uint8Array>;
 }
 
-/** 文件状态（location: 0=本地 2=仅云端）。 */
+/** 文件状态（location: 1=仅本地 2=仅云端（本地仅元数据桩） 3=本地+云端双份）。 */
 export class FsStatInfo {
   size: number = 0;
   location: number = 0;

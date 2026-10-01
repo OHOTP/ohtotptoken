@@ -815,6 +815,18 @@
       "value": "云端备份已清空"
     },
     {
+      "name": "cloud_sync_clear_storage_failed",
+      "value": "部分备份清理失败，请检查网络后重试"
+    },
+    {
+      "name": "cloud_backup_unknown_device",
+      "value": "未知设备"
+    },
+    {
+      "name": "cloud_backup_meta_not_synced",
+      "value": "元数据未同步"
+    },
+    {
       "name": "cloud_sync_encryption_huawei_account",
       "value": "华为账号加密"
     },

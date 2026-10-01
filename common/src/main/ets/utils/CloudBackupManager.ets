@@ -147,6 +147,13 @@ class CloudBackupPayload {
  * 2. `clearDeviceNameCloudStorage()` — 按 deviceName 匹配且排除当前 ODID，清理卸载重装前遗留的旧备份
  * 3. `clearCloudStorage()` — 清理全部备份
  *
+ * ## 端云协同约束（location）
+ * stat.location：1=仅本地、2=仅云端（本地只有元数据桩，文件体在云上）、3=双份。
+ * location=2 的文件读取内容或按本地路径删除前，必须先经 {@link cacheFile}
+ * （cloudSync.CloudFileCache）缓存到本地，否则操作必失败；删除后由 FileSync 将
+ * 删除动作同步到云端。清理操作按文件统计失败数，任一失败整体返回 false，
+ * 避免向用户误报"清理成功"。
+ *
  * ## 备份数量限制
  * 每台设备（按 ODID 区分）最多保留 {@link MAX_BACKUP_COUNT} 份备份，
  * 超出时自动删除最旧的一份。
@@ -380,7 +387,7 @@ export class CloudBackupManager {
     return await this.restoreFromBackupRecord(latestRecord.id);
   }
 
-  /** 清理云端所有设备的全部备份数据 */
+  /** 清理云端所有设备的全部备份数据；任一文件删除失败返回 false（部分成功不报成功） */
   async clearCloudStorage(): Promise<boolean> {
     await this.init();
     if (!this.context || !this.cloudDir) {
@@ -397,8 +404,16 @@ export class CloudBackupManager {
 
     try {
       const records = await this.listBackupRecords();
+      let failed = 0;
       for (const record of records) {
-        await this.deleteBackupFile(record.id);
+        if (!await this.deleteBackupFile(record.id)) {
+          failed++;
+        }
+      }
+      await this.syncToCloud();
+      if (failed > 0) {
+        hilog.error(DOMAIN, TAG, `clearCloudStorage: ${failed}/${records.length} deletions failed`);
+        return false;
       }
       AppPreference.setPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME, '0');
       // 同步清除图标包云端备份（fire-and-forget）
@@ -430,8 +445,18 @@ export class CloudBackupManager {
     try {
       const records = await this.listBackupRecords();
       const deviceRecords = records.filter((r: CloudBackupRecord) => r.deviceId === deviceId);
+      // header 未解析（deviceId 为空，如离线未缓存成功的 location=2 文件）的记录
+      // 无法确认归属、可能属于本设备：计入失败迫使重试，避免静默残留后误报成功
+      let failed = records.filter((r: CloudBackupRecord) => r.deviceId === '').length;
       for (const record of deviceRecords) {
-        await this.deleteBackupFile(record.id);
+        if (!await this.deleteBackupFile(record.id)) {
+          failed++;
+        }
+      }
+      await this.syncToCloud();
+      if (failed > 0) {
+        hilog.error(DOMAIN, TAG, `clearDeviceCloudStorage: ${failed} unresolved/failed of ${records.length}`);
+        return false;
       }
       AppPreference.setPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME, '0');
       // 同步清除图标包云端备份（fire-and-forget）
@@ -471,11 +496,21 @@ export class CloudBackupManager {
       const staleRecords = records.filter((r: CloudBackupRecord) =>
         r.deviceName === currentDeviceName && r.deviceId !== currentDeviceId
       );
+      // 同上：header 未解析（deviceName 为空）的记录无法确认是否为同名旧安装
+      // 遗留（其主场景恰是本机的 location=2 云端文件），计入失败迫使重试
+      let failed = records.filter((r: CloudBackupRecord) => r.deviceName === '').length;
       for (const record of staleRecords) {
-        await this.deleteBackupFile(record.id);
+        if (!await this.deleteBackupFile(record.id)) {
+          failed++;
+        }
+      }
+      await this.syncToCloud();
+      if (failed > 0) {
+        hilog.error(DOMAIN, TAG, `clearDeviceNameCloudStorage: ${failed} unresolved/failed of ${records.length}`);
+        return false;
       }
       if (staleRecords.length > 0) {
-        // 仅在有实际删除时才清除图标包备份（避免不必要的云操作）
+        // 仅在全部删除成功时才清除图标包备份（避免不必要的云操作）
         this.iconPort.clearCloudBackup();
       }
       hilog.info(DOMAIN, TAG, `clearDeviceNameCloudStorage: completed, deleted ${staleRecords.length}`);
@@ -495,6 +530,40 @@ export class CloudBackupManager {
     }
 
     return await this.listBackupRecords();
+  }
+
+  /**
+   * 将云端仅存（location=2）的备份文件预缓存到本地。
+   * 备份历史的 header 解析在 TaskPool 子线程执行，不便调用 cloudSync，
+   * 由主线程先完成云端文件下载，TaskPool 随后按本地文件正常读取。
+   * 缓存失败（如离线）不抛出，仅记录日志，交由后续解析降级兜底。
+   */
+  async cacheCloudOnlyBackups(): Promise<void> {
+    await this.init();
+    if (!this.context || !this.cloudDir) {
+      hilog.warn(DOMAIN, TAG, 'cacheCloudOnlyBackups: not initialized');
+      return;
+    }
+
+    try {
+      const files = await this.fsPort.listFiles(this.cloudDir);
+      for (const fileName of files) {
+        if (!isBackupFileName(fileName)) {
+          continue;
+        }
+        const filePath = `${this.cloudDir}/${fileName}`;
+        try {
+          const stat = await this.fsPort.stat(filePath);
+          if (stat.location === 2) {
+            await this.cacheFile(filePath);
+          }
+        } catch (e) {
+          hilog.warn(DOMAIN, TAG, `cacheCloudOnlyBackups: skip ${fileName}: ${JSON.stringify(e)}`);
+        }
+      }
+    } catch (e) {
+      hilog.error(DOMAIN, TAG, `cacheCloudOnlyBackups: error=${JSON.stringify(e)}`);
+    }
   }
 
   /** 检查是否需要自动备份：每日最多一次，需满足云同步开关 + 华为账号登录 */
@@ -613,9 +682,23 @@ export class CloudBackupManager {
     return result;
   }
 
-  /** 删除指定备份文件（不同步） */
+  /**
+   * 删除指定备份文件（不同步）。
+   * 云端仅存文件（location=2）本地只有元数据桩，直接按本地路径删除必失败，
+   * 须先缓存（下载）到本地再删除，删除结果由后续 FileSync 同步到云端。
+   */
   private async deleteBackupFile(fileName: string): Promise<boolean> {
     const filePath = `${this.cloudDir}/${fileName}`;
+    try {
+      const stat = await this.fsPort.stat(filePath);
+      if (stat.location === 2) {
+        hilog.info(DOMAIN, TAG, `deleteBackupFile: cloud-only, caching ${fileName} first`);
+        await this.cacheFile(filePath);
+      }
+    } catch (e) {
+      // stat/缓存失败不阻断删除尝试，由删除本身给出最终结果
+      hilog.warn(DOMAIN, TAG, `deleteBackupFile: stat/cache failed for ${fileName}: ${JSON.stringify(e)}`);
+    }
     try {
       await this.fsPort.deleteFile(filePath);
       hilog.info(DOMAIN, TAG, `deleteBackupFile: deleted ${fileName}`);
@@ -651,6 +734,10 @@ export class CloudBackupManager {
           let deviceId = '';
           let deviceName = '';
           try {
+            // 云端仅存文件（location=2）本地只有元数据，须先缓存到本地才能读取 header
+            if (stat.location === 2) {
+              await this.cacheFile(filePath);
+            }
             const tokenContent = await this.fsPort.readTextFile(filePath);
             const header = this.crypto.parseTokenHeader(tokenContent);
             tokenCount = header.tokenCount;

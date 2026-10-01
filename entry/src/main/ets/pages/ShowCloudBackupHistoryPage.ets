@@ -43,12 +43,18 @@ export struct ShowCloudBackupHistoryPage {
 
   /**
    * 通过 TaskPool 后台线程加载备份历史记录，避免逐文件 I/O 阻塞主线程。
-   * 后台线程执行目录遍历 + 文件读取 + header 解析，完成后回主线程更新 UI。
+   * 云端仅存（location=2）的备份本地只有元数据桩，先在主线程预缓存到本地，
+   * TaskPool 才能读取 header（deviceId/tokenCount 等）；预缓存失败（如离线）
+   * 不阻断加载，记录降级为"未知设备"展示。
    */
   private loadBackupHistory(): void {
     this.isLoading = true;
     const cloudDir: string = this.appCtx.cloudFileDir;
-    taskpool.execute(loadBackupHistoryRecords, cloudDir).then((result: Object) => {
+    this.backupManager.cacheCloudOnlyBackups().catch((err: BusinessError) => {
+      hilog.warn(DOMAIN, TAG, `loadBackupHistory: pre-cache failed: ${err.code} ${err.message}`);
+    }).then(() => {
+      return taskpool.execute(loadBackupHistoryRecords, cloudDir);
+    }).then((result: Object) => {
       this.backupRecords = result as CloudBackupRecord[];
       this.isLoading = false;
     }).catch((err: BusinessError) => {
@@ -237,9 +243,16 @@ export struct ShowCloudBackupHistoryPage {
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Row({ space: LengthMetrics.vp(8).value }) {
-            Text($r('app.string.cloud_backup_record_tokens', record.tokenCount))
-              .fontSize($r('sys.float.ohos_id_text_size_caption'))
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            // deviceId 为空 = header 未解析（云端文件未缓存成功），显示兜底提示而非误报 0 个令牌
+            if (record.deviceId === '') {
+              Text($r('app.string.cloud_backup_meta_not_synced'))
+                .fontSize($r('sys.float.ohos_id_text_size_caption'))
+                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            } else {
+              Text($r('app.string.cloud_backup_record_tokens', record.tokenCount))
+                .fontSize($r('sys.float.ohos_id_text_size_caption'))
+                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            }
 
             Text(this.formatSize(record.size))
               .fontSize($r('sys.float.ohos_id_text_size_caption'))
@@ -284,7 +297,7 @@ export struct ShowCloudBackupHistoryPage {
         SymbolGlyph($r('sys.symbol.icloud'))
           .fontSize(LengthMetrics.vp(12).value)
           .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
-        Text(record.deviceName)
+        Text(record.deviceName === '' ? $r('app.string.cloud_backup_unknown_device') : record.deviceName)
           .fontSize($r('sys.float.ohos_id_text_size_caption'))
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           .margin({ left: LengthMetrics.vp(4).value })
@@ -393,6 +406,10 @@ export struct ShowCloudBackupHistoryPage {
       } else {
         showSnackBar($r('app.string.cloud_backup_restore_failed'), SnackBarNotifyType.WARNING);
       }
+    }).catch((err: BusinessError) => {
+      this.isLoading = false;
+      hilog.error(DOMAIN, TAG, `triggerRestore: error: ${err.code} ${err.message}`);
+      showSnackBar($r('app.string.cloud_backup_restore_failed'), SnackBarNotifyType.WARNING);
     });
   }
 
@@ -408,6 +425,10 @@ export struct ShowCloudBackupHistoryPage {
       } else {
         showSnackBar($r('app.string.cloud_backup_delete_failed'), SnackBarNotifyType.WARNING);
       }
+    }).catch((err: BusinessError) => {
+      this.isLoading = false;
+      hilog.error(DOMAIN, TAG, `triggerDelete: error: ${err.code} ${err.message}`);
+      showSnackBar($r('app.string.cloud_backup_delete_failed'), SnackBarNotifyType.WARNING);
     });
   }
 
