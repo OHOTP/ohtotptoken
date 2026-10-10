@@ -11,10 +11,12 @@ import {
   IconPackRegistry,
   IconPackRestoreResult,
   IconPackSyncState,
+  IconPackSyncStarter,
   PREF_KEYS,
   mergeEnabledPacks,
 } from 'common';
 import { MemoryFs } from './fakes/BackupFakes';
+import { DownloadAwareFs, FakeFileCacher, cloudTestTurn } from './fakes/CloudCacheFakes';
 
 /**
  * 图标包云备份状态机测试（Phase 2 FsGateway + IconPackArchiver 端口注入）。
@@ -177,6 +179,26 @@ function bindDeps(fs: MemoryFs, archiver: IconPackArchiver): void {
   });
 }
 
+
+class FakeIconSync implements IconPackSyncStarter {
+  fail: boolean = false;
+  calls: number = 0;
+
+  async start(): Promise<void> {
+    this.calls++;
+    if (this.fail) {
+      throw new Error('sync unavailable');
+    }
+  }
+}
+
+function bindCloudDeps(fs: DownloadAwareFs, cache: FakeFileCacher, sync: FakeIconSync): void {
+  IconPackCloudBackup.getInstance().useDepsForTest({
+    fs: fs, cache: cache, sync: sync, archiver: new GatedArchiver(), device: new FakeIconDevice(),
+    filesDir: '/data/files', cloudDir: '/cloud', cacheDir: '/data/cache',
+  });
+}
+
 function resetSingleton(): void {
   IconPackCloudBackup.getInstance().resetForTest();
   AppPreference.setPreference(PREF_KEYS.ICON_PACK_CLOUD_SYNC_TIME, '');
@@ -314,6 +336,115 @@ export default function iconPackCloudBackupTest() {
       const ok = await IconPackCloudBackup.getInstance().clearCloudBackup();
       expect(ok).assertTrue();
       expect(fs.files.size).assertEqual(0);
+    });
+
+
+    it('icon_clear_waits_for_cloud_download_before_deleting', 0, async () => {
+      resetSingleton();
+      const fs = new DownloadAwareFs();
+      const cache = new FakeFileCacher(fs);
+      const sync = new FakeIconSync();
+      bindCloudDeps(fs, cache, sync);
+      fs.files.set('/cloud/icon_packs_backup.zip', 'zip');
+      fs.files.set('/cloud/icon_packs_sync_meta.json', '{}');
+      fs.locationOverride.set('/cloud/icon_packs_backup.zip', 2);
+      cache.hang = true;
+      const pending = IconPackCloudBackup.getInstance().clearCloudBackup();
+      await cloudTestTurn();
+      expect(fs.deletedPaths.length).assertEqual(0);
+      expect(sync.calls).assertEqual(0);
+      cache.complete();
+      expect(await pending).assertTrue();
+      expect(fs.files.size).assertEqual(0);
+      expect(sync.calls).assertEqual(1);
+      expect(IconPackCloudBackup.getInstance().getState()).assertEqual(IconPackSyncState.IDLE);
+    });
+
+    it('icon_clear_propagates_list_stat_cache_delete_and_sync_failures', 0, async () => {
+      for (const failure of [0, 1, 2, 3, 4]) {
+        resetSingleton();
+        const fs = new DownloadAwareFs();
+        const cache = new FakeFileCacher(fs);
+        const sync = new FakeIconSync();
+        bindCloudDeps(fs, cache, sync);
+        const zip = '/cloud/icon_packs_backup.zip';
+        fs.files.set(zip, 'zip');
+        fs.files.set('/cloud/icon_packs_sync_meta.json', '{}');
+        fs.failList = failure === 0;
+        if (failure === 1) fs.failStatFor.add(zip);
+        if (failure === 2) {
+          fs.locationOverride.set(zip, 2);
+          cache.fail = true;
+        }
+        if (failure === 3) fs.failDeleteFor.add(zip);
+        sync.fail = failure === 4;
+        AppPreference.setPreference(PREF_KEYS.ICON_PACK_CLOUD_SYNC_TIME, '1234');
+        expect(await IconPackCloudBackup.getInstance().clearCloudBackup()).assertFalse();
+        expect(IconPackCloudBackup.getInstance().getState()).assertEqual(IconPackSyncState.IDLE);
+        expect(AppPreference.getPreference(PREF_KEYS.ICON_PACK_CLOUD_SYNC_TIME)).assertEqual('1234');
+        if (failure < 4) expect(fs.files.has(zip)).assertTrue();
+        if (failure > 0) expect(sync.calls).assertEqual(1);
+      }
+    });
+
+    it('icon_clear_retries_remaining_zip_after_meta_was_deleted', 0, async () => {
+      resetSingleton();
+      const fs = new DownloadAwareFs();
+      const cache = new FakeFileCacher(fs);
+      const sync = new FakeIconSync();
+      bindCloudDeps(fs, cache, sync);
+      const zip = '/cloud/icon_packs_backup.zip';
+      fs.files.set(zip, 'zip');
+      fs.files.set('/cloud/icon_packs_sync_meta.json', '{}');
+      fs.failDeleteFor.add(zip);
+      expect(await IconPackCloudBackup.getInstance().clearCloudBackup()).assertFalse();
+      expect(fs.files.has(zip)).assertTrue();
+      expect(fs.files.has('/cloud/icon_packs_sync_meta.json')).assertFalse();
+      resetSingleton();
+      bindCloudDeps(fs, cache, sync);
+      fs.failDeleteFor.clear();
+      expect(await IconPackCloudBackup.getInstance().clearCloudBackup()).assertTrue();
+      expect(fs.files.size).assertEqual(0);
+      expect(sync.calls).assertEqual(2);
+    });
+
+    it('icon_clear_absent_files_is_idempotent_but_requires_sync', 0, async () => {
+      resetSingleton();
+      const fs = new DownloadAwareFs();
+      const cache = new FakeFileCacher(fs);
+      const sync = new FakeIconSync();
+      bindCloudDeps(fs, cache, sync);
+      expect(await IconPackCloudBackup.getInstance().clearCloudBackup()).assertTrue();
+      sync.fail = true;
+      expect(await IconPackCloudBackup.getInstance().clearCloudBackup()).assertFalse();
+      expect(sync.calls).assertEqual(2);
+    });
+
+    it('icon_restore_and_status_use_download_completion', 0, async () => {
+      resetSingleton();
+      const fs = new DownloadAwareFs();
+      const cache = new FakeFileCacher(fs);
+      const sync = new FakeIconSync();
+      const archiver = new GatedArchiver();
+      IconPackCloudBackup.getInstance().useDepsForTest({
+        fs: fs, cache: cache, sync: sync, archiver: archiver, device: new FakeIconDevice(),
+        filesDir: '/data/files', cloudDir: '/cloud', cacheDir: '/data/cache',
+      });
+      fs.files.set('/cloud/icon_packs_backup.zip', 'zip');
+      fs.locationOverride.set('/cloud/icon_packs_backup.zip', 2);
+      cache.hang = true;
+      const restoring = IconPackCloudBackup.getInstance().restoreIconPacks();
+      await cloudTestTurn();
+      expect(archiver.decompressCalls).assertEqual(0);
+      cache.complete();
+      expect((await restoring).restoredFiles).assertEqual(1);
+      fs.files.set('/cloud/icon_packs_sync_meta.json', '{"deviceId":"d","deviceName":"Phone","packs":[]}');
+      fs.locationOverride.set('/cloud/icon_packs_sync_meta.json', 2);
+      const status = IconPackCloudBackup.getInstance().getCloudBackupStatus();
+      await cloudTestTurn();
+      expect(fs.readPaths.includes('/cloud/icon_packs_sync_meta.json')).assertFalse();
+      cache.complete();
+      expect((await status).sourceDeviceName).assertEqual('Phone');
     });
 
     it('status_reports_zip_and_meta_fields', 0, async () => {

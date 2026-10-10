@@ -808,7 +808,7 @@
     },
     {
       "name": "cloud_sync_clear_storage_success",
-      "value": "Cloud backup cleared"
+      "value": "Backup deletion submitted; cloud sync is pending"
     },
     {
       "name": "cloud_sync_clear_storage_failed",
@@ -884,7 +884,7 @@
     },
     {
       "name": "cloud_backup_delete_success",
-      "value": "Backup deleted successfully"
+      "value": "Backup deletion submitted; cloud sync is pending"
     },
     {
       "name": "cloud_backup_delete_failed",

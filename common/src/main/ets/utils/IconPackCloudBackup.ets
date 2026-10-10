@@ -1,5 +1,6 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { cloudSync, fileUri } from '@kit.CoreFileKit';
+import { cloudSync } from '@kit.CoreFileKit';
+import { CloudFileCacher, CloudFileCacheLoader } from './CloudFileCacheLoader';
 import { common } from '@kit.AbilityKit';
 import { zlib } from '@kit.BasicServicesKit';
 import { AppPreference, PREF_KEYS, BUILTIN_DEFAULT_PACK_ID, EVENT_NAMES } from './AppPreference';
@@ -125,8 +126,14 @@ class TokenIconPacksRegistry implements IconPackRegistry {
 }
 
 /** LocalUnit 测试注入项（目录就绪时跳过 init() 的 AppStorage 依赖）。 */
+export interface IconPackSyncStarter {
+  start(): Promise<void>;
+}
+
 export interface IconPackBackupTestDeps {
   fs?: FsGateway;
+  cache?: CloudFileCacher;
+  sync?: IconPackSyncStarter;
   archiver?: IconPackArchiver;
   device?: IconPackDevicePort;
   registry?: IconPackRegistry;
@@ -266,6 +273,7 @@ export class IconPackCloudBackup {
     this.cloudDir = '';
     this.filesDir = '';
     this.cacheDir = '';
+    this.fileSync = null;
     this.syncState = IconPackSyncState.IDLE;
   }
 
@@ -693,15 +701,30 @@ export class IconPackCloudBackup {
       return false;
     }
     try {
-      const cloudZipPath = this.cloudDir + '/' + ICON_PACK_BACKUP_ZIP;
-      try {
-        await this.fs.deleteFile(cloudZipPath);
-      } catch (_) {}
-      try {
-        await this.fs.deleteFile(this.cloudDir + '/' + SYNC_META_FILE);
-      } catch (_) {}
-      await this.syncToCloud();
-      hilog.info(DOMAIN, TAG, 'clearCloudBackup: completed');
+      const files = await this.fs.listFiles(this.cloudDir);
+      let failed = false;
+      for (const name of [ICON_PACK_BACKUP_ZIP, SYNC_META_FILE]) {
+        if (!files.includes(name)) {
+          continue;
+        }
+        const filePath = `${this.cloudDir}/${name}`;
+        try {
+          const stat = await this.fs.stat(filePath);
+          if (stat.location === 2) {
+            await this.cacheFile(filePath);
+          }
+          await this.fs.deleteFile(filePath);
+        } catch (error) {
+          failed = true;
+          hilog.error(DOMAIN, TAG, `clearCloudBackup: ${name}: ${JSON.stringify(error)}`);
+        }
+      }
+      const syncStarted = await this.syncToCloud();
+      if (failed || !syncStarted) {
+        return false;
+      }
+      AppPreference.setPreference(PREF_KEYS.ICON_PACK_CLOUD_SYNC_TIME, '0');
+      hilog.info(DOMAIN, TAG, 'clearCloudBackup: deletion submitted');
       return true;
     } catch (e) {
       hilog.error(DOMAIN, TAG, `clearCloudBackup: error=${JSON.stringify(e)}`);
@@ -726,36 +749,36 @@ export class IconPackCloudBackup {
   }
 
   /** 触发 FileSync.start() 将 cloudDir 变更同步到云端（复用实例避免重复创建） */
-  private async syncToCloud(): Promise<void> {
-    // 测试注入下无需真实云同步
-    if (this.testDeps !== null) {
-      return;
-    }
+  private async syncToCloud(): Promise<boolean> {
     try {
-      if (!this.fileSync) {
-        this.fileSync = new cloudSync.FileSync();
+      if (this.testDeps !== null) {
+        if (this.testDeps.sync !== undefined) {
+          await this.testDeps.sync.start();
+        }
+      } else {
+        if (!this.fileSync) {
+          this.fileSync = new cloudSync.FileSync();
+        }
+        await this.fileSync.start();
       }
-      await this.fileSync.start();
       hilog.info(DOMAIN, TAG, 'syncToCloud: started');
+      return true;
     } catch (e) {
       hilog.error(DOMAIN, TAG, `syncToCloud: error=${JSON.stringify(e)}`);
+      return false;
     }
   }
 
   /** 将云端文件（location=2）缓存到本地，以便读取内容 */
   private async cacheFile(filePath: string): Promise<void> {
-    // 测试注入下假文件系统内容均在本地，跳过云端缓存拉取
     if (this.testDeps !== null) {
+      if (this.testDeps.cache === undefined) {
+        throw new Error('Cloud cache dependency required for cloud-only test files');
+      }
+      await this.testDeps.cache.cache(filePath);
       return;
     }
-    try {
-      const uri = fileUri.getUriFromPath(filePath);
-      const cache = new cloudSync.CloudFileCache();
-      await cache.start(uri);
-      hilog.info(DOMAIN, TAG, `cacheFile: cached ${filePath}`);
-    } catch (e) {
-      hilog.error(DOMAIN, TAG, `cacheFile: error=${JSON.stringify(e)}`);
-    }
+    await CloudFileCacheLoader.getInstance().cache(filePath);
   }
 
   private async removeDirRecursive(dirPath: string): Promise<void> {
