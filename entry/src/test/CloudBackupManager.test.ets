@@ -21,6 +21,7 @@ import {
 import { sha256 } from '../main/ets/crypto/PureHash';
 import { base64Decode, base64Encode, utf8ToBytes } from '../main/ets/steam/SteamCrypto';
 import { MemoryFs } from './fakes/BackupFakes';
+import { DownloadAwareFs, FakeFileCacher, cloudTestTurn } from './fakes/CloudCacheFakes';
 
 /**
  * 云备份编排逻辑测试（Phase 2 端口注入：FsGateway + 账号/设备/令牌/分组/图标包/同步）。
@@ -149,6 +150,8 @@ class FakeGroups implements CloudBackupGroupPort {
 class FakeIcons implements CloudBackupIconPort {
   backupCalls: number = 0;
   clearCalls: number = 0;
+  failClear: boolean = false;
+  rejectClear: boolean = false;
 
   backupIconPacks(): Promise<boolean> {
     this.backupCalls++;
@@ -157,7 +160,10 @@ class FakeIcons implements CloudBackupIconPort {
 
   clearCloudBackup(): Promise<boolean> {
     this.clearCalls++;
-    return Promise.resolve(true);
+    if (this.rejectClear) {
+      return Promise.reject(new Error('icons unavailable'));
+    }
+    return Promise.resolve(!this.failClear);
   }
 }
 
@@ -218,6 +224,7 @@ interface TestRig {
   groups: FakeGroups;
   icons: FakeIcons;
   sync: FakeSync;
+  cache: FakeFileCacher;
 }
 
 function freshRig(): TestRig {
@@ -228,8 +235,10 @@ function freshRig(): TestRig {
   AppPreference.setPreference(PREF_KEYS.ICON_PACK_CLOUD_SYNC_TIME, '');
   CloudBackupManager.getInstance().resetForTest();
 
+  const fs = new DownloadAwareFs();
   const rig: TestRig = {
-    fs: new MemoryFs(),
+    fs: fs,
+    cache: new FakeFileCacher(fs),
     account: new FakeAccount(),
     device: new FakeDevice(),
     tokens: new FakeTokens(),
@@ -245,6 +254,7 @@ function freshRig(): TestRig {
     groups: rig.groups,
     icons: rig.icons,
     sync: rig.sync,
+    cache: rig.cache,
     cloudDir: '/cloud',
   });
   return rig;
@@ -409,7 +419,7 @@ export default function cloudBackupManagerTest() {
       const rig = freshRig();
       const tokenJson = JSON.stringify(makeToken('cloud', 'cloud_secret'));
       await seedBackup(rig, 8600, `{"tokens":[${tokenJson}]}`, 'odid-A');
-      // 标记为云端文件（location=2）：注入模式下 cacheFile 跳过，读取与恢复不中断
+      // location=2 的文件在假缓存完成前不可读
       rig.fs.locationOverride.set('/cloud/otp_backup_8600.enc', 2);
 
       const result = await CloudBackupManager.getInstance().restoreFromBackupRecord(backupFileName(8600));
@@ -427,8 +437,7 @@ export default function cloudBackupManagerTest() {
     it('list_history_parses_header_of_cloud_only_location2_records', 0, async () => {
       const rig = freshRig();
       await seedBackup(rig, 8700, '{"tokens":[]}', 'odid-B', 'OtherDev');
-      // 云端仅存文件（location=2）：扫描时先走缓存分支再读 header
-      // （注入模式下 cacheFile 跳过，假文件系统内容仍可读）
+      // 假文件系统拒绝读取 location=2，必须等缓存完成
       rig.fs.locationOverride.set('/cloud/otp_backup_8700.enc', 2);
 
       const records = await CloudBackupManager.getInstance().listBackupHistory();
@@ -436,7 +445,9 @@ export default function cloudBackupManagerTest() {
       // header 解析成功 → 设备归属/令牌数不降级为空/0
       expect(records[0].deviceId).assertEqual('odid-B');
       expect(records[0].deviceName).assertEqual('OtherDev');
-      expect(records[0].location).assertEqual(2);
+      expect(records[0].tokenCount).assertEqual(1);
+      expect(rig.cache.calls.length).assertEqual(1);
+      expect(rig.fs.locationOverride.get('/cloud/otp_backup_8700.enc')).assertEqual(3);
     });
 
     it('clear_all_deletes_cloud_only_location2_files', 0, async () => {
@@ -445,7 +456,7 @@ export default function cloudBackupManagerTest() {
       rig.fs.locationOverride.set('/cloud/otp_backup_8800.enc', 2);
 
       const ok = await CloudBackupManager.getInstance().clearCloudStorage();
-      // 删除前内部先走缓存分支（注入模式下跳过），文件随后删除成功
+      // 假缓存将 location 变为 3 后，才允许删除
       expect(ok).assertTrue();
       expect(rig.fs.files.size).assertEqual(0);
     });
@@ -473,7 +484,7 @@ export default function cloudBackupManagerTest() {
       const flaky = new FlakyFs();
       CloudBackupManager.getInstance().useDepsForTest({
         fs: flaky, account: rig.account, device: rig.device, tokens: rig.tokens,
-        groups: rig.groups, icons: rig.icons, sync: rig.sync, cloudDir: '/cloud',
+        groups: rig.groups, icons: rig.icons, sync: rig.sync, cache: new FakeFileCacher(flaky), cloudDir: '/cloud',
       });
       const crypto = CloudBackupCrypto.getInstance();
       const mk = async (ts: number, odid: string): Promise<void> => {
@@ -488,7 +499,7 @@ export default function cloudBackupManagerTest() {
       flaky.failStatFor.add('/cloud/otp_backup_8950.enc');
 
       await CloudBackupManager.getInstance().cacheCloudOnlyBackups();
-      // 注入模式下缓存为 no-op：验证遍历/筛选/降级分支不抛错、文件不被误动
+      // 只缓存备份文件；stat 失败不阻断历史的降级展示
       expect(flaky.files.size).assertEqual(3);
       expect(flaky.deletedPaths.length).assertEqual(0);
     });
@@ -558,12 +569,12 @@ export default function cloudBackupManagerTest() {
       await seedBackup(rig, 9800, '{"tokens":[]}', 'odid-A');
 
       const missing = await CloudBackupManager.getInstance().deleteBackupRecord('otp_backup_1111.enc');
-      expect(missing).assertFalse();
-      expect(rig.sync.startCalls).assertEqual(0);
+      expect(missing).assertTrue();
+      expect(rig.sync.startCalls).assertEqual(1);
 
       const ok = await CloudBackupManager.getInstance().deleteBackupRecord(backupFileName(9800));
       expect(ok).assertTrue();
-      expect(rig.sync.startCalls).assertEqual(1);
+      expect(rig.sync.startCalls).assertEqual(2);
     });
 
     it('auto_backup_skips_when_disabled', 0, async () => {
@@ -667,15 +678,15 @@ export default function cloudBackupManagerTest() {
       expect(await CloudBackupManager.getInstance().clearDeviceCloudStorage()).assertFalse();
       expect(rig.icons.clearCalls).assertEqual(0);
 
-      // 同名旧备份清理：目标 f2 删除失败 → false，且不清图标包
+      // 同名旧备份保留 token 归属证据，先清图标再删 token
       flaky.failDeleteFor.delete(`/cloud/${backupFileName(9310)}`);
       flaky.failDeleteFor.add(`/cloud/${backupFileName(9320)}`);
       expect(await CloudBackupManager.getInstance().clearDeviceNameCloudStorage()).assertFalse();
-      expect(rig.icons.clearCalls).assertEqual(0);
+      expect(rig.icons.clearCalls).assertEqual(1);
 
-      // 全量清理：f2 仍失败 → false
+      // 全量清理：f2 仍失败 → false，不再触发图标清理
       expect(await CloudBackupManager.getInstance().clearCloudStorage()).assertFalse();
-      expect(rig.icons.clearCalls).assertEqual(0);
+      expect(rig.icons.clearCalls).assertEqual(1);
     });
 
     it('clear_device_name_storage_noop_does_not_clear_icons', 0, async () => {
@@ -721,6 +732,152 @@ export default function cloudBackupManagerTest() {
       expect(AppPreference.getPreference(PREF_KEYS.APPEARANCE_ICON_PACK_ENABLED) as string).assertEqual('["keep"]');
       expect(rig.tokens.updated.length).assertEqual(1);
       expect(rig.groups.mergedGroups !== null).assertTrue();
+    });
+
+
+    it('clear_scan_errors_abort_all_scopes_without_claiming_success', 0, async () => {
+      for (const listFailure of [true, false]) {
+        const rig = freshRig();
+        const fs = rig.fs as DownloadAwareFs;
+        await seedBackup(rig, 9801, '{}', 'odid-A');
+        fs.failList = listFailure;
+        if (!listFailure) {
+          fs.failStatFor.add('/cloud/otp_backup_9801.enc');
+        }
+        AppPreference.setPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME, '1234');
+        const manager = CloudBackupManager.getInstance();
+        expect(await manager.clearCloudStorage()).assertFalse();
+        expect(await manager.clearDeviceCloudStorage()).assertFalse();
+        expect(await manager.clearDeviceNameCloudStorage()).assertFalse();
+        expect(fs.files.size).assertEqual(1);
+        expect(rig.icons.clearCalls).assertEqual(0);
+        expect(AppPreference.getPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME)).assertEqual('1234');
+      }
+    });
+
+    it('clear_and_single_delete_report_sync_start_failure', 0, async () => {
+      for (const scope of [0, 1, 2, 3]) {
+        const rig = freshRig();
+        const sync = new FlakySync();
+        sync.fail = true;
+        CloudBackupManager.getInstance().useDepsForTest({
+          fs: rig.fs, account: rig.account, device: rig.device, tokens: rig.tokens,
+          groups: rig.groups, icons: rig.icons, sync: sync, cache: rig.cache, cloudDir: '/cloud',
+        });
+        await seedBackup(rig, 9802, '{}', scope === 2 ? 'old-odid' : 'odid-A');
+        AppPreference.setPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME, '1234');
+        const manager = CloudBackupManager.getInstance();
+        const ok = scope === 0 ? await manager.clearCloudStorage()
+          : scope === 1 ? await manager.clearDeviceCloudStorage()
+          : scope === 2 ? await manager.clearDeviceNameCloudStorage()
+          : await manager.deleteBackupRecord('otp_backup_9802.enc');
+        expect(ok).assertFalse();
+        expect(sync.startCalls).assertEqual(1);
+        expect(rig.fs.files.size).assertEqual(0);
+        expect(AppPreference.getPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME)).assertEqual('1234');
+      }
+    });
+
+    it('clear_waits_for_icon_result_and_preserves_preference_on_failure', 0, async () => {
+      for (const rejects of [true, false]) {
+        for (const scope of [0, 1, 2]) {
+          const rig = freshRig();
+          await seedBackup(rig, 9803, '{}', scope === 2 ? 'old-odid' : 'odid-A');
+          rig.icons.failClear = true;
+          rig.icons.rejectClear = rejects;
+          AppPreference.setPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME, '1234');
+          const manager = CloudBackupManager.getInstance();
+          const ok = scope === 0 ? await manager.clearCloudStorage()
+            : scope === 1 ? await manager.clearDeviceCloudStorage() : await manager.clearDeviceNameCloudStorage();
+          expect(ok).assertFalse();
+          expect(rig.icons.clearCalls).assertEqual(1);
+          expect(AppPreference.getPreference(PREF_KEYS.CLOUD_SYNC_LAST_TIME)).assertEqual('1234');
+        }
+      }
+    });
+
+    it('history_and_delete_wait_for_cache_completion', 0, async () => {
+      const rig = freshRig();
+      await seedBackup(rig, 9804, '{}', 'odid-A');
+      const path = '/cloud/otp_backup_9804.enc';
+      rig.fs.locationOverride.set(path, 2);
+      rig.cache.hang = true;
+      const fs = rig.fs as DownloadAwareFs;
+      let loaded = false;
+      const history = CloudBackupManager.getInstance().listBackupHistory().then(records => {
+        loaded = true;
+        return records;
+      });
+      await cloudTestTurn();
+      expect(loaded).assertFalse();
+      expect(fs.readPaths.length).assertEqual(0);
+      rig.cache.complete();
+      expect((await history)[0].tokenCount).assertEqual(1);
+      rig.fs.locationOverride.set(path, 2);
+      const deleting = CloudBackupManager.getInstance().deleteBackupRecord('otp_backup_9804.enc');
+      await cloudTestTurn();
+      expect(fs.files.has(path)).assertTrue();
+      expect(rig.sync.startCalls).assertEqual(0);
+      rig.cache.complete();
+      expect(await deleting).assertTrue();
+      expect(fs.files.has(path)).assertFalse();
+    });
+
+    it('cache_failure_blocks_read_restore_and_delete_until_retry', 0, async () => {
+      const rig = freshRig();
+      await seedBackup(rig, 9805, '{"tokens":[]}', 'odid-A');
+      const path = '/cloud/otp_backup_9805.enc';
+      rig.fs.locationOverride.set(path, 2);
+      rig.cache.fail = true;
+      const manager = CloudBackupManager.getInstance();
+      const records = await manager.listBackupHistory();
+      expect(records[0].deviceId).assertEqual('');
+      expect(await manager.restoreFromBackupRecord('otp_backup_9805.enc')).assertFalse();
+      expect(await manager.clearCloudStorage()).assertFalse();
+      expect(rig.fs.files.has(path)).assertTrue();
+      expect((rig.fs as DownloadAwareFs).readPaths.length).assertEqual(0);
+      rig.cache.fail = false;
+      expect(await manager.clearCloudStorage()).assertTrue();
+      expect(rig.fs.files.has(path)).assertFalse();
+    });
+
+
+    it('single_delete_retries_sync_after_local_file_is_already_gone', 0, async () => {
+      const rig = freshRig();
+      const sync = new FlakySync();
+      sync.fail = true;
+      CloudBackupManager.getInstance().useDepsForTest({
+        fs: rig.fs, account: rig.account, device: rig.device, tokens: rig.tokens,
+        groups: rig.groups, icons: rig.icons, sync: sync, cache: rig.cache, cloudDir: '/cloud',
+      });
+      await seedBackup(rig, 9901, '{}', 'odid-A');
+      const manager = CloudBackupManager.getInstance();
+      expect(await manager.deleteBackupRecord('otp_backup_9901.enc')).assertFalse();
+      expect(rig.fs.files.size).assertEqual(0);
+      sync.fail = false;
+      expect(await manager.deleteBackupRecord('otp_backup_9901.enc')).assertTrue();
+      expect(sync.startCalls).assertEqual(2);
+      (rig.fs as DownloadAwareFs).failStatFor.add('/cloud/otp_backup_9901.enc');
+      expect(await manager.deleteBackupRecord('otp_backup_9901.enc')).assertFalse();
+      expect(sync.startCalls).assertEqual(2);
+    });
+
+    it('stale_device_clear_preserves_identity_until_icons_succeed', 0, async () => {
+      const rig = freshRig();
+      await seedBackup(rig, 9902, '{}', 'old-odid');
+      rig.icons.failClear = true;
+      const manager = CloudBackupManager.getInstance();
+      expect(await manager.clearDeviceNameCloudStorage()).assertFalse();
+      expect(rig.fs.files.has('/cloud/otp_backup_9902.enc')).assertTrue();
+      manager.resetForTest();
+      manager.useDepsForTest({
+        fs: rig.fs, account: rig.account, device: rig.device, tokens: rig.tokens,
+        groups: rig.groups, icons: rig.icons, sync: rig.sync, cache: rig.cache, cloudDir: '/cloud',
+      });
+      rig.icons.failClear = false;
+      expect(await manager.clearDeviceNameCloudStorage()).assertTrue();
+      expect(rig.icons.clearCalls).assertEqual(2);
+      expect(rig.fs.files.size).assertEqual(0);
     });
 
     it('clear_methods_abort_when_not_logged_in', 0, async () => {

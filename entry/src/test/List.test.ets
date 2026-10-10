@@ -32,6 +32,7 @@ import responsiveLayoutPolicyTest from './ResponsiveLayoutPolicy.test';
 import tokenStoreTest from './TokenStore.test';
 import cryptoUtilsTest from './CryptoUtils.test';
 import cloudBackupManagerTest from './CloudBackupManager.test';
+import cloudFileCacheLoaderTest from './CloudFileCacheLoader.test';
 import backupRestoreHelperTest from './BackupRestoreHelper.test';
 import tokenBackupTest from './TokenBackup.test';
 import tokenCardStoreTest from './TokenCardStore.test';
@@ -78,6 +79,7 @@ export default function testsuite() {
   tokenStoreTest();
   cryptoUtilsTest();
   cloudBackupManagerTest();
+  cloudFileCacheLoaderTest();
   backupRestoreHelperTest();
   tokenBackupTest();
   tokenCardStoreTest();

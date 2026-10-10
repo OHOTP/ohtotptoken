@@ -812,7 +812,7 @@
     },
     {
       "name": "cloud_sync_clear_storage_success",
-      "value": "雲端備份已清空"
+      "value": "備份刪除已提交，雲端同步尚未完成"
     },
     {
       "name": "cloud_sync_clear_storage_failed",
@@ -888,7 +888,7 @@
     },
     {
       "name": "cloud_backup_delete_success",
-      "value": "備份刪除成功"
+      "value": "備份刪除已提交，雲端同步尚未完成"
     },
     {
       "name": "cloud_backup_delete_failed",
