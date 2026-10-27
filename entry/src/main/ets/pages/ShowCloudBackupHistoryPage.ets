@@ -501,8 +501,8 @@ export struct ShowCloudBackupHistoryPage {
         title: $r('app.string.cloud_backup_restore_confirm_title'),
         message: emptyBackup ? $r('app.string.cloud_backup_restore_empty_msg') :
           $r('app.string.cloud_backup_restore_confirm_msg', record.date),
-        autoCancel: true, alignment: DialogAlignment.Bottom, gridCount: 4,
-        offset: { dx: 0, dy: -20 }, buttonDirection: DialogButtonDirection.VERTICAL,
+        autoCancel: true, alignment: DialogAlignment.Center, gridCount: 4,
+        buttonDirection: DialogButtonDirection.VERTICAL,
         buttons: [
           { value: $r('app.string.cloud_backup_restore_confirm_title'),
             fontColor: emptyBackup ? $r('sys.color.ohos_id_color_warning') : $r('sys.color.font_emphasize'),
@@ -532,8 +532,8 @@ export struct ShowCloudBackupHistoryPage {
       this.getUIContext().showAlertDialog({
         systemMaterial: dialogSystemMaterial(),
         title: $r('app.string.cloud_backup_delete_confirm_title'), message: message,
-        autoCancel: true, alignment: DialogAlignment.Bottom, gridCount: 4,
-        offset: { dx: 0, dy: -20 }, buttonDirection: DialogButtonDirection.VERTICAL,
+        autoCancel: true, alignment: DialogAlignment.Center, gridCount: 4,
+        buttonDirection: DialogButtonDirection.VERTICAL,
         buttons: [
           { value: $r('app.string.cloud_backup_delete_confirm_title'), fontColor: $r('sys.color.ohos_id_color_warning'),
             action: () => {
@@ -565,8 +565,8 @@ export struct ShowCloudBackupHistoryPage {
         systemMaterial: dialogSystemMaterial(),
         title: $r('app.string.cloud_backup_unknown_cleanup_entry'),
         message: $r('app.string.cloud_backup_unknown_cleanup_confirm', targets.length),
-        autoCancel: true, alignment: DialogAlignment.Bottom, gridCount: 4,
-        offset: { dx: 0, dy: -20 }, buttonDirection: DialogButtonDirection.VERTICAL,
+        autoCancel: true, alignment: DialogAlignment.Center, gridCount: 4,
+        buttonDirection: DialogButtonDirection.VERTICAL,
         buttons: [
           { value: $r('app.string.cloud_backup_unknown_cleanup_entry'), fontColor: $r('sys.color.ohos_id_color_warning'),
             action: () => {

@@ -1,6 +1,5 @@
 import { common, Want } from '@kit.AbilityKit';
-import { AppStorageV2, promptAction } from '@kit.ArkUI';
-import { BusinessError } from '@kit.BasicServicesKit';
+import { AppStorageV2 } from '@kit.ArkUI';
 import { HdsNavDestination, HdsNavDestinationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import {
   AppPreference, AppWindowInfo, CloudBackupActionResult, CloudBackupDiagnostics, CloudBackupFailureReason, CloudBackupManager,
@@ -553,19 +552,24 @@ export struct ShowCloudSyncDetailsPage {
     if (!this.canStartAction()) { return; }
     this.confirmationOpen = true;
     try {
-      this.getUIContext().getPromptAction().showActionMenu({
-        systemMaterial: dialogSystemMaterial(), title: $r('app.string.cloud_sync_clear_storage_confirm'),
+      let selection: ClearCloudType | undefined;
+      this.getUIContext().showAlertDialog({
+        systemMaterial: dialogSystemMaterial(), title: $r('app.string.cloud_sync_clear_storage_confirm'), message: '',
+        autoCancel: true, alignment: DialogAlignment.Center,
+        buttonDirection: DialogButtonDirection.VERTICAL,
         buttons: [
-          { text: $r('app.string.cloud_sync_clear_device'), color: $r('sys.color.ohos_id_color_warning') },
-          { text: $r('app.string.cloud_sync_clear_device_name'), color: $r('sys.color.ohos_id_color_warning') },
-          { text: $r('app.string.cloud_sync_clear_all'), color: $r('sys.color.ohos_id_color_warning') }
-        ]
-      }, (err: BusinessError, data: promptAction.ActionMenuSuccessResponse) => {
-        this.confirmationOpen = false;
-        if (err || !this.isMounted) { return; }
-        if (data.index === 0) { this.showClearConfirmDialog(ClearCloudType.DEVICE); }
-        else if (data.index === 1) { this.showClearConfirmDialog(ClearCloudType.DEVICE_NAME); }
-        else if (data.index === 2) { this.showClearConfirmDialog(ClearCloudType.ALL); }
+          { value: $r('app.string.cloud_sync_clear_device'), fontColor: $r('sys.color.ohos_id_color_warning'),
+            action: () => { selection = ClearCloudType.DEVICE; } },
+          { value: $r('app.string.cloud_sync_clear_device_name'), fontColor: $r('sys.color.ohos_id_color_warning'),
+            action: () => { selection = ClearCloudType.DEVICE_NAME; } },
+          { value: $r('app.string.cloud_sync_clear_all'), fontColor: $r('sys.color.ohos_id_color_warning'),
+            action: () => { selection = ClearCloudType.ALL; } }
+        ],
+        onDidDisappear: () => {
+          this.confirmationOpen = false;
+          if (!this.isMounted || selection === undefined) { return; }
+          this.showClearConfirmDialog(selection);
+        }
       });
     } catch (_) {
       this.confirmationOpen = false;
@@ -582,7 +586,7 @@ export struct ShowCloudSyncDetailsPage {
     try {
       this.getUIContext().showAlertDialog({
         systemMaterial: dialogSystemMaterial(), title: $r('app.string.cloud_sync_clear_storage_confirm'), message: message,
-        autoCancel: true, alignment: DialogAlignment.Bottom, gridCount: 4, offset: { dx: 0, dy: -20 },
+        autoCancel: true, alignment: DialogAlignment.Center, gridCount: 4,
         buttonDirection: DialogButtonDirection.VERTICAL,
         buttons: [
           { value: $r('app.string.cloud_sync_clear_storage'), fontColor: $r('sys.color.ohos_id_color_warning'), action: () => {

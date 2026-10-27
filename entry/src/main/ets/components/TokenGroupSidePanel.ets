@@ -59,7 +59,7 @@ export struct TokenGroupSidePanel {
       systemMaterial: dialogSystemMaterial(),
       builder: () => this.NameDialogBuilder(group, onClose),
       autoCancel: false,
-      alignment: DialogAlignment.Center
+      alignment: DialogAlignment.Bottom
     }).then((id: number) => {
       dialogId = id;
     }).catch(() => showSnackBar($r('app.string.token_group_error'), SnackBarNotifyType.ERROR));
@@ -67,6 +67,7 @@ export struct TokenGroupSidePanel {
 
   private deleteGroup(group: TokenGroup): void {
     this.getUIContext().showAlertDialog({
+      alignment: DialogAlignment.Center,
       systemMaterial: dialogSystemMaterial(),
       title: $r('app.string.token_group_delete'),
       subtitle: group.name,
@@ -194,7 +195,9 @@ export struct TokenGroupSidePanel {
                   this.onSelect(group.id);
                 }
               })
-              .bindContextMenu(() => this.GroupMenu(group), ResponseType.LongPress)
+              .bindContextMenu(() => this.GroupMenu(group), ResponseType.LongPress, {
+                systemMaterial: dialogSystemMaterial()
+              })
               if (this.editing) {
                 Button({ type: ButtonType.Circle }) {
                   SymbolGlyph($r('sys.symbol.trash'))

@@ -644,6 +644,7 @@ export struct TokenItem {
       .borderRadius(this.token_preference.app_appearance_item_radius)
       .clip(this.hdsCardMode)
       .bindContextMenuWithResponse(this.TokenRightCtxMenu, {
+        systemMaterial: MaterialTheme.systemMaterial(),
         // 官方 hoverScale 仅在 LongPress + CustomBuilder 预览中提供原组件截图到
         // 扩展预览的一镜到底变形；右键触发会忽略 preview 并显示箭头。
         preview: this.TokenMenuPreview,
@@ -796,6 +797,7 @@ export struct TokenItem {
 
   private openQRCodeDialog(): void {
     this.getUIContext().getPromptAction().openCustomDialog({
+      alignment: DialogAlignment.Center,
       systemMaterial: dialogSystemMaterial(),
       builder: () => {
         this.QRCodeDialogBuilder();

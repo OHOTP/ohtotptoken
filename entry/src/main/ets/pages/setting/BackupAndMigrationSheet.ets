@@ -1,6 +1,5 @@
 import { bundleManager } from '@kit.AbilityKit';
-import { BusinessError } from '@kit.BasicServicesKit';
-import { AppStorageV2, LengthMetrics, promptAction } from '@kit.ArkUI';
+import { AppStorageV2, LengthMetrics } from '@kit.ArkUI';
 import { HdsNavigation, HdsNavigationTitleMode, ScrollEffectType } from '@kit.UIDesignKit';
 import {
   AppPreference, AppWindowInfo, convertToken2URI, dialogSystemMaterial, encodeLocalBackup, generateFileNameWithDate,
@@ -15,7 +14,7 @@ import { SubItemDivider } from '../../components/SubItemDivider';
 import { EncryptionPassWordDialog } from '../../dialogs/EncryptionPassWordDialog';
 import { commitPreparedBackup, TokenImportHandler } from '../../utils/BackupImportOperation';
 import { TokenBatchOperation } from '../../utils/TokenBatchOperation';
-import { isLocalBackupMenuCancellation, LocalBackupFlow, LocalBackupStage } from '../../utils/LocalBackupFlow';
+import { LocalBackupFlow, LocalBackupStage } from '../../utils/LocalBackupFlow';
 import { TokenProgressDialog, TokenProgressDialogParams } from '../../dialogs/TokenProgressDialog';
 // [冷启动优化] 云面板及配置延迟到备份页面首次构建，避免冷启动加载。
 import lazy { CloudBackupDetailsSheet, cloudBackupDetailsSheetOptions } from './CloudBackupDetailsSheet';
@@ -142,8 +141,7 @@ export struct BackupAndMigrationSheet {
     try {
       this.getUIContext().showAlertDialog({
         systemMaterial: dialogSystemMaterial(), title: title, message: message,
-        autoCancel: true, alignment: DialogAlignment.Bottom, gridCount: 4,
-        offset: { dx: 0, dy: -Math.max(20, this.window.AvoidBottomHeight) },
+        autoCancel: true, alignment: DialogAlignment.Center, gridCount: 4,
         buttonDirection: DialogButtonDirection.VERTICAL,
         buttons: [
           { value: action, fontColor: warning ? $r('sys.color.ohos_id_color_warning') : $r('sys.color.font_emphasize'),
@@ -161,26 +159,27 @@ export struct BackupAndMigrationSheet {
     const generation = this.beginExport();
     if (generation === undefined) { return; }
     try {
-      this.getUIContext().getPromptAction().showActionMenu({
-        systemMaterial: dialogSystemMaterial(), title: $r('app.string.setting_backup_output'),
+      let encrypted: boolean | undefined;
+      this.getUIContext().showAlertDialog({
+        systemMaterial: dialogSystemMaterial(), title: $r('app.string.setting_backup_output'), message: '',
+        autoCancel: true, alignment: DialogAlignment.Center,
+        buttonDirection: DialogButtonDirection.VERTICAL,
         buttons: [
-          { text: $r('app.string.setting_backup_type_enc'), color: $r('sys.color.font_primary') },
-          { text: $r('app.string.setting_backup_type_default'), color: $r('sys.color.font_primary') }
-        ]
-      }, (error: BusinessError, result: promptAction.ActionMenuSuccessResponse) => {
-        if (!this.flow.isCurrent(generation) || this.flow.stage !== LocalBackupStage.CHOOSING) { return; }
-        if (error) {
-          if (isLocalBackupMenuCancellation(error)) { this.cancel(generation); }
-          else { this.fail(generation, $r('app.string.local_backup_prepare_failed')); }
-          return;
+          { value: $r('app.string.setting_backup_type_enc'), action: () => { encrypted = true; } },
+          { value: $r('app.string.setting_backup_type_default'), action: () => { encrypted = false; } },
+          { value: $r('app.string.setting_backup_cancel'), action: () => this.cancel(generation) }
+        ],
+        cancel: () => this.cancel(generation),
+        // 等选择框关闭后再进入密码或风险确认，保留会话和防重复触发边界。
+        onDidDisappear: () => {
+          if (!this.flow.isCurrent(generation) || this.flow.stage !== LocalBackupStage.CHOOSING) { return; }
+          if (encrypted === true) { this.openPassword(generation, true); }
+          else if (encrypted === false) {
+            this.confirmStep(generation, $r('app.string.setting_backup_type_default'),
+              $r('app.string.local_backup_plain_warning'), $r('app.string.local_backup_export_anyway'), true,
+              () => { this.prepareExport(generation, false); });
+          } else { this.cancel(generation); }
         }
-        if (result.index < 0) { this.cancel(generation); return; }
-        if (result.index === 0) { this.openPassword(generation, true); }
-        else if (result.index === 1) {
-          this.confirmStep(generation, $r('app.string.setting_backup_type_default'),
-            $r('app.string.local_backup_plain_warning'), $r('app.string.local_backup_export_anyway'), true,
-            () => { this.prepareExport(generation, false); });
-        } else { this.cancel(generation); }
       });
     } catch (_) { this.fail(generation, $r('app.string.local_backup_prepare_failed')); }
   }
@@ -285,7 +284,8 @@ export struct BackupAndMigrationSheet {
     try {
       const id = await this.getUIContext().getPromptAction().openCustomDialog({
         systemMaterial: dialogSystemMaterial(), builder: () => { this.PasswordBuilder(generation, exporting); },
-        autoCancel: true, alignment: DialogAlignment.Top, offset: { dx: 0, dy: 16 },
+        autoCancel: true, alignment: DialogAlignment.Bottom,
+        offset: { dx: 0, dy: -Math.max(20, this.window.AvoidBottomHeight) },
         keyboardAvoidMode: KeyboardAvoidMode.DEFAULT,
         onDidDisappear: () => {
           const next = this.afterPasswordClosed;
@@ -500,7 +500,7 @@ export struct BackupAndMigrationSheet {
     this.getUIContext().showAlertDialog({
       systemMaterial: dialogSystemMaterial(), title: $r('app.string.cloud_sync_require_huawei_account_title'),
       message: $r('app.string.cloud_sync_require_huawei_account_msg'), autoCancel: true,
-      alignment: DialogAlignment.Bottom, gridCount: 4, offset: { dx: 0, dy: -20 },
+      alignment: DialogAlignment.Center, gridCount: 4,
       buttons: [{ value: $r('app.string.dialog_btn_confirm'), action: () => {} }], cancel: () => {}
     });
   }

@@ -359,6 +359,7 @@ struct Index {
       return;
     }
     this.getUIContext().getPromptAction().openCustomDialog({
+      alignment: DialogAlignment.Center,
       builder: () => this.MultiDeleteDialog()
     }).catch(() => {
       showSnackBar($r('app.string.token_multi_failed', this.selectedTokenIds.length), SnackBarNotifyType.ERROR);
@@ -397,6 +398,7 @@ struct Index {
       }
     };
     this.getUIContext().getPromptAction().openCustomDialog({
+      alignment: DialogAlignment.Center,
       systemMaterial: dialogSystemMaterial(),
       builder: () => this.MultiGroupDialog((id: string) => {
         onClose();
@@ -695,7 +697,7 @@ struct Index {
         this.EncryptionPasswordDialogBuilder();
       },
       autoCancel: true,
-      alignment: DialogAlignment.Center
+      alignment: DialogAlignment.Bottom
     }).catch((error: BusinessError) => {
       hilog.error(error.code, 'Index', `open password dialog failed: ${error.message}`);
     });
@@ -1131,7 +1133,10 @@ struct Index {
     const promptAction = uiContext.getPromptAction();
     const contentNode = new ComponentContent(uiContext, wrapBuilder(TokenActionsMenuBuilder), this);
     try {
-      promptAction.openMenu(contentNode, { id: this.sortTokenMenuTargetId }, {});
+      // 全局菜单的弹出层单独消费 MenuOptions，不能只给内部 Menu 设置材质。
+      promptAction.openMenu(contentNode, { id: this.sortTokenMenuTargetId }, {
+        systemMaterial: dialogSystemMaterial()
+      });
     } catch (error) {
       const err = error as BusinessError;
       hilog.error(err.code, 'Index', `openTokenSortMenu failed: ${err.message}`);
@@ -1208,8 +1213,7 @@ struct Index {
       }),
       cancel: () => {},
       autoCancel: true,
-      alignment: DialogAlignment.Bottom,
-      offset: { dx: 0, dy: -20 },
+      alignment: DialogAlignment.Center,
       gridCount: 4,
       customStyle: false,
       cornerRadius: 10,

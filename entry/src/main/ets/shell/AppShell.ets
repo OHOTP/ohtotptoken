@@ -180,7 +180,7 @@ export struct AppShell {
       systemMaterial: dialogSystemMaterial(),
       builder: () => this.NewGroupDialogBuilder(onClose),
       autoCancel: false,
-      alignment: DialogAlignment.Center
+      alignment: DialogAlignment.Bottom
     }).then((id: number) => {
       dialogId = id;
     }).catch(() => {

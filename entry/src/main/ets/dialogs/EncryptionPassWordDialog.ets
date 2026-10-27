@@ -131,17 +131,33 @@ export struct EncryptionPassWordDialog {
           LoadingProgress().width(32).height(32)
           Text($r('app.string.local_backup_processing')).fontColor($r('sys.color.font_secondary'))
         }
-        Button($r('app.string.setting_backup_confirm'))
-          .id('local-backup-password-submit').width('100%').constraintSize({ minHeight: 48 })
-          .labelStyle({ maxLines: 4 }).enabled(!this.busy).onClick(() => this.submitPassword())
-        Button($r('app.string.setting_backup_cancel'))
-          .id('local-backup-password-cancel').width('100%').constraintSize({ minHeight: 48 })
-          .labelStyle({ maxLines: 4 }).backgroundColor(Color.Transparent).fontColor($r('sys.color.font_emphasize'))
-          .onClick(() => { this.cancel(); this.resetInput(); if (this.submit === undefined) { this.close(); } })
+        // 自绘按钮保留异步提交/显式关闭语义，仅恢复横排文字按钮外观。
+        Row() {
+          Button($r('app.string.setting_backup_cancel'))
+            .id('local-backup-password-cancel').layoutWeight(1).constraintSize({ minHeight: 48 })
+            .type(ButtonType.ROUNDED_RECTANGLE)
+            .borderRadius($r('sys.float.ohos_id_corner_radius_button'))
+            .labelStyle({ maxLines: 4 }).backgroundColor(Color.Transparent)
+            .fontColor($r('sys.color.font_emphasize'))
+            .fontSize($r('sys.float.ohos_id_text_size_body1')).fontWeight(FontWeight.Medium)
+            .onClick(() => { this.cancel(); this.resetInput(); if (this.submit === undefined) { this.close(); } })
+          Divider()
+            .vertical(true).height(24).strokeWidth(2)
+            .color($r('sys.color.ohos_id_color_list_separator')).margin({ left: 3, right: 3 })
+          Button($r('app.string.setting_backup_confirm'))
+            .id('local-backup-password-submit').layoutWeight(1).constraintSize({ minHeight: 48 })
+            .type(ButtonType.ROUNDED_RECTANGLE)
+            .borderRadius($r('sys.float.ohos_id_corner_radius_button'))
+            .labelStyle({ maxLines: 4 }).backgroundColor(Color.Transparent)
+            .fontColor($r('sys.color.font_emphasize'))
+            .fontSize($r('sys.float.ohos_id_text_size_body1')).fontWeight(FontWeight.Medium)
+            .enabled(!this.busy).onClick(() => this.submitPassword())
+        }
+        .width('100%')
       }
       .width('100%')
     }
-    .width('100%').constraintSize({ maxHeight: this.contentLimit }).scrollBar(BarState.Auto)
+    .width('100%').constraintSize({ maxHeight: this.contentLimit }).scrollBar(BarState.Off)
   }
 
   build() {

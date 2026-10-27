@@ -213,6 +213,7 @@ export struct TokenListPage {
 
   showQRCodeDialog(conf: TokenConfig): void {
     this.getUIContext().getPromptAction().openCustomDialog({
+      alignment: DialogAlignment.Center,
       systemMaterial: dialogSystemMaterial(),
       builder: () => {
         this.QRCodeDialogBuilder(conf);

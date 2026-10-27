@@ -31,6 +31,7 @@ export struct SubItemColor {
 
   private openLegacyColorPicker(color: number, index: number): void {
     this.dialog_color_picker = new CustomDialogController({
+      alignment: DialogAlignment.Bottom,
       systemMaterial: dialogSystemMaterial(),
       builder: ColorSelectDialog({
         old_color: color,

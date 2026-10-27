@@ -167,9 +167,8 @@ export struct SheetCoordinator {
       title: $r('app.string.huawei_account_logout_confirm_title'),
       message: msg,
       autoCancel: true,
-      alignment: DialogAlignment.Bottom,
+      alignment: DialogAlignment.Center,
       gridCount: 4,
-      offset: { dx: 0, dy: -20 },
       buttonDirection: DialogButtonDirection.HORIZONTAL,
       buttons: [
         {
