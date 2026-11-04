@@ -33,15 +33,29 @@ struct TokenCard_2x2 {
   @State currentCode1: string = '';
   @State localCounterOffset0: number = 0;
   @State localCounterOffset1: number = 0;
+  @State remaining: number = 30;
+  private timerController: TextTimerController = new TextTimerController();
+  private lastTimeStep: number = -1;
 
   private isHOTP(index: number): boolean {
     return index === 0 ? this.token0Type === '2' : this.token1Type === '2';
   }
 
-  /** 当前 TOTP 周期剩余秒数(渲染/翻转/刷新时计算; 卡片无定时器能力, 随刷新时机校正) */
-  private remainingSeconds(index: number): number {
+  private updateCountdown(): void {
+    const index = this.flippedIndex;
+    if (index < 0 || this.isHOTP(index)) return;
     const period = parseInt(index === 0 ? this.token0Period : this.token1Period) || 30;
-    return period - (Math.floor(Date.now() / 1000) % period);
+    const seconds = Math.floor(Date.now() / 1000);
+    this.remaining = period - (seconds % period);
+    const timeStep = Math.floor(seconds / period);
+    if (timeStep !== this.lastTimeStep) {
+      if (index === 0) {
+        this.currentCode0 = this.computeOTP(0);
+      } else {
+        this.currentCode1 = this.computeOTP(1);
+      }
+      this.lastTimeStep = timeStep;
+    }
   }
 
   private computeOTP(index: number): string {
@@ -97,7 +111,7 @@ struct TokenCard_2x2 {
               if (this.flippedIndex !== 0) {
                 this.TokenFrontView(this.token0Issuer, this.token0Name, 0)
               } else {
-                this.TokenBackView(this.currentCode0, this.token0Issuer, parseInt(this.token0Period) || 30, this.remainingSeconds(0), parseInt(this.token0NextMargin) || 5)
+                this.TokenBackView()
               }
             }
             .width('100%')
@@ -133,7 +147,7 @@ struct TokenCard_2x2 {
               if (this.flippedIndex !== 1) {
                 this.TokenFrontView(this.token1Issuer, this.token1Name, 1)
               } else {
-                this.TokenBackView(this.currentCode1, this.token1Issuer, parseInt(this.token1Period) || 30, this.remainingSeconds(1), parseInt(this.token1NextMargin) || 5)
+                this.TokenBackView()
               }
             }
             .width('100%')
@@ -230,39 +244,56 @@ struct TokenCard_2x2 {
   }
 
   @Builder
-  TokenBackView(code: string, issuer: string, period: number, remaining: number, nextMargin: number) {
-    Column() {
-      Row() {
-        Column() {
-          Text(code)
-            .fontSize(24)
-            .fontColor($r('app.color.card_code'))
-            .fontWeight(FontWeight.Bold)
-            .letterSpacing(2)
-            .fontFamily('monospace')
-          Text(issuer)
-            .fontSize(10)
-            .fontColor($r('app.color.card_text_secondary'))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
+  TokenBackView() {
+    Column({ space: 3 }) {
+      Stack() {
+        Text(this.flippedIndex === 0 ? this.currentCode0 : this.currentCode1)
+          .fontSize(24)
+          .minFontSize(10)
+          .maxFontSize(24)
+          .maxLines(1)
+          .fontColor(!this.isHOTP(this.flippedIndex) &&
+            this.remaining <= Number(this.flippedIndex === 0 ? this.token0NextMargin : this.token1NextMargin)
+            ? $r('app.color.card_code_warning') : $r('app.color.card_code'))
+          .fontWeight(FontWeight.Bold)
+          .letterSpacing(2)
+          .fontFamily('monospace')
+          .width('100%')
+          .height('100%')
+        if (!this.isHOTP(this.flippedIndex)) {
+          // 透明计时组件仅驱动自动换码和临期变色，不占用额外布局空间。
+          TextTimer({ controller: this.timerController })
+            .format('ss')
+            .width(1)
+            .height(1)
+            .opacity(0)
+            .accessibilityLevel('no')
+            .onTimer(() => this.updateCountdown())
+            .onAppear(() => {
+              this.lastTimeStep = -1;
+              this.updateCountdown();
+              this.timerController.start();
+            })
+            .onDisAppear(() => {
+              this.timerController.pause();
+            })
         }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
       }
       .width('100%')
       .layoutWeight(1)
-      .alignItems(VerticalAlign.Center)
-
-      // TOTP 剩余时间进度条(底部): 剩余时间低于用户设置的即将过期阈值时变红
-      Progress({ value: remaining, total: period })
+      .clip(true)
+      Text(this.flippedIndex === 0 ? this.token0Issuer : this.token1Issuer)
+        .fontSize(10)
+        .fontColor($r('app.color.card_text_secondary'))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
-        .height(3)
-        .color(remaining <= nextMargin
-          ? $r('app.color.card_code_warning') : $r('app.color.card_code'))
-        .backgroundColor($r('app.color.card_text_secondary'))
-        .margin({ top: 2 })
+        .height(14)
+        .clip(true)
+
     }
     .width('100%')
     .height('100%')
+    .alignItems(HorizontalAlign.Start)
   }
 }
