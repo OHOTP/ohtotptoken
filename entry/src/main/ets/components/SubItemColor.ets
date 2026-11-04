@@ -1,7 +1,7 @@
 import { ColorSelectDialog } from "../dialogs/ColorSelectDialog";
-import { dialogSystemMaterial, colorHex, hexColor } from 'common';
+import { dialogSystemMaterial, colorHex, hexColor, DeviceInfoHelper } from 'common';
 import { deviceInfo } from '@kit.BasicServicesKit';
-import { HdsColorPicker } from '@kit.UIDesignKit';
+import { HdsColorPickerHostModule, HdsColorPickerParams } from './HdsColorPickerTypes';
 import { SETTING_ROW_MIN_HEIGHT, SETTING_ROW_PADDING, SETTING_ROW_ICON_OFFSET } from './SettingStyle';
 
 export class ColorItem {
@@ -21,12 +21,49 @@ export struct SubItemColor {
   @Param rowPadding: Padding = SETTING_ROW_PADDING;
   @Param expandable: boolean = false;
   @Local collapsed: boolean = true;
+  /**
+   * HDS 拾色器宿主：仅在 phone/tablet 上通过动态 import 装载；PC 上保持 undefined，
+   * 走 openLegacyColorPicker(ColorSelectDialog)。**不可改成静态 import**：
+   * 2in1 的 @kit.UIDesignKit 不导出 HdsColorPicker，静态加载即 SyntaxError 杀进程。
+   */
+  @Local hdsPicker: WrappedBuilder<[HdsColorPickerParams]> | undefined = undefined;
 
   private dialog_color_picker?: CustomDialogController;
 
+  aboutToAppear(): void {
+    this.loadHdsPicker();
+  }
+
+  /** 按设备能力懒加载 HdsColorPicker 宿主；任何失败都回退到旧拾色器 */
+  private async loadHdsPicker(): Promise<void> {
+    if (this.hdsPicker !== undefined || !this.isHdsColorPickerAvailable()) {
+      return;
+    }
+    try {
+      const host: HdsColorPickerHostModule = await import('./HdsColorPickerHost');
+      this.hdsPicker = host.hdsColorPickerHost;
+    } catch (_) {
+      this.hdsPicker = undefined;
+    }
+  }
+
   private isHdsColorPickerAvailable(): boolean {
-    return deviceInfo.apiAvailable('26.0.0') &&
+    // HdsColorPicker 仅 phone/tablet 提供导出（见 SDK UIDesignKit.json 的 deviceTypes），
+    // 2in1 上加载会抛 SyntaxError，必须显式排除。
+    return !DeviceInfoHelper.getInstance().isPc() &&
+      deviceInfo.apiAvailable('26.0.0') &&
       canIUse('SystemCapability.UIDesign.HDSPattern.Standard');
+  }
+
+  /** 为第 index 个色块构造 HDS 拾色器入参 */
+  private hdsPickerParams(index: number): HdsColorPickerParams {
+    const params = new HdsColorPickerParams();
+    params.color = colorHex(this.colors[index].color);
+    params.onSelected = (selectedColor: string): void => {
+      const normalizedColor = selectedColor.startsWith('#') ? selectedColor : `#${selectedColor}`;
+      this.onChange(index, hexColor(normalizedColor));
+    };
+    return params;
   }
 
   private openLegacyColorPicker(color: number, index: number): void {
@@ -93,21 +130,8 @@ export struct SubItemColor {
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
             }
-            if (this.isHdsColorPickerAvailable()) {
-              Row() {
-                HdsColorPicker({
-                  initialColor: colorHex(this.colors[index].color),
-                  options: { circleRadius: 16 },
-                  onColorSelected: (selectedColor: string) => {
-                    const normalizedColor = selectedColor.startsWith('#') ?
-                      selectedColor : `#${selectedColor}`;
-                    this.onChange(index, hexColor(normalizedColor));
-                  }
-                })
-              }
-              .constraintSize({ minWidth: 48, minHeight: 48 })
-              .justifyContent(FlexAlign.Center)
-              .alignItems(VerticalAlign.Center)
+            if (this.hdsPicker !== undefined) {
+              this.hdsPicker!.builder(this.hdsPickerParams(index))
             } else {
               Button({ type: ButtonType.Normal }) {
                 Row()
