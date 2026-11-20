@@ -186,6 +186,12 @@ export struct ArcTokenListPage {
       .width('100%')
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring)
+      // 旋转表冠翻看隐私政策正文
+      .onDigitalCrown((event: CrownEvent) => {
+        if (event.action === CrownAction.UPDATE) {
+          this.privacyScroller.scrollBy(0, event.degree * 2);
+        }
+      })
       Row({ space: 8 }) {
         Button($r('app.string.watch_privacy_disagree'))
           .layoutWeight(1)
@@ -342,6 +348,12 @@ export struct ArcTokenListPage {
       .height('100%')
       .space(LengthMetrics.vp(10))
       .scrollBar(BarState.Off)
+      // 旋转表冠：顺时针下滚、逆时针上滚（手表主要交互方式）
+      .onDigitalCrown((event: CrownEvent) => {
+        if (event.action === CrownAction.UPDATE) {
+          this.listScroller.scrollBy(0, event.degree * 2);
+        }
+      })
 
       // 已有令牌时的重新同步入口：同样只在用户点击时申请权限（审核 7.17）
       if (this.CurrentTokens.length > 0) {
@@ -385,6 +397,8 @@ export struct ArcTokenListPage {
         .hitTestBehavior(HitTestMode.Transparent)
       }
     }
+    // 与启动窗口背景保持一致，避免冷启动出现白屏转场
+    .backgroundColor('#ff000000')
   }
 
   @Builder
