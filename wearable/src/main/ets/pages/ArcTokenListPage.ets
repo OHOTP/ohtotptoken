@@ -111,10 +111,24 @@ export struct ArcTokenListPage {
     BleTokenServer.getInstance().setOnSyncStatus(undefined);
   }
 
+  /** 让令牌列表默认获得焦点（表冠事件按焦点分发，ArcList 获焦后表冠才能滚动） */
+  private requestListFocus(): void {
+    // 等首帧布局完成后再请求焦点，否则节点还未挂载
+    setTimeout(() => {
+      try {
+        this.getUIContext().getFocusController().requestFocus('token_list');
+      } catch (err) {
+        const e = err as BusinessError;
+        hilog.warn(e.code, 'ArcTokenListPage', `requestFocus failed: ${e.message}`);
+      }
+    }, 120);
+  }
+
   /** 同意隐私政策：持久化后进入主界面（此后启动不再弹窗） */
   acceptPrivacy(): void {
     AppPreference.setPreference(PREF_KEYS.PRIVACY_POLICY_AGREED, true);
     this.privacyAgreed = true;
+    this.requestListFocus();
   }
 
   /** 不同意隐私政策：退出应用，本次运行不进入任何功能页面 */
@@ -186,12 +200,10 @@ export struct ArcTokenListPage {
       .width('100%')
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring)
-      // 旋转表冠翻看隐私政策正文
-      .onDigitalCrown((event: CrownEvent) => {
-        if (event.action === CrownAction.UPDATE) {
-          this.privacyScroller.scrollBy(0, event.degree * 2);
-        }
-      })
+      // 表冠同样依赖焦点：隐私正文出现时让 Scroll 默认获焦
+      .focusable(true)
+      .focusOnTouch(true)
+      .defaultFocus(true)
       Row({ space: 8 }) {
         Button($r('app.string.watch_privacy_disagree'))
           .layoutWeight(1)
@@ -244,6 +256,10 @@ export struct ArcTokenListPage {
     this.appIsShow = true;
     // 回到前台立即强制刷新一次(后台期间可能错过 TOTP 周期边界)
     this.updateTimestamp(true);
+    // 页面可见后把焦点交还令牌列表，保证表冠可用
+    if (this.privacyAgreed) {
+      this.requestListFocus();
+    }
   }
 
   onPageHide(): void {
@@ -348,12 +364,11 @@ export struct ArcTokenListPage {
       .height('100%')
       .space(LengthMetrics.vp(10))
       .scrollBar(BarState.Off)
-      // 旋转表冠：顺时针下滚、逆时针上滚（手表主要交互方式）
-      .onDigitalCrown((event: CrownEvent) => {
-        if (event.action === CrownAction.UPDATE) {
-          this.listScroller.scrollBy(0, event.degree * 2);
-        }
-      })
+      // 表冠适配：表冠事件按焦点分发，ArcList 自带表冠滚动，需默认获焦
+      .id('token_list')
+      .focusable(true)
+      .focusOnTouch(true)
+      .defaultFocus(true)
 
       // 已有令牌时的重新同步入口：同样只在用户点击时申请权限（审核 7.17）
       if (this.CurrentTokens.length > 0) {
