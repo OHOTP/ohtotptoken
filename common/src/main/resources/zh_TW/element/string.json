@@ -1672,6 +1672,34 @@
       "value": "設定已同步"
     },
     {
+      "name": "watch_privacy_title",
+      "value": "隱私政策"
+    },
+    {
+      "name": "watch_privacy_intro",
+      "value": "使用本應用前，請閱讀並同意以下隱私政策。"
+    },
+    {
+      "name": "watch_privacy_body",
+      "value": "本應用為離線令牌（OTP）工具。\n1. 資料儲存：令牌密鑰與設定僅保存在本機（系統加密儲存），不會上傳至伺服器。\n2. 藍牙權限：僅在您主動點擊「從手機接收令牌」時申請，用於與已配對的手機傳輸令牌和設定，不用於探索其他裝置。\n3. 我們不會收集您的帳號、通訊錄、位置或使用行為資料。\n4. 您可以在系統設定中撤銷權限，或解除安裝應用程式以刪除全部本機資料。"
+    },
+    {
+      "name": "watch_privacy_agree",
+      "value": "同意"
+    },
+    {
+      "name": "watch_privacy_disagree",
+      "value": "不同意"
+    },
+    {
+      "name": "watch_receive_action",
+      "value": "從手機接收令牌"
+    },
+    {
+      "name": "watch_receive_permission_denied",
+      "value": "未開啟藍牙權限，無法接收令牌"
+    },
+    {
       "name": "ble_access_permission_reason",
       "value": "用於透過藍牙與手錶配對並安全同步令牌"
     },

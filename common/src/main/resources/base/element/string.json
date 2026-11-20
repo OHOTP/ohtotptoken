@@ -1664,6 +1664,34 @@
       "value": "Settings synced"
     },
     {
+      "name": "watch_privacy_title",
+      "value": "Privacy Policy"
+    },
+    {
+      "name": "watch_privacy_intro",
+      "value": "Please read and agree to the following privacy policy before using this app."
+    },
+    {
+      "name": "watch_privacy_body",
+      "value": "This app is an offline OTP token tool.\n1. Data storage: token secrets and settings are kept only on this device (system-encrypted) and are never uploaded to a server.\n2. Bluetooth: requested only after you tap \"Receive tokens from phone\"; it is used to transfer tokens and settings with your paired phone, not to discover other devices.\n3. We do not collect your account, contacts, location or usage data.\n4. You can revoke permissions in system settings, or uninstall the app to delete all local data."
+    },
+    {
+      "name": "watch_privacy_agree",
+      "value": "Agree"
+    },
+    {
+      "name": "watch_privacy_disagree",
+      "value": "Disagree"
+    },
+    {
+      "name": "watch_receive_action",
+      "value": "Receive tokens from phone"
+    },
+    {
+      "name": "watch_receive_permission_denied",
+      "value": "Bluetooth permission not granted, cannot receive tokens"
+    },
+    {
       "name": "ble_access_permission_reason",
       "value": "Used to pair with wearable devices and securely sync tokens"
     },

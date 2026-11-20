@@ -107,6 +107,8 @@ export enum PREF_KEYS {
   SHOW_GUIDE_TIPS = 'app_show_guide_tips',
   /** 添加令牌页自定义图标引导提示 */
   SHOW_ADD_TOKEN_ICON_GUIDE = 'app_show_add_token_icon_guide',
+  /** 隐私政策是否已同意（手表首次启动弹窗；未同意时不进入主界面） */
+  PRIVACY_POLICY_AGREED = 'app_privacy_policy_agreed',
   /** Token项目高度 */
   APPEARANCE_ITEM_HEIGHT = 'app_appearance_item_height',
   /** Token项目间距 */
@@ -550,6 +552,8 @@ export class AppPreference {
     [PREF_KEYS.DB_KV_SYNC_TIME, ''],
     [PREF_KEYS.SHOW_GUIDE_TIPS, true],
     [PREF_KEYS.SHOW_ADD_TOKEN_ICON_GUIDE, true],
+    // 隐私政策是否已同意（默认未同意，首次启动需弹窗确认）
+    [PREF_KEYS.PRIVACY_POLICY_AGREED, false],
     // 主密码弃用告知已确认
     [PREF_KEYS.MASTER_KEY_DEPRECATION_ACKNOWLEDGED, false],
     // ASSET Secret 迁移已完成
