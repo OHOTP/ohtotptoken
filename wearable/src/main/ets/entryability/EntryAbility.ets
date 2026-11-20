@@ -6,8 +6,8 @@ import {
 } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppStorageV2, window } from '@kit.ArkUI';
-import { AppPreference, AppWindowInfo, TokenStore, WearEngineServer, BleTokenServer } from 'common';
-import { wearEngine } from '@kit.WearEngine';
+import { AppPreference, AppWindowInfo, PermissionManager, TokenStore } from 'common';
+import { startReceiveChannels } from '../utils/ReceiveChannels';
 
 const TAG: string = 'WearableEntry';
 
@@ -87,11 +87,15 @@ export default class EntryAbility extends UIAbility {
   }
 
   /**
-   * 手表端初始化链路: TokenStore 初始化 → P2P 接收注册与 BLE GATT Server 并行就绪.
+   * 手表端初始化链路: TokenStore 初始化 → （已授权时）静默拉起接收通道.
    *
    * 分布式 KV 同步方案已废弃(数据库安全等级 S4 无法同步到 SL1 手表),
    * 令牌改由手机端手动下发: Wear Engine P2P(WatchSyncPage)与 BLE GATT(BleWatchSyncPage)
    * 两条通道并行常驻、互不阻塞, 入库均走 WearEngineTransfer 共享实现.
+   *
+   * 合规约束(审核 7.17/7.19): 启动阶段**不得**申请权限或弹框。
+   * 这里只做「检查是否已授权」——已授权则静默启动，未授权则保持关闭，
+   * 由用户在页面上主动点击「从手机接收令牌」时再申请并启动。
    */
   private async initDataSync(): Promise<void> {
     // 两通道入库均依赖 TokenStore 就绪(kvMgr/ASSET 回填), 必须先行初始化
@@ -101,29 +105,15 @@ export default class EntryAbility extends UIAbility {
       hilog.error(0x0000, TAG, `initTokenStore failed: ${JSON.stringify(err)}`);
       return;
     }
-    // P2P 与 BLE 并行启动, 各自独立 try/catch: 任一通道失败(权限/蓝牙未就绪)不阻塞另一通道
-    this.startP2pReceive();
-    this.startBleReceive();
-  }
-
-  /** P2P 通道: 获取已连接对端(手机)并注册消息接收, 失败仅记日志 */
-  private async startP2pReceive(): Promise<void> {
     try {
-      const deviceClient: wearEngine.DeviceClient = wearEngine.getDeviceClient(this.context);
-      const connected = await deviceClient.getConnectedDevices();
-      const randomIds: Array<string> = connected.map((device: wearEngine.Device) => device.randomId);
-      await WearEngineServer.getInstance().registerReceiver(randomIds);
+      const granted: boolean =
+        await PermissionManager.getInstance().checkPermissionGrantBool('ohos.permission.ACCESS_BLUETOOTH');
+      if (granted) {
+        await startReceiveChannels(this.context);
+      }
     } catch (err) {
-      hilog.error(0x0000, TAG, `startP2pReceive failed: ${JSON.stringify(err)}`);
-    }
-  }
-
-  /** BLE 通道: 启动 GATT Server 与广播(内部含 5 次 × 1s 延时重试), 失败仅记日志 */
-  private async startBleReceive(): Promise<void> {
-    try {
-      await BleTokenServer.getInstance().start();
-    } catch (err) {
-      hilog.error(0x0000, TAG, `startBleReceive failed: ${JSON.stringify(err)}`);
+      // 查询权限失败按未授权处理：不申请、不启动，等用户主动触发
+      hilog.warn(0x0000, TAG, `silent receive start skipped: ${JSON.stringify(err)}`);
     }
   }
 }

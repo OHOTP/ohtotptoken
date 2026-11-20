@@ -1672,6 +1672,34 @@
       "value": "设置已同步"
     },
     {
+      "name": "watch_privacy_title",
+      "value": "隐私政策"
+    },
+    {
+      "name": "watch_privacy_intro",
+      "value": "使用本应用前，请阅读并同意以下隐私政策。"
+    },
+    {
+      "name": "watch_privacy_body",
+      "value": "本应用为离线令牌（OTP）工具。\n1. 数据存储：令牌密钥与设置仅保存在本机（系统加密存储），不会上传到服务器。\n2. 蓝牙权限：仅在您主动点击「从手机接收令牌」时申请，用于与已配对的手机传输令牌和设置，不用于发现其他设备。\n3. 我们不会收集您的账号、通讯录、位置或使用行为数据。\n4. 您可以在系统设置中撤销权限，或卸载应用以删除全部本地数据。"
+    },
+    {
+      "name": "watch_privacy_agree",
+      "value": "同意"
+    },
+    {
+      "name": "watch_privacy_disagree",
+      "value": "不同意"
+    },
+    {
+      "name": "watch_receive_action",
+      "value": "从手机接收令牌"
+    },
+    {
+      "name": "watch_receive_permission_denied",
+      "value": "未开启蓝牙权限，无法接收令牌"
+    },
+    {
       "name": "ble_access_permission_reason",
       "value": "用于通过蓝牙与手表配对并安全同步令牌"
     },
